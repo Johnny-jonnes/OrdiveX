@@ -35,10 +35,15 @@ const UI = {
     return `<span class="badge badge-success">${this.formatDate(dateStr)}</span>`;
   },
 
-  stockBadge(qty, minStock) {
+  stockBadge(qty, minStock, product = null) {
+    let displayStr = qty;
+    if (product && product.allowUnitSale && product.unitsPerBox > 1) {
+      displayStr = `${Math.floor(qty / product.unitsPerBox)} bt ${qty % product.unitsPerBox} u`;
+      minStock = minStock * product.unitsPerBox; // Optionnel : ajuster le test bas/rupture selon le seuil si exprimé en boîtes
+    }
     if (qty === 0) return `<span class="badge badge-danger">Rupture</span>`;
-    if (qty <= minStock) return `<span class="badge badge-warning">${qty} (bas)</span>`;
-    return `<span class="badge badge-success">${qty}</span>`;
+    if (qty <= minStock) return `<span class="badge badge-warning">${displayStr} (bas)</span>`;
+    return `<span class="badge badge-success">${displayStr}</span>`;
   },
 
   toast(message, type = 'info', duration = 3500) {

@@ -48,6 +48,16 @@ CREATE TABLE products (
   unit                    TEXT DEFAULT 'boîte',
   status                  TEXT DEFAULT 'active',
   "expiryDate"            TEXT,
+  -- ═══ NOTICE MÉDICALE (Feature 4) ═══
+  "dosageInstructions"    TEXT,
+  "precautions"           TEXT,
+  "contraindications"     TEXT,
+  "sideEffects"           TEXT,
+  "medicalNotice"         TEXT,
+  -- ═══ DÉCONDITIONNEMENT (Feature 1) ═══
+  "unitsPerBox"           INTEGER DEFAULT 1,
+  "pricePerUnit"          NUMERIC DEFAULT 0,
+  "allowUnitSale"         BOOLEAN DEFAULT false,
   "updatedAt"             BIGINT
 );
 
@@ -148,6 +158,7 @@ CREATE TABLE patients (
   dob         TEXT,
   allergies   TEXT,
   address     TEXT,
+  assurances  JSONB, -- Tableau d'assurances [{"name": "CNSS", "coverage": 80, "ref": "123"}]
   "updatedAt" BIGINT
 );
 
@@ -190,6 +201,7 @@ CREATE TABLE sales (
   "returnStatus"    TEXT,
   "lastReturnId"    BIGINT,
   "lastReturnDate"  TEXT,
+  "insuranceDetails" JSONB, -- Détails de prise en charge multi-assurances
   "updatedAt"       BIGINT
 );
 

@@ -210,6 +210,9 @@ async function viewSupplierDetail(supId) {
   ]);
   if (!sup) return;
   const sortedOrders = orders.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const complaints = sup.complaints || [];
+  const openComplaints = complaints.filter(c => c.status === 'open').length;
+
   UI.modal(`<i data-lucide="factory" class="modal-icon-inline"></i> ${sup.name}`, `
     <div class="supplier-detail">
       <div class="rx-detail-grid" style="margin-bottom:16px">
@@ -227,6 +230,7 @@ async function viewSupplierDetail(supId) {
           <div class="detail-row"><span>Total achats</span><span><strong>${UI.formatCurrency(orders.reduce((a, o) => a + (o.totalAmount || 0), 0))}</strong></span></div>
           <div class="detail-row"><span>Dernière commande</span><span>${orders[0]?.date ? UI.formatDate(orders[0].date) : '—'}</span></div>
           <div class="detail-row"><span>Statut</span><span><span class="badge badge-${sup.status === 'active' ? 'success' : 'neutral'}">${sup.status}</span></span></div>
+          <div class="detail-row"><span>Réclamations ouvertes</span><span>${openComplaints > 0 ? `<span class="badge badge-danger">${openComplaints}</span>` : '<span class="text-muted">0</span>'}</span></div>
         </div>
       </div>
       <h4 style="margin-bottom:8px">Historique des commandes</h4>
@@ -240,6 +244,33 @@ async function viewSupplierDetail(supId) {
             <td><span class="badge badge-${o.status === 'received' ? 'success' : o.status === 'sent' ? 'info' : o.status === 'cancelled' ? 'danger' : 'warning'}">${({pending:'Brouillon',sent:'Envoyée',partial:'Partielle',received:'Reçue',cancelled:'Annulée'})[o.status] || o.status}</span></td>
           </tr>`).join('')}</tbody>
         </table>`}
+
+      <!-- RÉCLAMATIONS -->
+      <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:16px">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px">
+          <h4 style="margin:0"><i data-lucide="alert-circle"></i> Réclamations</h4>
+          <button class="btn btn-sm btn-danger" onclick="showAddComplaint(${supId})"><i data-lucide="plus"></i> Nouvelle réclamation</button>
+        </div>
+        <div id="complaints-list-${supId}">
+          ${complaints.length === 0 ? '<p class="text-muted" style="font-size:13px">Aucune réclamation enregistrée pour ce fournisseur.</p>' :
+          complaints.sort((a, b) => new Date(b.date) - new Date(a.date)).map((c, idx) => `
+            <div class="complaint-card">
+              <div class="complaint-header">
+                <span class="complaint-type ${c.type}">${({quality:'Qualité', delivery:'Livraison', missing:'Manquant', other:'Autre'})[c.type] || c.type}</span>
+                <span class="complaint-date">${UI.formatDate(c.date)}</span>
+              </div>
+              <div class="complaint-desc">${c.description}</div>
+              ${c.orderRef ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Réf. commande : <code>${c.orderRef}</code></div>` : ''}
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
+                <span class="complaint-status ${c.status}">
+                  ${c.status === 'open' ? '⏳ Ouverte' : '✅ Résolue'}
+                </span>
+                ${c.status === 'open' ? `<button class="btn btn-xs btn-success" onclick="resolveComplaint(${supId}, ${idx})"><i data-lucide="check"></i> Résoudre</button>` : ''}
+              </div>
+              ${c.resolution ? `<div style="margin-top:8px; padding:8px 10px; background:rgba(46,175,125,0.06); border-radius:6px; font-size:12px; color:var(--text-muted)"><strong>Résolution :</strong> ${c.resolution}</div>` : ''}
+            </div>`).join('')}
+        </div>
+      </div>
     </div>
   `, { size: 'large' });
   if (window.lucide) lucide.createIcons();
@@ -692,6 +723,84 @@ async function viewOrder(orderId) {
   if (window.lucide) lucide.createIcons();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// RÉCLAMATIONS FOURNISSEUR
+// ═══════════════════════════════════════════════════════════════
+function showAddComplaint(supId) {
+  UI.modal('<i data-lucide="alert-circle" class="modal-icon-inline"></i> Nouvelle Réclamation', `
+    <form id="complaint-form" class="form-grid">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type de réclamation *</label>
+          <select name="type" class="form-control" required>
+            <option value="delivery">Erreur de livraison</option>
+            <option value="quality">Problème de qualité</option>
+            <option value="missing">Produit manquant</option>
+            <option value="other">Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Réf. commande (optionnel)</label>
+          <input type="text" name="orderRef" class="form-control" placeholder="BC-2026-XXXXX">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description détaillée *</label>
+        <textarea name="description" class="form-control" rows="3" required placeholder="Décrivez le problème rencontré..."></textarea>
+      </div>
+    </form>
+  `, {
+    footer: `
+      <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+      <button class="btn btn-danger" onclick="submitComplaint(${supId})"><i data-lucide="alert-circle"></i> Enregistrer</button>
+    `
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+async function submitComplaint(supId) {
+  const form = document.getElementById('complaint-form');
+  if (!form?.checkValidity()) { form?.reportValidity(); return; }
+  const data = Object.fromEntries(new FormData(form));
+  const sup = await DB.dbGet('suppliers', supId);
+  if (!sup) return;
+
+  const complaint = {
+    type: data.type,
+    description: data.description,
+    orderRef: data.orderRef || null,
+    date: new Date().toISOString().split('T')[0],
+    status: 'open',
+    resolution: null,
+    createdBy: DB.AppState.currentUser?.name || 'Inconnu',
+  };
+
+  const complaints = sup.complaints || [];
+  complaints.push(complaint);
+  await DB.dbPut('suppliers', { ...sup, complaints });
+  await DB.writeAudit('ADD_COMPLAINT', 'suppliers', supId, { type: complaint.type, description: complaint.description });
+  UI.closeModal();
+  UI.toast('Réclamation enregistrée', 'success');
+  viewSupplierDetail(supId);
+}
+
+async function resolveComplaint(supId, complaintIdx) {
+  const resolution = prompt('Comment ce problème a-t-il été résolu ?');
+  if (resolution === null) return;
+  const sup = await DB.dbGet('suppliers', supId);
+  if (!sup || !sup.complaints?.[complaintIdx]) return;
+
+  sup.complaints[complaintIdx].status = 'resolved';
+  sup.complaints[complaintIdx].resolution = resolution || 'Résolu sans commentaire';
+  sup.complaints[complaintIdx].resolvedAt = new Date().toISOString();
+  sup.complaints[complaintIdx].resolvedBy = DB.AppState.currentUser?.name || 'Inconnu';
+
+  await DB.dbPut('suppliers', sup);
+  await DB.writeAudit('RESOLVE_COMPLAINT', 'suppliers', supId, { idx: complaintIdx });
+  UI.toast('Réclamation marquée comme résolue', 'success');
+  viewSupplierDetail(supId);
+}
+
 window.showAddSupplier = showAddSupplier;
 window.submitSupplier = submitSupplier;
 window.viewSupplierDetail = viewSupplierDetail;
@@ -706,6 +815,10 @@ window.sendOrder = sendOrder;
 window.receiveOrder = receiveOrder;
 window.confirmReceiveOrder = confirmReceiveOrder;
 window.viewOrder = viewOrder;
+window.showAddComplaint = showAddComplaint;
+window.submitComplaint = submitComplaint;
+window.resolveComplaint = resolveComplaint;
 
 Router.register('suppliers', renderSuppliers);
 Router.register('purchase-orders', renderPurchaseOrders);
+

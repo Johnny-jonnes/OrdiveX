@@ -9653,3 +9653,156 @@ kbd {
     flex-direction: column;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   SUPPORT CHAT FAB — WhatsApp Widget Flottant
+   ═══════════════════════════════════════════════════════════════ */
+#support-chat-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9000;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.35), 0 2px 8px rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(.4,0,.2,1);
+  text-decoration: none;
+}
+
+#support-chat-fab:hover {
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 8px 28px rgba(37, 211, 102, 0.45), 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#support-chat-fab:active {
+  transform: scale(0.95);
+}
+
+#support-chat-fab .fab-label {
+  position: absolute;
+  right: 64px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateX(8px);
+  transition: all 0.25s ease;
+  pointer-events: none;
+}
+
+#support-chat-fab:hover .fab-label {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+#support-chat-fab .fab-pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(37, 211, 102, 0.5);
+  animation: fab-pulse-ring 2.5s ease-out infinite;
+}
+
+@keyframes fab-pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+/* Masquer le FAB sur la page login et onboarding */
+body:has(#login-page) #support-chat-fab,
+body:has(#onboarding-container) #support-chat-fab {
+  display: none;
+}
+
+/* ═══ RÉCLAMATIONS FOURNISSEUR ═══ */
+.complaint-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: all var(--transition);
+}
+
+.complaint-card:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow);
+}
+
+.complaint-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.complaint-type {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.complaint-type.quality { background: rgba(214, 59, 59, 0.1); color: var(--danger); }
+.complaint-type.delivery { background: rgba(232, 145, 58, 0.1); color: var(--warning); }
+.complaint-type.missing { background: rgba(74, 159, 217, 0.1); color: var(--info); }
+.complaint-type.other { background: rgba(100, 116, 139, 0.1); color: var(--text-muted); }
+
+.complaint-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.complaint-desc {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.complaint-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.complaint-status.open { background: rgba(232, 145, 58, 0.1); color: var(--warning); }
+.complaint-status.resolved { background: rgba(46, 175, 125, 0.1); color: var(--success); }
+
+/* Mobile — repositionner le FAB au-dessus de la tabbar */
+@media (max-width: 767px) {
+  #support-chat-fab {
+    bottom: 80px;
+    right: 16px;
+    width: 50px;
+    height: 50px;
+  }
+
+  #support-chat-fab svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  #support-chat-fab .fab-label {
+    display: none;
+  }
+}

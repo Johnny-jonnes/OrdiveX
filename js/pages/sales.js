@@ -167,8 +167,10 @@ function renderSalesTable(data) {
     {
       label: 'Actions', render: r => {
         const isPending = r.status === 'pending' && ['credit', 'assurance'].includes(r.paymentMethod);
+        const canSms = r.paymentMethod === 'credit' && r.status === 'pending' && r.patientId;
         return `
           <button class="btn btn-xs btn-primary" onclick="viewSaleDetail(${r.id})">Détail</button>
+          ${canSms ? `<button class="btn btn-xs" style="margin-left:4px;background:var(--info);color:white;border:none" onclick="openSmsModal(${r.patientId})" title="Envoyer rappel SMS"><i data-lucide="message-square" style="width:12px;height:12px"></i></button>` : ''}
           ${isPending ? `<button class="btn btn-xs btn-success" style="margin-left:4px" onclick="settleDebt(${r.id})"><i data-lucide="check-circle" style="width:12px;height:12px"></i> Encaisser</button>` : ''}
         `;
       }
@@ -197,6 +199,26 @@ async function viewSaleDetail(saleId) {
         <span><i data-lucide="user-check"></i> Vendeur: <strong>${sale.sellerName || (sale.userId ? 'Utilisateur #' + sale.userId : '—')}</strong></span>
         <span>${UI.paymentMethodBadge(sale.paymentMethod)}</span>
       </div>
+      
+      ${sale.insuranceDetails && sale.insuranceDetails.length > 0 ? `
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px; margin-top:12px; font-size:12px;">
+          <h5 style="margin:0 0 8px 0; font-size:12px; color:var(--text)"><i data-lucide="shield"></i> Prise(s) en charge</h5>
+          <div style="display:grid; gap:6px;">
+            ${sale.insuranceDetails.map(ins => `
+              <div style="display:flex; justify-content:space-between">
+                <span>${ins.name} ${ins.ref ? `<span style="color:var(--text-muted)">(${ins.ref})</span>` : ''}</span>
+                <strong style="color:#1A56DB">${UI.formatCurrency(ins.amount)}</strong>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : (sale.paymentMethod === 'assurance' && sale.assuranceName ? `
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px; margin-top:12px; font-size:12px; display:flex; justify-content:space-between">
+          <span><i data-lucide="shield"></i> <strong>${sale.assuranceName}</strong> ${sale.assuranceRef ? `(${sale.assuranceRef})` : ''}</span>
+          <strong style="color:#1A56DB">${UI.formatCurrency(sale.assuranceAmount)}</strong>
+        </div>
+      ` : '')}
+
       <table class="data-table" style="margin-top:12px">
         <thead><tr><th>Médicament</th><th>Qté</th><th>Prix unit.</th><th>Total</th></tr></thead>
         <tbody>

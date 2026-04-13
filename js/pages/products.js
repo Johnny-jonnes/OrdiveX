@@ -86,6 +86,7 @@ async function viewProduct(id) {
   const p = await DB.dbGet('products', id);
   if (!p) return;
   const margin = p.salePrice && p.purchasePrice ? ((p.salePrice - p.purchasePrice) / p.salePrice * 100).toFixed(1) : 0;
+  const hasNotice = p.dosageInstructions || p.precautions || p.contraindications || p.sideEffects || p.medicalNotice;
   UI.modal(`<i data-lucide="pill" class="modal-icon-inline"></i> ${p.name}`, `
     <div class="product-detail-grid">
       <div class="detail-row"><span class="detail-label">Code</span><span><code>${p.code}</code></span></div>
@@ -100,7 +101,25 @@ async function viewProduct(id) {
       <div class="detail-row"><span class="detail-label">Marge</span><span class="font-bold">${margin}%</span></div>
       <div class="detail-row"><span class="detail-label">Date de Péremption</span><span>${p.expiryDate ? (UI.expiryBadge ? UI.expiryBadge(p.expiryDate) : p.expiryDate) : '<span class="text-muted">Non renseignée</span>'}</span></div>
       <div class="detail-row"><span class="detail-label">Seuil minimum</span><span>${p.minStock} unités</span></div>
+      ${p.allowUnitSale ? `
+      <div class="detail-row" style="grid-column:1/-1; background:var(--primary-light,rgba(46,134,193,0.1)); padding:8px 12px; border-radius:6px; margin-top:8px;">
+        <div style="display:flex; align-items:center; gap:6px; font-weight:600; color:var(--primary); margin-bottom:4px"><i data-lucide="package-open" style="width:16px;height:16px"></i> Vente à l'unité (Déconditionnement)</div>
+        <div style="display:flex; justify-content:space-between; font-size:13px">
+          <span>Boîte de <strong>${p.unitsPerBox}</strong> unités</span>
+          <span>Prix unitaire : <strong>${UI.formatCurrency(p.pricePerUnit)}</strong></span>
+        </div>
+      </div>` : ''}
     </div>
+    ${hasNotice ? `
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border)">
+        <h4 style="margin-bottom:12px; display:flex; align-items:center; gap:8px; font-size:14px"><i data-lucide="file-text"></i> Notice Médicale</h4>
+        ${p.dosageInstructions ? `<div style="margin-bottom:12px"><strong style="font-size:12px;color:var(--primary)">📋 Posologie</strong><p style="margin:4px 0 0;font-size:13px;color:var(--text)">${p.dosageInstructions}</p></div>` : ''}
+        ${p.precautions ? `<div style="margin-bottom:12px; padding:10px; background:rgba(232,145,58,0.08); border-radius:8px; border-left:3px solid var(--warning)"><strong style="font-size:12px;color:var(--warning)">⚠️ Précautions</strong><p style="margin:4px 0 0;font-size:13px">${p.precautions}</p></div>` : ''}
+        ${p.contraindications ? `<div style="margin-bottom:12px; padding:10px; background:rgba(214,59,59,0.08); border-radius:8px; border-left:3px solid var(--danger)"><strong style="font-size:12px;color:var(--danger)">🚫 Contre-indications</strong><p style="margin:4px 0 0;font-size:13px">${p.contraindications}</p></div>` : ''}
+        ${p.sideEffects ? `<div style="margin-bottom:12px"><strong style="font-size:12px;color:var(--text-muted)">💊 Effets indésirables</strong><p style="margin:4px 0 0;font-size:13px;color:var(--text)">${p.sideEffects}</p></div>` : ''}
+        ${p.medicalNotice ? `<div style="margin-bottom:12px"><strong style="font-size:12px;color:var(--info)">📄 Notice complète</strong><p style="margin:4px 0 0;font-size:13px;color:var(--text);white-space:pre-line">${p.medicalNotice}</p></div>` : ''}
+      </div>
+    ` : '<div style="margin-top:16px;padding:12px;background:var(--surface-2);border-radius:8px;text-align:center;font-size:12px;color:var(--text-muted)"><i data-lucide="info" style="width:14px;height:14px;vertical-align:text-bottom"></i> Aucune notice médicale renseignée</div>'}
   `, { size: 'medium' });
 }
 
@@ -169,12 +188,33 @@ async function showAddProduct() {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Seuil minimum</label>
+          <label>Seuil minimum (boîtes/unités brutes)</label>
           <input type="number" name="minStock" class="form-control" value="10" min="0">
         </div>
         <div class="form-group">
-          <label>Unité de vente</label>
+          <label>Type de produit</label>
           <input type="text" name="unit" class="form-control" value="boîte">
+        </div>
+      </div>
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+        <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="package-open"></i> Déconditionnement (Vente à l'unité)</h4>
+        <div class="form-group">
+           <label style="display:flex; align-items:center; gap:8px">
+             <input type="checkbox" name="allowUnitSale" id="allowUnitSaleCb" value="1" onchange="document.getElementById('unit-sale-group').style.display = this.checked ? 'block' : 'none'">
+             <span>Autoriser la vente à l'unité (fractionner la boîte)</span>
+           </label>
+        </div>
+        <div id="unit-sale-group" style="display:none">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre d'unités par boîte (ex: 30 comprimés)</label>
+              <input type="number" name="unitsPerBox" class="form-control" value="1" min="1" oninput="calcUnitPrice('product-form')">
+            </div>
+            <div class="form-group">
+              <label>Prix de vente par unité (GNF)</label>
+              <input type="number" name="pricePerUnit" class="form-control" value="0" min="0">
+            </div>
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -201,6 +241,29 @@ async function showAddProduct() {
         </div>
         <div class="form-group"></div>
       </div>
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+        <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="file-text"></i> Notice Médicale</h4>
+        <div class="form-group">
+          <label>Posologie recommandée</label>
+          <textarea name="dosageInstructions" class="form-control" rows="2" placeholder="Ex: Adulte : 1 comprimé 3 fois par jour, pendant 5 jours"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Précautions d'emploi</label>
+          <textarea name="precautions" class="form-control" rows="2" placeholder="Ex: Ne pas dépasser la dose prescrite. Prudence en cas d'insuffisance hépatique."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Contre-indications</label>
+          <textarea name="contraindications" class="form-control" rows="2" placeholder="Ex: Allergie connue au paracétamol. Insuffisance hépatique sévère."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Effets indésirables</label>
+          <textarea name="sideEffects" class="form-control" rows="2" placeholder="Ex: Rarement : réactions cutanées, troubles digestifs."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Notice complète / RCP</label>
+          <textarea name="medicalNotice" class="form-control" rows="3" placeholder="Résumé des Caractéristiques du Produit (texte libre)"></textarea>
+        </div>
+      </div>
     </form>
   `, {
     footer: `
@@ -220,6 +283,9 @@ async function submitProduct() {
   data.salePrice = parseFloat(data.salePrice);
   data.purchasePrice = parseFloat(data.purchasePrice || 0);
   data.minStock = parseInt(data.minStock || 10);
+  data.allowUnitSale = !!data.allowUnitSale;
+  data.unitsPerBox = parseInt(data.unitsPerBox || 1);
+  data.pricePerUnit = parseFloat(data.pricePerUnit || 0);
   data.expiryDate = data.expiryDate || null;
   data.status = 'active';
   try {
@@ -297,12 +363,33 @@ async function editProductForm(id) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Seuil minimum</label>
+          <label>Seuil minimum (boîtes)</label>
           <input type="number" name="minStock" class="form-control" value="${p.minStock || 10}" min="0">
         </div>
         <div class="form-group">
-          <label>Unité de vente</label>
+          <label>Type de produit</label>
           <input type="text" name="unit" class="form-control" value="${p.unit || 'boîte'}">
+        </div>
+      </div>
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+        <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="package-open"></i> Déconditionnement (Vente à l'unité)</h4>
+        <div class="form-group">
+           <label style="display:flex; align-items:center; gap:8px">
+             <input type="checkbox" name="allowUnitSale" id="allowUnitSaleCb_edit" value="1" ${p.allowUnitSale ? 'checked' : ''} onchange="document.getElementById('edit-unit-sale-group').style.display = this.checked ? 'block' : 'none'">
+             <span>Autoriser la vente à l'unité (fractionner la boîte)</span>
+           </label>
+        </div>
+        <div id="edit-unit-sale-group" style="display:${p.allowUnitSale ? 'block' : 'none'}">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nombre d'unités par boîte (ex: 30 comprimés)</label>
+              <input type="number" name="unitsPerBox" class="form-control" value="${p.unitsPerBox || 1}" min="1" oninput="calcUnitPrice('edit-product-form')">
+            </div>
+            <div class="form-group">
+              <label>Prix de vente par unité (GNF)</label>
+              <input type="number" name="pricePerUnit" class="form-control" value="${p.pricePerUnit || 0}" min="0">
+            </div>
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -335,6 +422,29 @@ async function editProductForm(id) {
           </select>
         </div>
       </div>
+      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+        <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="file-text"></i> Notice Médicale</h4>
+        <div class="form-group">
+          <label>Posologie recommandée</label>
+          <textarea name="dosageInstructions" class="form-control" rows="2">${p.dosageInstructions || ''}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Précautions d'emploi</label>
+          <textarea name="precautions" class="form-control" rows="2">${p.precautions || ''}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Contre-indications</label>
+          <textarea name="contraindications" class="form-control" rows="2">${p.contraindications || ''}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Effets indésirables</label>
+          <textarea name="sideEffects" class="form-control" rows="2">${p.sideEffects || ''}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Notice complète / RCP</label>
+          <textarea name="medicalNotice" class="form-control" rows="3">${p.medicalNotice || ''}</textarea>
+        </div>
+      </div>
     </form>
   `, {
     footer: `
@@ -365,9 +475,17 @@ async function updateProduct(id) {
     salePrice: parseFloat(data.salePrice),
     purchasePrice: parseFloat(data.purchasePrice || 0),
     minStock: parseInt(data.minStock || 10),
+    allowUnitSale: !!data.allowUnitSale,
+    unitsPerBox: parseInt(data.unitsPerBox || 1),
+    pricePerUnit: parseFloat(data.pricePerUnit || 0),
     unit: data.unit || 'boîte',
     status: data.status || 'active',
     expiryDate: data.expiryDate || null,
+    dosageInstructions: data.dosageInstructions || null,
+    precautions: data.precautions || null,
+    contraindications: data.contraindications || null,
+    sideEffects: data.sideEffects || null,
+    medicalNotice: data.medicalNotice || null,
   };
   try {
     await DB.dbPut('products', updated);
@@ -604,7 +722,20 @@ function downloadImportTemplate(e) {
   a.click();
 }
 
+function calcUnitPrice(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+  const salePrice = parseFloat(form.salePrice.value) || 0;
+  const unitsPerBox = parseInt(form.unitsPerBox.value) || 1;
+  const allowUnitSaleCb = form.querySelector('[name="allowUnitSale"]');
+  if (allowUnitSaleCb && allowUnitSaleCb.checked && unitsPerBox > 1) {
+     const pricePerUnit = Math.ceil(salePrice / unitsPerBox);
+     form.pricePerUnit.value = pricePerUnit;
+  }
+}
+
 window.showImportModal = showImportModal;
 window.downloadImportTemplate = downloadImportTemplate;
+window.calcUnitPrice = calcUnitPrice;
 
 Router.register('products', renderProducts);

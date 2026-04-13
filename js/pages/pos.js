@@ -390,11 +390,13 @@ function renderFullPOSUI(container) {
           </div>
 
           <div id="pay-assurance" class="pay-detail" style="display:none">
-            <label class="pay-detail-label">Organisme & Prise en charge</label>
-            <input id="assur-name" type="text" class="pay-input" placeholder="Nom de l'assurance / Entreprise" style="margin-bottom:8px">
-            <input id="assur-ref" type="text" class="pay-input" placeholder="Réf. Prise en charge" style="margin-bottom:8px">
-            <div style="margin-bottom:6px;font-size:11px;font-weight:700;color:#1A56DB">🛡️ Montant pris en charge par l'entreprise :</div>
-            <input id="assur-amount" type="number" class="pay-input" placeholder="Part couverte par l'assurance (pas le total)" oninput="calcAssurance()" style="border-color:#1A56DB">
+            <div id="assur-dynamic-list">
+              <label class="pay-detail-label">Organisme & Prise en charge</label>
+              <input id="assur-name" type="text" class="pay-input assur-name-field" placeholder="Nom de l'assurance / Entreprise" style="margin-bottom:8px">
+              <input id="assur-ref" type="text" class="pay-input assur-ref-field" placeholder="Réf. Prise en charge" style="margin-bottom:8px">
+              <div style="margin-bottom:6px;font-size:11px;font-weight:700;color:#1A56DB">🛡️ Montant pris en charge par l'entreprise :</div>
+              <input id="assur-amount" type="number" class="pay-input assur-amount-field" placeholder="Part couverte par l'assurance (pas le total)" oninput="calcAssurance()" style="border-color:#1A56DB">
+            </div>
             
             <div style="margin:15px 0 10px 0; font-weight:700; color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.5px">👤 Règlement Patient (Ticket modérateur)</div>
             <div style="background:#E8F8EF; padding:12px; border-radius:8px; border:1.5px solid #C3E6CB">
@@ -601,10 +603,13 @@ function refreshGrid() {
       <div class="prod-dci">${p.dci || p.brand || ''}</div>
       ${marginInfo}
       <div class="prod-foot">
-        <span class="prod-price">${UI.formatCurrency(p.salePrice)}</span>
-        <span class="prod-stock ${rupt ? 's-rupt' : low ? 's-low' : 's-ok'}">${rupt ? (alts.length ? '<i data-lucide="repeat"></i> Alt.' : '<i data-lucide="x-circle"></i> Rupture') : (low ? '<i data-lucide="alert-triangle"></i> ' : '') + q + ' u.'}</span>
+        <span class="prod-price">${UI.formatCurrency(p.salePrice)} <small style="font-size:10px; color:var(--text-muted)">/ bte</small></span>
+        <span class="prod-stock ${rupt ? 's-rupt' : low ? 's-low' : 's-ok'}">${rupt ? (alts.length ? '<i data-lucide="repeat"></i> Alt.' : '<i data-lucide="x-circle"></i> Rupture') : (low ? '<i data-lucide="alert-triangle"></i> ' : '') + ((p.allowUnitSale && p.unitsPerBox > 1) ? Math.floor(q / p.unitsPerBox) + ' bt ' + (q % p.unitsPerBox) + ' u' : q + ' btes')}</span>
       </div>
-      ${!rupt ? '<div class="prod-add-hover"><i data-lucide="plus-circle"></i> Ajouter</div>' : ''}
+      <div style="display:flex; justify-content:space-between; margin-top:8px;">
+        ${!rupt ? `<button class="btn btn-xs btn-primary" style="flex:1; margin-right:4px;" onclick="addToCart(${p.id}, 'box')"><i data-lucide="package"></i> Boîte</button>` : ''}
+        ${!rupt && p.allowUnitSale ? `<button class="btn btn-xs btn-secondary" style="flex:1;" onclick="addToCart(${p.id}, 'unit')"><i data-lucide="pill"></i> Unité</button>` : ''}
+      </div>
     </div>`;
   }).join('');
 
@@ -618,14 +623,20 @@ function refreshGrid() {
 // ═══════════════════════════════════════════════════════════════════
 // PANIER
 // ═══════════════════════════════════════════════════════════════════
-function addToCart(productId) {
+function addToCart(productId, mode = 'box') {
   const p = posProducts.find(x => x.id === productId);
   if (!p) return;
   const avail = posStock[productId] || 0;
-  const existing = posCart.find(c => c.productId === productId);
-  if ((existing?.qty || 0) >= avail) {
-    UI.toast(`Stock insuffisant — ${avail} unité(s) disponible(s)`, 'warning'); return;
+  const existing = posCart.find(c => c.productId === productId && (c.saleMode || 'box') === mode);
+  
+  // Calcul unités requises
+  const unitFactor = (mode === 'box' && p.allowUnitSale && p.unitsPerBox) ? p.unitsPerBox : 1;
+  const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => sum + (c.qty * ((c.saleMode === 'box' && p.allowUnitSale && p.unitsPerBox) ? p.unitsPerBox : 1)), 0);
+  
+  if ((currentlyInCart + unitFactor) > avail) {
+    UI.toast(`Stock insuffisant (${Math.floor(avail/(p.unitsPerBox||1))} boîte(s) et ${avail%(p.unitsPerBox||1)} u. dispo)`, 'warning'); return;
   }
+  
   // Alerte allergie patient
   if (posCurrentPatient?.allergies) {
     const txt = (p.name + ' ' + (p.dci || '')).toLowerCase();
@@ -645,42 +656,63 @@ function addToCart(productId) {
   const fefoLot = getFEFOLot(productId);
 
   if (existing) { existing.qty++; existing.total = existing.qty * existing.unitPrice; }
-  else posCart.push({
-    productId, name: p.name, dci: p.dci || '', dosage: p.dosage || '',
-    unitPrice: p.salePrice, purchasePrice: p.purchasePrice || 0,
-    qty: 1, total: p.salePrice, requiresPrescription: !!p.requiresPrescription,
-    isControlled: !!p.isControlled, controlledClass: p.controlledClass || null,
-    fefoLotNumber: fefoLot?.lotNumber || null, fefoLotId: fefoLot?.id || null,
-  });
+  else {
+    const price = mode === 'unit' ? (p.pricePerUnit || 0) : p.salePrice;
+    posCart.push({
+      productId, name: p.name, dci: p.dci || '', dosage: p.dosage || '',
+      unitPrice: price, purchasePrice: p.purchasePrice || 0,
+      qty: 1, total: price, requiresPrescription: !!p.requiresPrescription,
+      isControlled: !!p.isControlled, controlledClass: p.controlledClass || null,
+      fefoLotNumber: fefoLot?.lotNumber || null, fefoLotId: fefoLot?.id || null,
+      saleMode: mode
+    });
+  }
   // Feedback visuel + sonore
-  posAddFeedback(p.name);
+  posAddFeedback(p.name + (mode === 'unit' ? ' (Unité)' : ''));
   refreshCartUI(); refreshGrid();
 }
 
-function changeQty(productId, delta) {
-  const item = posCart.find(c => c.productId === productId);
+function checkStockCart(productId) {
+  const p = posProducts.find(x => x.id === productId);
+  const avail = posStock[productId] || 0;
+  const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => sum + (c.qty * ((c.saleMode === 'box' && p?.allowUnitSale && p?.unitsPerBox) ? p.unitsPerBox : 1)), 0);
+  return currentlyInCart <= avail;
+}
+
+function changeQty(productId, mode, delta) {
+  const item = posCart.find(c => c.productId === productId && c.saleMode === mode);
   if (!item) return;
   const nq = item.qty + delta;
-  if (nq <= 0) posCart = posCart.filter(c => c.productId !== productId);
-  else {
-    if (nq > (posStock[productId] || 0)) { UI.toast('Stock insuffisant', 'warning'); return; }
-    item.qty = nq; item.total = nq * item.unitPrice;
+  if (nq <= 0) {
+    posCart = posCart.filter(c => !(c.productId === productId && c.saleMode === mode));
+  } else {
+    item.qty = nq; 
+    if (!checkStockCart(productId)) { 
+      item.qty -= delta; // rollback
+      UI.toast('Stock insuffisant', 'warning'); return; 
+    }
+    item.total = nq * item.unitPrice;
   }
   refreshCartUI(); refreshGrid();
 }
 
-function setQtyDirect(productId, val) {
+function setQtyDirect(productId, mode, val) {
   const nq = parseInt(val);
   if (isNaN(nq) || nq < 1) return;
-  const item = posCart.find(c => c.productId === productId);
+  const item = posCart.find(c => c.productId === productId && c.saleMode === mode);
   if (!item) return;
-  if (nq > (posStock[productId] || 0)) { UI.toast('Stock insuffisant', 'warning'); return; }
-  item.qty = nq; item.total = nq * item.unitPrice;
+  const oldQty = item.qty;
+  item.qty = nq;
+  if (!checkStockCart(productId)) { 
+    item.qty = oldQty; // rollback
+    UI.toast('Stock insuffisant', 'warning'); return; 
+  }
+  item.total = nq * item.unitPrice;
   refreshCartUI(); refreshGrid();
 }
 
-function removeItem(productId) {
-  posCart = posCart.filter(c => c.productId !== productId);
+function removeItem(productId, mode) {
+  posCart = posCart.filter(c => !(c.productId === productId && c.saleMode === mode));
   refreshCartUI(); refreshGrid();
 }
 
@@ -718,18 +750,19 @@ function refreshCartUI() {
       <div class="cart-line-info">
         <div class="cart-line-name">${item.name}${item.requiresPrescription ? ' <span class="tag-rx-xs">Rx</span>' : ''}</div>
         ${item.dci ? `<div class="cart-line-dci">${item.dci}${item.dosage ? ' · ' + item.dosage : ''}</div>` : ''}
-        <div class="cart-line-pu">${UI.formatCurrency(item.unitPrice)} / unité</div>
+        <div class="cart-line-pu">${UI.formatCurrency(item.unitPrice)} / ${item.saleMode === 'unit' ? 'unité' : 'boîte'}</div>
       </div>
       <div class="cart-line-qty">
-        <button class="qty-ctrl" onclick="changeQty(${item.productId},-1)">−</button>
+        <button class="qty-ctrl" onclick="changeQty(${item.productId}, '${item.saleMode}', -1)">−</button>
         <input type="number" class="qty-direct" value="${item.qty}" min="1"
-          onchange="setQtyDirect(${item.productId}, this.value)"
+          onchange="setQtyDirect(${item.productId}, '${item.saleMode}', this.value)"
           onfocus="this.select()">
-        <button class="qty-ctrl" onclick="changeQty(${item.productId},+1)">+</button>
+        <button class="qty-ctrl" onclick="changeQty(${item.productId}, '${item.saleMode}', +1)">+</button>
       </div>
       <div class="cart-line-right">
         <div class="cart-line-total">${UI.formatCurrency(item.total)}</div>
-        <button class="cart-line-del" onclick="removeItem(${item.productId})" title="Retirer"><i data-lucide="trash-2"></i></button>
+        <button class="cart-notice-btn" onclick="showProductNotice(${item.productId})" title="Notice médicale" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 6px;cursor:pointer;color:var(--info);font-size:12px;transition:all 0.2s"><i data-lucide="info" style="width:14px;height:14px"></i></button>
+        <button class="cart-line-del" onclick="removeItem(${item.productId}, '${item.saleMode}')" title="Retirer"><i data-lucide="trash-2"></i></button>
       </div>
     </div>`).join('');
 
@@ -827,6 +860,7 @@ function selectPay(btn) {
     onCombinedChange();
   }
   if (m === 'assurance') {
+    renderDynamicAssurances();
     calcAssurance();
     if (posCurrentPatient?.phone) {
         const ph = document.getElementById('assur-patient-phone');
@@ -834,6 +868,43 @@ function selectPay(btn) {
     }
   }
 }
+
+function renderDynamicAssurances() {
+  const container = document.getElementById('assur-dynamic-list');
+  if (!container) return;
+  
+  if (posCurrentPatient && posCurrentPatient.assurances && posCurrentPatient.assurances.length > 0) {
+    const total = getTotal();
+    let html = '';
+    posCurrentPatient.assurances.forEach((assur, idx) => {
+      const covAmt = total * (assur.coverage / 100);
+      html += `
+        <div class="dynamic-assur-block" style="padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; background:var(--surface)">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px">
+            <strong><i data-lucide="shield" style="width:14px;height:14px;margin-right:4px"></i>${assur.name} (${assur.coverage}%)</strong>
+            <span style="color:var(--text-muted); font-size:11px">${assur.ref || 'Sans réf.'}</span>
+          </div>
+          <input type="hidden" class="assur-name-field" value="${assur.name}">
+          <input type="hidden" class="assur-ref-field" value="${assur.ref}">
+          <div style="font-size:11px;font-weight:700;color:#1A56DB; margin-bottom:6px">🛡️ Part prise en charge :</div>
+          <input type="number" class="pay-input assur-amount-field" value="${covAmt}" oninput="calcAssurance()" style="border-color:#1A56DB">
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+  } else {
+    // Default single assurance manual form
+    container.innerHTML = `
+      <label class="pay-detail-label">Organisme & Prise en charge</label>
+      <input id="assur-name" type="text" class="pay-input assur-name-field" placeholder="Nom de l'assurance / Entreprise" style="margin-bottom:8px">
+      <input id="assur-ref" type="text" class="pay-input assur-ref-field" placeholder="Réf. Prise en charge" style="margin-bottom:8px">
+      <div style="margin-bottom:6px;font-size:11px;font-weight:700;color:#1A56DB">🛡️ Montant pris en charge par l'entreprise :</div>
+      <input id="assur-amount" type="number" class="pay-input assur-amount-field" placeholder="Part couverte par l'assurance (pas le total)" oninput="calcAssurance()" style="border-color:#1A56DB">
+    `;
+  }
+}
+
 
 // ═══════════════════════════════════════════════════════════════════
 // PAIEMENT COMBINÉ — Split Payment (2 modes max)
@@ -884,7 +955,13 @@ function onCombinedChange() {
 // ═══════════════════════════════════════════════════════════════════
 function calcAssurance() {
   const total = getTotal();
-  const assurAmt = parseFloat(document.getElementById('assur-amount')?.value || 0);
+  
+  // Aggregate all assurance amounts
+  let assurAmt = 0;
+  document.querySelectorAll('.assur-amount-field').forEach(input => {
+    assurAmt += parseFloat(input.value || 0);
+  });
+  
   const patientPart = Math.max(0, total - assurAmt);
   
   const elPatientPart = document.getElementById('assur-patient-part');
@@ -1369,16 +1446,21 @@ async function validerVente() {
     if (!posCurrentPatient) {
       UI.toast('Un patient doit être sélectionné pour une prise en charge', 'error'); return;
     }
-    const assurName = document.getElementById('assur-name')?.value.trim();
-    if (!assurName) {
-      UI.toast('Le nom de l\'organisme (Assurance/Entreprise) est requis', 'error'); return;
-    }
-    const assurAmt = parseFloat(document.getElementById('assur-amount')?.value || 0);
+    
+    let assurAmt = 0;
+    let hasValidationErrors = false;
+    document.querySelectorAll('.assur-amount-field').forEach(input => {
+      const val = parseFloat(input.value || 0);
+      if (val < 0) hasValidationErrors = true;
+      assurAmt += val;
+    });
+    
+    if (hasValidationErrors) { UI.toast('Le montant pris en charge est invalide', 'error'); return; }
     if (assurAmt <= 0) {
-      UI.toast('Le montant pris en charge doit être supérieur à zéro', 'error'); return;
+      UI.toast('Le montant pris en charge global doit être supérieur à zéro', 'error'); return;
     }
     if (assurAmt > total) {
-      UI.toast('Le montant assurance ne peut pas dépasser le total de la facture (' + UI.formatCurrency(total) + ')', 'error'); return;
+      UI.toast('Le montant assurance global ne peut pas dépasser la facture (' + UI.formatCurrency(total) + ')', 'error'); return;
     }
     // Check patient part rules
     const patientPart = Math.max(0, total - assurAmt);
@@ -1413,22 +1495,42 @@ async function validerVente() {
 
     // Build assurance data
     let assurData = {};
+    let insuranceDetails = null;
     if (method === 'assurance') {
-      const assurName = document.getElementById('assur-name')?.value.trim();
-      const assurRef = document.getElementById('assur-ref')?.value.trim();
-      const assurAmt = parseFloat(document.getElementById('assur-amount')?.value || 0);
+      let assurAmt = 0;
+      insuranceDetails = [];
+      const blocks = document.querySelectorAll('#assur-dynamic-list .dynamic-assur-block');
+      if (blocks.length > 0) {
+        blocks.forEach(block => {
+          const name = block.querySelector('.assur-name-field').value;
+          const ref = block.querySelector('.assur-ref-field').value;
+          const amt = parseFloat(block.querySelector('.assur-amount-field').value || 0);
+          if (amt > 0) {
+            insuranceDetails.push({ name, ref, amount: amt });
+            assurAmt += amt;
+          }
+        });
+      } else {
+        const name = document.getElementById('assur-name')?.value.trim();
+        const ref = document.getElementById('assur-ref')?.value.trim();
+        const amt = parseFloat(document.getElementById('assur-amount')?.value || 0);
+        if (amt > 0) {
+          insuranceDetails.push({ name, ref, amount: amt });
+          assurAmt += amt;
+        }
+      }
+
       const patientPart = Math.max(0, total - assurAmt);
       const pMethod = document.getElementById('assur-patient-method')?.value || 'cash';
       
       assurData = {
-         assuranceName: assurName,
-         assuranceRef: assurRef,
+         assuranceName: insuranceDetails.length === 1 ? insuranceDetails[0].name : 'Multi-Assurances',
+         assuranceRef: insuranceDetails.length === 1 ? insuranceDetails[0].ref : 'Multiple',
          assuranceAmount: assurAmt,
+         insuranceDetails: insuranceDetails.length > 0 ? insuranceDetails : null
       };
       
-      combinedDetails = [
-         { method: 'assurance', amount: assurAmt, entity: assurName }
-      ];
+      combinedDetails = [...insuranceDetails.map(ins => ({ method: 'assurance', amount: ins.amount, entity: ins.name }))];
       if (patientPart > 0) {
          combinedDetails.push({ method: pMethod, amount: patientPart, label: 'Ticket modérateur' });
       }
@@ -1475,14 +1577,19 @@ async function validerVente() {
       itemCount: posCart.length,
       creditDueDate: method === 'credit' ? document.getElementById('credit-date')?.value : null,
       cashReceived: cashRcv > 0 ? cashRcv : null,
+      insuranceDetails: assurData.insuranceDetails || null
     };
 
     const saleId = await DB.dbAdd('sales', saleData);
 
     for (const item of posCart) {
+      const p = posProducts.find(x => x.id === item.productId);
+      const isBox = (item.saleMode !== 'unit');
+      const deductQty = (isBox && p?.allowUnitSale && p?.unitsPerBox > 1) ? item.qty * p.unitsPerBox : item.qty;
+      
       // FEFO: décrémentation du lot le plus proche de l'expiration
       let assignedLotNumber = item.fefoLotNumber || null;
-      let remainingQty = item.qty;
+      let remainingQty = deductQty;
       try {
         const productLots = posLots
           .filter(l => l.productId === item.productId && l.status === 'active' && l.quantity > 0)
@@ -1501,18 +1608,18 @@ async function validerVente() {
         saleId, productId: item.productId, productName: item.name,
         quantity: item.qty, unitPrice: item.unitPrice,
         purchasePrice: item.purchasePrice, total: item.total,
-        lotNumber: assignedLotNumber,
+        lotNumber: assignedLotNumber, saleMode: item.saleMode || 'box'
       });
       const stockAll = await DB.dbGetAll('stock');
       const se = stockAll.find(s => s.productId === item.productId);
       if (se) {
-        const nq = Math.max(0, se.quantity - item.qty);
+        const nq = Math.max(0, se.quantity - deductQty);
         await DB.dbPut('stock', { ...se, quantity: nq });
         posStock[item.productId] = nq;
       }
       await DB.dbAdd('movements', {
         productId: item.productId, type: 'EXIT', subType: 'SALE',
-        quantity: -item.qty, date: new Date().toISOString(),
+        quantity: -deductQty, date: new Date().toISOString(),
         userId: DB.AppState.currentUser?.id,
         reference: `SALE-${saleId}`,
         lotNumber: assignedLotNumber,
@@ -2216,6 +2323,36 @@ function showGenericAlternatives(productId) {
 }
 
 Router.register('pos', renderPOS);
+
+// ═══════════════════════════════════════════════════════════════════
+// NOTICE MÉDICALE — Consultation rapide depuis le panier
+// ═══════════════════════════════════════════════════════════════════
+async function showProductNotice(productId) {
+  const p = await DB.dbGet('products', productId);
+  if (!p) return;
+
+  const hasNotice = p.dosageInstructions || p.precautions || p.contraindications || p.sideEffects || p.medicalNotice;
+
+  UI.modal(`<i data-lucide="file-text" class="modal-icon-inline"></i> Notice — ${p.name}`, `
+    ${hasNotice ? `
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${p.dosageInstructions ? `<div><strong style="font-size:12px;color:var(--primary)">📋 Posologie recommandée</strong><p style="margin:4px 0 0;font-size:13px">${p.dosageInstructions}</p></div>` : ''}
+        ${p.precautions ? `<div style="padding:10px;background:rgba(232,145,58,0.08);border-radius:8px;border-left:3px solid var(--warning)"><strong style="font-size:12px;color:var(--warning)">⚠️ Précautions d'emploi</strong><p style="margin:4px 0 0;font-size:13px">${p.precautions}</p></div>` : ''}
+        ${p.contraindications ? `<div style="padding:10px;background:rgba(214,59,59,0.08);border-radius:8px;border-left:3px solid var(--danger)"><strong style="font-size:12px;color:var(--danger)">🚫 Contre-indications</strong><p style="margin:4px 0 0;font-size:13px">${p.contraindications}</p></div>` : ''}
+        ${p.sideEffects ? `<div><strong style="font-size:12px;color:var(--text-muted)">💊 Effets indésirables</strong><p style="margin:4px 0 0;font-size:13px">${p.sideEffects}</p></div>` : ''}
+        ${p.medicalNotice ? `<div style="border-top:1px solid var(--border);padding-top:12px"><strong style="font-size:12px;color:var(--info)">📄 Notice complète / RCP</strong><p style="margin:4px 0 0;font-size:13px;white-space:pre-line">${p.medicalNotice}</p></div>` : ''}
+      </div>
+    ` : `
+      <div style="text-align:center;padding:24px;color:var(--text-muted)">
+        <i data-lucide="info" style="width:32px;height:32px;margin-bottom:8px;opacity:0.5"></i>
+        <p style="font-size:14px">Aucune notice médicale renseignée pour ce produit.</p>
+        <p style="font-size:12px;margin-top:4px">Vous pouvez l'ajouter depuis <strong>Catalogue → Modifier le produit</strong>.</p>
+      </div>
+    `}
+  `, { size: 'medium' });
+  if (window.lucide) lucide.createIcons();
+}
+window.showProductNotice = showProductNotice;
 
 // ═══════════════════════════════════════════════════════════════════
 // MOBILE — Navigation 3 vues (Produits | Panier | Menu)

@@ -116,7 +116,7 @@ function renderStockTable(data) {
         <span class="text-muted text-sm">${r.dci || r.brand || ''}</span>
       </div>` },
     { label: 'Catégorie', render: r => `<span class="category-tag">${r.category}</span>` },
-    { label: 'Stock', render: r => UI.stockBadge(r.currentStock, r.minStock) },
+    { label: 'Stock', render: r => UI.stockBadge(r.currentStock, r.minStock, r) },
     { label: 'Min. Seuil', key: 'minStock' },
     { label: 'Lots actifs', render: r => `<span class="text-center">${r.lots.length}</span>` },
     {

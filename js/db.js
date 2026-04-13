@@ -88,8 +88,8 @@ async function getSupabaseClient() {
   }
   try {
     const settings = await dbGetAll('settings');
-    const url = settings.find(s => s.key === 'supabase_url')?.value;
-    const key = settings.find(s => s.key === 'supabase_key')?.value;
+    const url = (settings.find(s => s.key === 'supabase_url')?.value) || 'https://iapvppgdqewgqnpisvwq.supabase.co';
+    const key = (settings.find(s => s.key === 'supabase_key')?.value) || 'sb_publishable_fg1UcnkRJsPrqKVQ44yZ7Q_zXJIAW3k';
     if (url && key && window.supabase) {
       _supabaseInstance = window.supabase.createClient(url.trim(), key.trim());
       if (AppState.isOnline) _setupRealtime(_supabaseInstance);

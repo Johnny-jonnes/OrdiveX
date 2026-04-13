@@ -137,6 +137,8 @@ async function renderSettings(container) {
 
   // Load settings into a map
   const gs = k => settingsData.find(s => s.key === k)?.value || '';
+  const smsConfigStr = settingsData.find(s => s.key === 'sms_config')?.value;
+  const smsConfig = smsConfigStr ? JSON.parse(smsConfigStr) : { provider: 'africastalking', enabled: false, apiKey: '', username: '', senderId: 'PharmaProjet', countryCode: '+224' };
 
   const recentAudit = auditLog.sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
 
@@ -211,6 +213,53 @@ async function renderSettings(container) {
           </div>
           <button type="button" class="btn btn-primary" onclick="saveSettings()"><i data-lucide="save"></i> Sauvegarder les paramètres</button>
         </form>
+      </div>
+
+      <!-- Configuration SMS -->
+      <div class="settings-card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <h3 class="settings-card-title" style="margin:0"><i data-lucide="message-square"></i> Configuration SMS</h3>
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer">
+            <input type="checkbox" id="sms-enabled-cb" ${smsConfig.enabled ? 'checked' : ''} onchange="document.getElementById('sms-settings-box').style.opacity = this.checked ? '1' : '0.5'; document.getElementById('sms-settings-box').style.pointerEvents = this.checked ? 'auto' : 'none';">
+            <span style="font-weight:600; font-size:13px">Activer les SMS</span>
+          </label>
+        </div>
+        <div id="sms-settings-box" style="opacity: ${smsConfig.enabled ? '1' : '0.5'}; pointer-events: ${smsConfig.enabled ? 'auto' : 'none'}; transition: all 0.3s">
+          <form id="sms-config-form" class="form-grid">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fournisseur API</label>
+                <select name="provider" class="form-control" onchange="document.getElementById('sms-username-group').style.display = this.value === 'africastalking' ? 'block' : 'none'">
+                  <option value="africastalking" ${smsConfig.provider === 'africastalking' ? 'selected' : ''}>AfricasTalking (Recommandé)</option>
+                  <option value="twilio" ${smsConfig.provider === 'twilio' ? 'selected' : ''}>Twilio</option>
+                  <option value="orange" ${smsConfig.provider === 'orange' ? 'selected' : ''}>Orange SMS API</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Nom de l'Expéditeur (Sender ID)</label>
+                <input type="text" name="senderId" class="form-control" value="${smsConfig.senderId || 'PharmaProjet'}" placeholder="Max 11 caractères">
+              </div>
+            </div>
+            <div class="form-group" id="sms-username-group" style="display: ${smsConfig.provider === 'africastalking' ? 'block' : 'none'}">
+              <label>Nom d'utilisateur (Username)</label>
+              <input type="text" name="username" class="form-control" value="${smsConfig.username || ''}" placeholder="Ex: sandbox ou votre_nom">
+            </div>
+            <div class="form-group">
+              <label>Clé API (API Key)</label>
+              <input type="password" name="apiKey" class="form-control" value="${smsConfig.apiKey || ''}" placeholder="Votre clé secrète">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Préfixe téléphonique pays</label>
+                <input type="text" name="countryCode" class="form-control" value="${smsConfig.countryCode || '+224'}" placeholder="Ex: +224">
+              </div>
+            </div>
+            <div style="display:flex; gap:8px">
+              <button type="button" class="btn btn-primary" onclick="saveSmsConfig()"><i data-lucide="save"></i> Enregistrer Config SMS</button>
+              <button type="button" class="btn btn-secondary" onclick="testSmsConnection()"><i data-lucide="send"></i> Tester l'envoi</button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <!-- Users Management (Admin Only) -->
@@ -672,8 +721,59 @@ async function triggerPull() {
 }
 
 
+async function saveSmsConfig() {
+  const form = document.getElementById('sms-config-form');
+  if (!form) return;
+  const data = Object.fromEntries(new FormData(form));
+  data.enabled = document.getElementById('sms-enabled-cb').checked;
+  try {
+    if (window.SMS) {
+      await SMS.saveConfig(data);
+      UI.toast('Configuration SMS enregistrée', 'success');
+      await DB.writeAudit('SAVE_SMS_CONFIG', 'settings', null, { provider: data.provider, enabled: data.enabled });
+    } else {
+      UI.toast('Module SMS introuvable !', 'error');
+    }
+  } catch(e) {
+    UI.toast('Erreur: ' + e.message, 'error');
+  }
+}
+
+async function testSmsConnection() {
+  if (!window.SMS) {
+    UI.toast('Module SMS introuvable !', 'error');
+    return;
+  }
+  const btn = event.currentTarget;
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="spinner-inline"></i> Test en cours...';
+
+  try {
+    // Save current unsubmitted form state to config first for testing
+    const form = document.getElementById('sms-config-form');
+    const data = Object.fromEntries(new FormData(form));
+    data.enabled = document.getElementById('sms-enabled-cb').checked;
+    await SMS.saveConfig(data);
+
+    const res = await SMS.testConnection();
+    if (res.success) {
+      UI.toast('Test réussi ! SMS envoyé à TrillionX.', 'success');
+    } else {
+      UI.toast('Erreur d\'envoi: ' + (res.error || 'Vérifiez vos paramètres'), 'error');
+    }
+  } catch (e) {
+    UI.toast('Erreur: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
 window.updatePharmacyDisplay = updatePharmacyDisplay;
 window.saveSupabaseConfig = saveSupabaseConfig;
+window.saveSmsConfig = saveSmsConfig;
+window.testSmsConnection = testSmsConnection;
 window.handleLogoUpload = handleLogoUpload;
 window.removeLogo = removeLogo;
 window.handleLogin = handleLogin;
