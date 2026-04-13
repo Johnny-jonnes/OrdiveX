@@ -1,17 +1,16 @@
 const fs = require('fs');
 
 const generateSeed = () => {
-  const products = [];
-  const chunkSize = 5000;
-  
   console.log('-- Generation du seed SQL: 50,000 medicaments...');
-  let sql = '-- Seed 50k Drugs\\n';
-  sql += 'INSERT INTO products (id, code, name, dci, brand, form, dosage, category, "requiresPrescription", "minStock", "salePrice", "purchasePrice", "unitsPerBox", "pricePerUnit", "allowUnitSale", status, "dosageInstructions", "sideEffects") VALUES\\n';
   
   const forms = ['Comprimé', 'Sirop', 'Gélule', 'Injection', 'Pommade', 'Suppositoire', 'Gouttes'];
   const categories = ['Antalgique', 'Antibiotique', 'Antipaludéen', 'Vitamines', 'Cardiologie', 'Dermatologie', 'Pédiatrie'];
   
   let id = 1000;
+  
+  let currentRows = [];
+  let fileIndex = 1;
+
   for (let i = 1; i <= 50000; i++) {
     id++;
     const form = forms[Math.floor(Math.random() * forms.length)];
@@ -31,16 +30,17 @@ const generateSeed = () => {
     
     const row = `(${id}, '${code}', 'Produit Medicament ${i}', 'DCI ${i}', 'Marque ${i}', '${form}', 'Ajusté', '${category}', ${rx}, 10, ${sale}, ${purc}, 30, ${Math.floor(sale / 30)}, true, 'active', ${dosageInstructions}, ${sideEffects})`;
     
-    products.push(row);
+    currentRows.push(row);
+
+    if (currentRows.length === 2500 || i === 50000) {
+        let chunkSql = 'INSERT INTO products (id, code, name, dci, brand, form, dosage, category, "requiresPrescription", "minStock", "salePrice", "purchasePrice", "unitsPerBox", "pricePerUnit", "allowUnitSale", status, "dosageInstructions", "sideEffects") VALUES\n' + currentRows.join(',\n') + ';\n\n';
+        fs.writeFileSync(`scripts/seed_50k_part_${fileIndex}.sql`, chunkSql);
+        currentRows = [];
+        fileIndex++;
+    }
   }
   
-  for (let i = 0; i < products.length; i += chunkSize) {
-    const chunk = products.slice(i, i + chunkSize);
-    const chunkSql = 'INSERT INTO products (id, code, name, dci, brand, form, dosage, category, "requiresPrescription", "minStock", "salePrice", "purchasePrice", "unitsPerBox", "pricePerUnit", "allowUnitSale", status, "dosageInstructions", "sideEffects") VALUES\\n' + chunk.join(',\\n') + ';\\n\\n';
-    fs.appendFileSync('seed_50k.sql', chunkSql);
-  }
-  console.log('Fichier seed_50k.sql généré avec succès !');
+  console.log('Fichiers seed_50k_part générés avec succès !');
 }
 
-fs.writeFileSync('seed_50k.sql', '');
 generateSeed();
