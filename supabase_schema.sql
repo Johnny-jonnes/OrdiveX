@@ -369,3 +369,195 @@ ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "hasNonConformity" BOOLEAN
 -- ═══════════════════════════════════════════════════════════════
 -- ✅ TERMINÉ — Toutes les tables sont prêtes. v4.0.1-stable
 -- ═══════════════════════════════════════════════════════════════
+
+-- ═══════════════════════════════════════════════════════════════
+-- SECURITÉ & RLS (Row Level Security)
+-- ═══════════════════════════════════════════════════════════════
+
+-- RLS pour cashRegister
+ALTER TABLE "cashRegister" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cashRegister_policy_select" ON "cashRegister";
+CREATE POLICY "cashRegister_policy_select" ON "cashRegister" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "cashRegister_policy_insert" ON "cashRegister";
+CREATE POLICY "cashRegister_policy_insert" ON "cashRegister" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "cashRegister_policy_update" ON "cashRegister";
+CREATE POLICY "cashRegister_policy_update" ON "cashRegister" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "cashRegister_policy_delete" ON "cashRegister";
+CREATE POLICY "cashRegister_policy_delete" ON "cashRegister" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour auditLog
+ALTER TABLE "auditLog" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "auditLog_policy_select" ON "auditLog";
+CREATE POLICY "auditLog_policy_select" ON "auditLog" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "auditLog_policy_insert" ON "auditLog";
+CREATE POLICY "auditLog_policy_insert" ON "auditLog" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "auditLog_policy_update" ON "auditLog";
+CREATE POLICY "auditLog_policy_update" ON "auditLog" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "auditLog_policy_delete" ON "auditLog";
+CREATE POLICY "auditLog_policy_delete" ON "auditLog" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour app_users
+ALTER TABLE "app_users" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "app_users_policy_select" ON "app_users";
+CREATE POLICY "app_users_policy_select" ON "app_users" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "app_users_policy_insert" ON "app_users";
+CREATE POLICY "app_users_policy_insert" ON "app_users" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "app_users_policy_update" ON "app_users";
+CREATE POLICY "app_users_policy_update" ON "app_users" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "app_users_policy_delete" ON "app_users";
+CREATE POLICY "app_users_policy_delete" ON "app_users" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour users
+ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users_policy_select" ON "users";
+CREATE POLICY "users_policy_select" ON "users" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "users_policy_insert" ON "users";
+CREATE POLICY "users_policy_insert" ON "users" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "users_policy_update" ON "users";
+CREATE POLICY "users_policy_update" ON "users" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "users_policy_delete" ON "users";
+CREATE POLICY "users_policy_delete" ON "users" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour returns
+ALTER TABLE "returns" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "returns_policy_select" ON "returns";
+CREATE POLICY "returns_policy_select" ON "returns" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "returns_policy_insert" ON "returns";
+CREATE POLICY "returns_policy_insert" ON "returns" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "returns_policy_update" ON "returns";
+CREATE POLICY "returns_policy_update" ON "returns" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "returns_policy_delete" ON "returns";
+CREATE POLICY "returns_policy_delete" ON "returns" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour alerts
+ALTER TABLE "alerts" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "alerts_policy_select" ON "alerts";
+CREATE POLICY "alerts_policy_select" ON "alerts" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "alerts_policy_insert" ON "alerts";
+CREATE POLICY "alerts_policy_insert" ON "alerts" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "alerts_policy_update" ON "alerts";
+CREATE POLICY "alerts_policy_update" ON "alerts" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "alerts_policy_delete" ON "alerts";
+CREATE POLICY "alerts_policy_delete" ON "alerts" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour saleItems
+ALTER TABLE "saleItems" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "saleItems_policy_select" ON "saleItems";
+CREATE POLICY "saleItems_policy_select" ON "saleItems" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "saleItems_policy_insert" ON "saleItems";
+CREATE POLICY "saleItems_policy_insert" ON "saleItems" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "saleItems_policy_update" ON "saleItems";
+CREATE POLICY "saleItems_policy_update" ON "saleItems" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "saleItems_policy_delete" ON "saleItems";
+CREATE POLICY "saleItems_policy_delete" ON "saleItems" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour sales
+ALTER TABLE "sales" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "sales_policy_select" ON "sales";
+CREATE POLICY "sales_policy_select" ON "sales" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "sales_policy_insert" ON "sales";
+CREATE POLICY "sales_policy_insert" ON "sales" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "sales_policy_update" ON "sales";
+CREATE POLICY "sales_policy_update" ON "sales" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "sales_policy_delete" ON "sales";
+CREATE POLICY "sales_policy_delete" ON "sales" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour movements
+ALTER TABLE "movements" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "movements_policy_select" ON "movements";
+CREATE POLICY "movements_policy_select" ON "movements" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "movements_policy_insert" ON "movements";
+CREATE POLICY "movements_policy_insert" ON "movements" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "movements_policy_update" ON "movements";
+CREATE POLICY "movements_policy_update" ON "movements" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "movements_policy_delete" ON "movements";
+CREATE POLICY "movements_policy_delete" ON "movements" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour stock
+ALTER TABLE "stock" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "stock_policy_select" ON "stock";
+CREATE POLICY "stock_policy_select" ON "stock" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "stock_policy_insert" ON "stock";
+CREATE POLICY "stock_policy_insert" ON "stock" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "stock_policy_update" ON "stock";
+CREATE POLICY "stock_policy_update" ON "stock" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "stock_policy_delete" ON "stock";
+CREATE POLICY "stock_policy_delete" ON "stock" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour lots
+ALTER TABLE "lots" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "lots_policy_select" ON "lots";
+CREATE POLICY "lots_policy_select" ON "lots" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "lots_policy_insert" ON "lots";
+CREATE POLICY "lots_policy_insert" ON "lots" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "lots_policy_update" ON "lots";
+CREATE POLICY "lots_policy_update" ON "lots" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "lots_policy_delete" ON "lots";
+CREATE POLICY "lots_policy_delete" ON "lots" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour purchaseOrders
+ALTER TABLE "purchaseOrders" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "purchaseOrders_policy_select" ON "purchaseOrders";
+CREATE POLICY "purchaseOrders_policy_select" ON "purchaseOrders" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "purchaseOrders_policy_insert" ON "purchaseOrders";
+CREATE POLICY "purchaseOrders_policy_insert" ON "purchaseOrders" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "purchaseOrders_policy_update" ON "purchaseOrders";
+CREATE POLICY "purchaseOrders_policy_update" ON "purchaseOrders" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "purchaseOrders_policy_delete" ON "purchaseOrders";
+CREATE POLICY "purchaseOrders_policy_delete" ON "purchaseOrders" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour suppliers
+ALTER TABLE "suppliers" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "suppliers_policy_select" ON "suppliers";
+CREATE POLICY "suppliers_policy_select" ON "suppliers" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "suppliers_policy_insert" ON "suppliers";
+CREATE POLICY "suppliers_policy_insert" ON "suppliers" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "suppliers_policy_update" ON "suppliers";
+CREATE POLICY "suppliers_policy_update" ON "suppliers" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "suppliers_policy_delete" ON "suppliers";
+CREATE POLICY "suppliers_policy_delete" ON "suppliers" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour prescriptions
+ALTER TABLE "prescriptions" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "prescriptions_policy_select" ON "prescriptions";
+CREATE POLICY "prescriptions_policy_select" ON "prescriptions" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "prescriptions_policy_insert" ON "prescriptions";
+CREATE POLICY "prescriptions_policy_insert" ON "prescriptions" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "prescriptions_policy_update" ON "prescriptions";
+CREATE POLICY "prescriptions_policy_update" ON "prescriptions" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "prescriptions_policy_delete" ON "prescriptions";
+CREATE POLICY "prescriptions_policy_delete" ON "prescriptions" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour patients
+ALTER TABLE "patients" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "patients_policy_select" ON "patients";
+CREATE POLICY "patients_policy_select" ON "patients" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "patients_policy_insert" ON "patients";
+CREATE POLICY "patients_policy_insert" ON "patients" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "patients_policy_update" ON "patients";
+CREATE POLICY "patients_policy_update" ON "patients" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "patients_policy_delete" ON "patients";
+CREATE POLICY "patients_policy_delete" ON "patients" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour products
+ALTER TABLE "products" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "products_policy_select" ON "products";
+CREATE POLICY "products_policy_select" ON "products" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "products_policy_insert" ON "products";
+CREATE POLICY "products_policy_insert" ON "products" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "products_policy_update" ON "products";
+CREATE POLICY "products_policy_update" ON "products" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "products_policy_delete" ON "products";
+CREATE POLICY "products_policy_delete" ON "products" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour settings
+ALTER TABLE "settings" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "settings_policy_select" ON "settings";
+CREATE POLICY "settings_policy_select" ON "settings" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "settings_policy_insert" ON "settings";
+CREATE POLICY "settings_policy_insert" ON "settings" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "settings_policy_update" ON "settings";
+CREATE POLICY "settings_policy_update" ON "settings" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "settings_policy_delete" ON "settings";
+CREATE POLICY "settings_policy_delete" ON "settings" FOR DELETE USING (auth.uid() IS NOT NULL);
+

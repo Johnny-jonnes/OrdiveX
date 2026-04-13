@@ -88,12 +88,26 @@ async function getSupabaseClient() {
   }
   try {
     const settings = await dbGetAll('settings');
-    const url = (settings.find(s => s.key === 'supabase_url')?.value) || 'https://iapvppgdqewgqnpisvwq.supabase.co';
-    const key = (settings.find(s => s.key === 'supabase_key')?.value) || 'sb_publishable_fg1UcnkRJsPrqKVQ44yZ7Q_zXJIAW3k';
+    const url = settings.find(s => s.key === 'supabase_url')?.value;
+    const key = settings.find(s => s.key === 'supabase_key')?.value;
+    
     if (url && key && window.supabase) {
       _supabaseInstance = window.supabase.createClient(url.trim(), key.trim());
+      
+      // Auto-Login Anonyme pour satisfaire la politique stricte de RLS (auth.uid() IS NOT NULL)
+      try {
+        const { data: { session } } = await _supabaseInstance.auth.getSession();
+        if (!session && _supabaseInstance.auth.signInAnonymously) {
+           await _supabaseInstance.auth.signInAnonymously();
+        }
+      } catch(e) {
+        console.warn('[Flash] Sécurité: Échec du login anonyme', e);
+      }
+
       if (AppState.isOnline) _setupRealtime(_supabaseInstance);
       return _supabaseInstance;
+    } else {
+      console.warn('[Flash] Clés Supabase manquantes. Veuillez utiliser un Magic Link pour configurer l\'accès.');
     }
   } catch (e) {
     console.error('[Flash] Error initializing Supabase client:', e);
