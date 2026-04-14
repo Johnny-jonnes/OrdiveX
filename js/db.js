@@ -779,9 +779,10 @@ async function pullFromSupabase() {
     }
 
     const storesToPull = [
+      'users', 'settings',
       'products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders',
       'sales', 'saleItems', 'patients', 'prescriptions', 'alerts',
-      'cashRegister', 'auditLog', 'users', 'settings', 'returns'
+      'cashRegister', 'auditLog', 'returns'
     ];
 
     // --- PROBE METIER (Sonde) ---
