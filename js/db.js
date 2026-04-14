@@ -802,7 +802,7 @@ async function pullFromSupabase() {
       try {
         let allData = [];
         let fromIdx = 0;
-        const fetchLimit = 3000; // Augmenté pour accélérer le téléchargement
+        const fetchLimit = 1000; // Supabase API max_rows limite stricte par défaut
         
         while (true) {
           try {
@@ -816,7 +816,7 @@ async function pullFromSupabase() {
             if (!data || data.length < fetchLimit) break;
             fromIdx += fetchLimit;
           } catch(errReq) {
-            // Si erreur de range/timeout, on réduit la limite temporairement
+            // Si erreur de range/timeout, on arrête
             if (fromIdx === 0) throw errReq;
             break;
           }
