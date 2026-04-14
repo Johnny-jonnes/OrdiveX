@@ -801,24 +801,31 @@ async function pullFromSupabase() {
     for (const storeName of storesToPull) {
       try {
         let allData = [];
-        let fromIdx = 0;
-        const fetchLimit = 1000; // Supabase API max_rows limite stricte par défaut
         
-        while (true) {
-          try {
-            const { data, error } = await sb.from(storeName === 'users' ? 'app_users' : storeName)
-                                            .select('*')
-                                            .range(fromIdx, fromIdx + fetchLimit - 1);
-            if (error) throw error;
-            if (data && data.length > 0) {
-              allData = allData.concat(data);
+        // 1. Obtenir le nombre total d'items
+        const countRes = await sb.from(storeName === 'users' ? 'app_users' : storeName).select('*', { count: 'exact', head: true });
+        const totalCount = countRes.count || 0;
+
+        if (totalCount > 0) {
+          const fetchLimit = 1000;
+          const fetchPromises = [];
+          
+          for (let offset = 0; offset < totalCount; offset += fetchLimit) {
+            fetchPromises.push(
+              sb.from(storeName === 'users' ? 'app_users' : storeName)
+                .select('*')
+                .range(offset, offset + fetchLimit - 1)
+            );
+          }
+
+          // 2. Lancer les requêtes en parallèle (par lots de 5 pour ne pas surcharger)
+          for (let i = 0; i < fetchPromises.length; i += 5) {
+            const chunk = fetchPromises.slice(i, i + 5);
+            const results = await Promise.all(chunk);
+            for (const res of results) {
+              if (res.error) throw res.error;
+              if (res.data) allData = allData.concat(res.data);
             }
-            if (!data || data.length < fetchLimit) break;
-            fromIdx += fetchLimit;
-          } catch(errReq) {
-            // Si erreur de range/timeout, on arrête
-            if (fromIdx === 0) throw errReq;
-            break;
           }
         }
 

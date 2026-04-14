@@ -128,9 +128,20 @@ const AlertsPage = {
     const filtered = this.getFilteredAlerts(allAlerts);
     const months = this.getAvailableMonths(allAlerts);
 
-    // Group filtered alerts by month for timeline
+    // Pagination
+    const PAGE_SIZE = 100;
+    const totalFiltered = filtered.length;
+    const totalPages = Math.ceil(totalFiltered / PAGE_SIZE) || 1;
+    let currentPage = parseInt(container.dataset.alertPage || '1');
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    const startIdx = (currentPage - 1) * PAGE_SIZE;
+    const paginated = filtered.slice(startIdx, startIdx + PAGE_SIZE);
+
+    // Group only paginated alerts by month for timeline
     const grouped = {};
-    filtered.forEach(a => {
+    paginated.forEach(a => {
       const d = new Date(a.date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!grouped[key]) grouped[key] = [];
@@ -245,13 +256,19 @@ const AlertsPage = {
         </div>
 
         <!-- Results Count -->
-        <div class="alerts-results-bar">
-          <span class="alerts-results-count">${filtered.length} alerte(s) affichée(s)</span>
+        <div class="alerts-results-bar" style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="alerts-results-count">${totalFiltered.toLocaleString()} alerte(s) | Page ${currentPage}/${totalPages}</span>
+          ${totalPages > 1 ? `
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="AlertsPage.changePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>◀ Précédent</button>
+              <button class="btn btn-secondary btn-sm" onclick="AlertsPage.changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Suivant ▶</button>
+            </div>
+          ` : ''}
         </div>
 
         <!-- Alerts Timeline -->
         <div class="alerts-timeline">
-          ${filtered.length === 0 ? `
+          ${paginated.length === 0 ? `
             <div class="alerts-empty">
               <div class="alerts-empty-icon"><i data-lucide="bell-off"></i></div>
               <h3>Aucune alerte</h3>
@@ -262,7 +279,7 @@ const AlertsPage = {
               <div class="alerts-month-header">
                 <div class="alerts-month-dot"></div>
                 <span class="alerts-month-label">${this.formatMonth(monthKey)}</span>
-                <span class="alerts-month-count">${grouped[monthKey].length} alerte(s)</span>
+                <span class="alerts-month-count">${grouped[monthKey].length} alerte(s) (cette page)</span>
               </div>
               <div class="alerts-cards-grid">
                 ${grouped[monthKey].map(a => this.renderAlertCard(a)).join('')}
@@ -270,6 +287,15 @@ const AlertsPage = {
             </div>
           `).join('')}
         </div>
+        
+        ${totalPages > 1 ? `
+        <div class="alerts-results-bar" style="display:flex; justify-content:center; align-items:center; margin-top:20px;">
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="AlertsPage.changePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>◀ Précédent</button>
+              <button class="btn btn-secondary btn-sm" onclick="AlertsPage.changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Suivant ▶</button>
+            </div>
+        </div>
+        ` : ''}
       </div>
     `;
 
@@ -341,6 +367,7 @@ const AlertsPage = {
     this.filters.priority = document.getElementById('alerts-priority')?.value || 'all';
     this.filters.status = document.getElementById('alerts-status')?.value || 'unread';
     const container = document.getElementById('app-content');
+    container.dataset.alertPage = '1';
     this.render(container);
   },
 
@@ -350,12 +377,20 @@ const AlertsPage = {
       this.filters.status = 'unread'; // Show unread when filtering by priority
     }
     const container = document.getElementById('app-content');
+    container.dataset.alertPage = '1';
     this.render(container);
   },
 
   clearFilters() {
     this.filters = { month: '', type: 'all', priority: 'all', status: 'unread', search: '' };
     const container = document.getElementById('app-content');
+    container.dataset.alertPage = '1';
+    this.render(container);
+  },
+
+  changePage(p) {
+    const container = document.getElementById('app-content');
+    container.dataset.alertPage = p;
     this.render(container);
   },
 

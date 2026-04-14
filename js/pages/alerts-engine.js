@@ -46,41 +46,84 @@ const AlertsEngine = {
     const stockMap = {};
     stockAll.forEach(s => { stockMap[s.productId] = s.quantity; });
 
-    const today = new Date().toISOString().split('T')[0];
+    // --- RESCUE MODE : Nettoyage d'urgence si la BDD a été spammée ---
+    if (existingAlerts.length > 3000) {
+      console.warn('[AlertsEngine] Rescue: Trop d\'alertes détectées, purge en cours...');
+      for (const a of existingAlerts) {
+        if (a.type === 'RUPTURE' || a.type === 'LOW_STOCK') {
+           await DB.dbDelete('alerts', a.id);
+        }
+      }
+      return; // On s'arrête ici pour ce cycle, le prochain créera les groupes propres
+    }
+    // -----------------------------------------------------------------
+
+    const activeRuptureAlerts = existingAlerts.filter(a => a.status === 'unread' && a.type === 'RUPTURE');
+    const activeLowStockAlerts = existingAlerts.filter(a => a.status === 'unread' && a.type === 'LOW_STOCK');
+
+    const ruptureSet = new Set(activeRuptureAlerts.map(a => a.productId));
+    const lowStockSet = new Set(activeLowStockAlerts.map(a => a.productId));
+
+    let newRuptures = [];
+    let newLowStocks = [];
 
     for (const product of products) {
       if (product.status !== 'active') continue;
       const qty = stockMap[product.id] || 0;
       const min = product.minStock || 10;
 
-      // Check if alert already exists today
-      const hasAlert = existingAlerts.some(a =>
-        a.productId === product.id &&
-        a.status === 'unread' &&
-        (a.type === 'LOW_STOCK' || a.type === 'RUPTURE') &&
-        new Date(a.date).toISOString().split('T')[0] === today
-      );
-      if (hasAlert) continue;
-
       if (qty === 0) {
+        if (!ruptureSet.has(product.id) && !ruptureSet.has('global_rupture')) newRuptures.push(product);
+      } else if (qty <= min) {
+        if (!lowStockSet.has(product.id) && !lowStockSet.has('global_lowstock')) newLowStocks.push({product, qty, min});
+      }
+    }
+
+    // Protection contre l'explosion d'alertes
+    if (newRuptures.length > 50) {
+      await DB.dbAdd('alerts', {
+        type: 'RUPTURE',
+        productId: 'global_rupture',
+        productName: 'Alerte Globale',
+        message: `Rupture massive: ${newRuptures.length} produits sont en rupture.`,
+        status: 'unread',
+        date: Date.now(),
+        priority: 'critical',
+      });
+    } else {
+      for (const p of newRuptures) {
         await DB.dbAdd('alerts', {
           type: 'RUPTURE',
-          productId: product.id,
-          productName: product.name,
-          message: `RUPTURE : ${product.name} — Stock épuisé`,
+          productId: p.id,
+          productName: p.name,
+          message: `RUPTURE : ${p.name} — Stock épuisé`,
           status: 'unread',
           date: Date.now(),
           priority: 'critical',
         });
-      } else if (qty <= min) {
+      }
+    }
+
+    if (newLowStocks.length > 50) {
+      await DB.dbAdd('alerts', {
+        type: 'LOW_STOCK',
+        productId: 'global_lowstock',
+        productName: 'Alerte Globale',
+        message: `Stock bas massif: ${newLowStocks.length} produits sont presque épuisés.`,
+        status: 'unread',
+        date: Date.now(),
+        priority: 'high',
+      });
+    } else {
+      for (const item of newLowStocks) {
         await DB.dbAdd('alerts', {
           type: 'LOW_STOCK',
-          productId: product.id,
-          productName: product.name,
-          message: `Stock bas : ${product.name} — ${qty} unités (seuil: ${min})`,
+          productId: item.product.id,
+          productName: item.product.name,
+          message: `Stock bas : ${item.product.name} — ${item.qty} unités (seuil: ${item.min})`,
           status: 'unread',
           date: Date.now(),
-          priority: qty <= Math.floor(min / 2) ? 'high' : 'medium',
+          priority: item.qty <= Math.floor(item.min / 2) ? 'high' : 'medium',
         });
       }
     }
