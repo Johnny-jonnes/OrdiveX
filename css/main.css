@@ -203,7 +203,7 @@ a {
   margin-left: var(--sidebar-w);
   padding-top: var(--topbar-h);
   min-height: 100vh;
-  padding: calc(var(--topbar-h) + 24px) 24px 24px;
+  padding: calc(var(--topbar-h) + 24px) 24px 100px;
 }
 
 /* ===== SIDEBAR ===== */
@@ -8602,7 +8602,7 @@ kbd {
   }
 
   #app-content {
-    padding: 88px 16px 24px;
+    padding: 88px 16px 100px;
     margin-left: 0 !important;
     overflow-x: hidden;
   }
