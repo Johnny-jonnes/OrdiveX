@@ -256,7 +256,14 @@ async function renderReorderSuggestions(container) {
   UI.loading(container, 'Calcul des suggestions de réapprovisionnement...');
 
   const suggestions = await generateReorderSuggestions();
-  const suppliers = await DB.dbGetAll('suppliers');
+  
+  // Initialiser les stats de liste pour la pagination
+  suggestions.forEach(s => {
+    s.selected = true;
+    s.suggestedQtyToOrder = s.suggestedQty;
+  });
+  window._reorderSuggestions = suggestions;
+  window._reorderPage = 1;
 
   if (suggestions.length === 0) {
     UI.empty(container, 'Tous les stocks sont suffisants', 'package');
@@ -283,11 +290,34 @@ async function renderReorderSuggestions(container) {
       <div class="stat-chip stat-blue"><span class="stat-val">${suggestions.length}</span><span class="stat-label">Total à commander</span></div>
     </div>
 
+    <div id="reorder-table-container"></div>
+  `;
+  renderReorderTable();
+}
+
+function updateReorderState(idx, key, val) {
+  if (!window._reorderSuggestions) return;
+  if (key === 'selected') window._reorderSuggestions[idx].selected = val;
+  if (key === 'qty') window._reorderSuggestions[idx].suggestedQtyToOrder = parseInt(val) || 0;
+}
+
+function renderReorderTable() {
+  const container = document.getElementById('reorder-table-container');
+  if (!container) return;
+
+  const suggestions = window._reorderSuggestions || [];
+  const PAGE_SIZE = 50;
+  const totalPages = Math.max(1, Math.ceil(suggestions.length / PAGE_SIZE));
+  if (window._reorderPage > totalPages) window._reorderPage = totalPages;
+  const start = (window._reorderPage - 1) * PAGE_SIZE;
+  const pageData = suggestions.slice(start, start + PAGE_SIZE);
+
+  container.innerHTML = `
     <div class="table-wrapper">
       <table class="data-table">
         <thead>
           <tr>
-            <th><input type="checkbox" id="select-all-suggestions" onchange="toggleAllSuggestions(this)"></th>
+            <th><input type="checkbox" id="select-all-suggestions" onchange="toggleAllSuggestions(this)" checked></th>
             <th>Produit</th>
             <th>Stock actuel</th>
             <th>Conso/jour</th>
@@ -298,47 +328,60 @@ async function renderReorderSuggestions(container) {
           </tr>
         </thead>
         <tbody>
-          ${suggestions.map((s, idx) => `
+          ${pageData.map((s, i) => {
+            const originalIdx = start + i;
+            return \`
             <tr>
-              <td><input type="checkbox" class="suggestion-cb" data-idx="${idx}" checked></td>
+              <td><input type="checkbox" class="suggestion-cb" data-idx="\${originalIdx}" \${s.selected ? 'checked' : ''} onchange="updateReorderState(\${originalIdx}, 'selected', this.checked)"></td>
               <td>
-                <div><strong>${s.product.name}</strong></div>
-                <div class="text-muted text-sm">${s.product.category}</div>
+                <div><strong>\${s.product.name}</strong></div>
+                <div class="text-muted text-sm">\${s.product.category}</div>
               </td>
               <td>
-                <span class="${s.currentStock === 0 ? 'text-danger' : s.currentStock <= s.product.minStock ? 'text-warning' : 'text-success'} font-bold">${s.currentStock}</span>
-                <span class="text-muted text-sm"> / min ${s.product.minStock}</span>
+                <span class="\${s.currentStock === 0 ? 'text-danger' : s.currentStock <= s.product.minStock ? 'text-warning' : 'text-success'} font-bold">\${s.currentStock}</span>
+                <span class="text-muted text-sm"> / min \${s.product.minStock}</span>
               </td>
-              <td>${s.avgDailyConsumption}</td>
+              <td>\${s.avgDailyConsumption}</td>
               <td>
-                <span class="badge badge-${s.urgency === 'critical' ? 'danger' : s.urgency === 'high' ? 'warning' : 'info'}">
-                  ${s.daysRemaining >= 999 ? '∞' : s.daysRemaining + 'j'}
+                <span class="badge badge-\${s.urgency === 'critical' ? 'danger' : s.urgency === 'high' ? 'warning' : 'info'}">
+                  \${s.daysRemaining >= 999 ? '∞' : s.daysRemaining + 'j'}
                 </span>
               </td>
-              <td><input type="number" class="input-sm" id="suggest-qty-${idx}" value="${s.suggestedQty}" min="1" style="width:70px"></td>
-              <td><span class="badge badge-${s.urgency === 'critical' ? 'danger' : s.urgency === 'high' ? 'warning' : 'info'}">${s.urgency === 'critical' ? 'Critique' : s.urgency === 'high' ? 'Haute' : 'Normale'}</span></td>
+              <td><input type="number" class="input-sm" id="suggest-qty-\${originalIdx}" value="\${s.suggestedQtyToOrder}" min="1" style="width:70px" onchange="updateReorderState(\${originalIdx}, 'qty', this.value)"></td>
+              <td><span class="badge badge-\${s.urgency === 'critical' ? 'danger' : s.urgency === 'high' ? 'warning' : 'info'}">\${s.urgency === 'critical' ? 'Critique' : s.urgency === 'high' ? 'Haute' : 'Normale'}</span></td>
               <td>
-                <button class="btn btn-xs btn-primary" onclick="quickOrder(${s.product.id}, '${s.product.name}')">Commander</button>
+                <button class="btn btn-xs btn-primary" onclick="quickOrder(\${s.product.id}, '\${s.product.name.replace(/'/g, "\\\\'")}')">Commander</button>
               </td>
-            </tr>`).join('')}
+            </tr>\`;
+          }).join('')}
         </tbody>
       </table>
     </div>
+    
+    <div style="margin-top:16px; margin-bottom:16px;">
+      <button class="btn btn-primary btn-block" onclick="createOrderFromSuggestions()"><i data-lucide="shopping-cart"></i> Générer le Bon de Commande MASSIVE</button>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 0;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:13px;color:var(--text-muted)">${suggestions.length.toLocaleString()} suggestions — Page ${window._reorderPage}/${totalPages}</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" ${window._reorderPage <= 1 ? 'disabled' : ''} onclick="window._reorderPage--;renderReorderTable()">◀ Précédent</button>
+        <button class="btn btn-secondary btn-sm" ${window._reorderPage >= totalPages ? 'disabled' : ''} onclick="window._reorderPage++;renderReorderTable()">Suivant ▶</button>
+      </div>
+    </div>
   `;
   if (window.lucide) lucide.createIcons();
-  window._reorderSuggestions = suggestions;
 }
 
 function toggleAllSuggestions(cb) {
-  document.querySelectorAll('.suggestion-cb').forEach(c => { c.checked = cb.checked; });
+  if (!window._reorderSuggestions) return;
+  window._reorderSuggestions.forEach(s => s.selected = cb.checked);
+  renderReorderTable();
 }
 
 async function createOrderFromSuggestions() {
   const suggestions = window._reorderSuggestions || [];
-  const selected = suggestions.filter((s, idx) => {
-    const cb = document.querySelector(`.suggestion-cb[data-idx="${idx}"]`);
-    return cb?.checked;
-  });
+  const selected = suggestions.filter(s => s.selected);
 
   if (selected.length === 0) {
     UI.toast('Sélectionnez au moins un produit', 'warning');
@@ -351,11 +394,15 @@ async function createOrderFromSuggestions() {
     return;
   }
 
-  // Get quantities from inputs
+  // Get quantities from state
   const items = selected.map((s, i) => {
-    const originalIdx = (window._reorderSuggestions || []).indexOf(s);
-    const qty = parseInt(document.getElementById(`suggest-qty-${originalIdx}`)?.value || s.suggestedQty);
-    return { productId: s.product.id, productName: s.product.name, quantity: qty, unitPrice: s.product.purchasePrice || 0, receivedQty: 0 };
+    return { 
+      productId: s.product.id, 
+      productName: s.product.name, 
+      quantity: s.suggestedQtyToOrder || s.suggestedQty, 
+      unitPrice: s.product.purchasePrice || 0, 
+      receivedQty: 0 
+    };
   });
 
   const totalAmount = items.reduce((a, i) => a + i.quantity * i.unitPrice, 0);
