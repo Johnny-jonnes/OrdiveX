@@ -802,9 +802,22 @@ async function pullFromSupabase() {
 
     await Promise.all(storesToPull.map(async (storeName) => {
       try {
-        const { data, error } = await sb.from(storeName === 'users' ? 'app_users' : storeName).select('*');
+        let allData = [];
+        let fromIdx = 0;
+        const fetchLimit = 1000;
+        while (true) {
+          const { data, error } = await sb.from(storeName === 'users' ? 'app_users' : storeName)
+                                          .select('*')
+                                          .range(fromIdx, fromIdx + fetchLimit - 1);
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allData = allData.concat(data);
+          }
+          if (!data || data.length < fetchLimit) break;
+          fromIdx += fetchLimit;
+        }
 
-        if (error) throw error;
+        let data = allData;
 
         if (data && data.length > 0) {
           hasChanges = true;
