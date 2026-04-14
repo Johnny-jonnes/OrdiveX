@@ -52,6 +52,22 @@ function filterProducts() {
 function renderProductsTable(data) {
   const container = document.getElementById('prod-table-container');
   if (!container) return;
+
+  // Pagination
+  const PAGE_SIZE = 50;
+  window._filteredProducts = data;
+  window._prodPage = window._prodPage || 1;
+  // Reset page when filter changes
+  if (data !== window._lastFilteredData) {
+    window._prodPage = 1;
+    window._lastFilteredData = data;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+  if (window._prodPage > totalPages) window._prodPage = totalPages;
+  const start = (window._prodPage - 1) * PAGE_SIZE;
+  const pageData = data.slice(start, start + PAGE_SIZE);
+
   const columns = [
     { label: 'Code', render: r => `<code class="code-tag">${r.code}</code>` },
     { label: 'Médicament', render: r => `<div><strong>${r.name}</strong><br><span class="text-muted text-sm">${r.dci || ''} ${r.dosage || ''}</span></div>` },
@@ -79,7 +95,22 @@ function renderProductsTable(data) {
         <button class="btn btn-xs btn-secondary" onclick="editProductForm(${r.id})"><i data-lucide="edit-3"></i></button>
       </div>` },
   ];
-  UI.table(container, columns, data, { emptyMessage: 'Aucun produit trouvé', emptyIcon: 'pill' });
+
+  // Render table with only the current page
+  UI.table(container, columns, pageData, { emptyMessage: 'Aucun produit trouvé', emptyIcon: 'pill' });
+
+  // Pagination controls
+  const pagDiv = document.createElement('div');
+  pagDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:16px 0;gap:12px;flex-wrap:wrap;';
+  pagDiv.innerHTML = `
+    <span style="font-size:13px;color:var(--text-muted)">${data.length.toLocaleString()} produits — Page ${window._prodPage}/${totalPages}</span>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-secondary btn-sm" ${window._prodPage <= 1 ? 'disabled' : ''} onclick="window._prodPage--;renderProductsTable(window._filteredProducts)">◀ Précédent</button>
+      <button class="btn btn-secondary btn-sm" ${window._prodPage >= totalPages ? 'disabled' : ''} onclick="window._prodPage++;renderProductsTable(window._filteredProducts)">Suivant ▶</button>
+    </div>
+  `;
+  container.appendChild(pagDiv);
+  if (window.lucide) lucide.createIcons();
 }
 
 async function viewProduct(id) {
