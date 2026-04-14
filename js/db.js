@@ -785,17 +785,13 @@ async function pullFromSupabase() {
     ];
 
     // --- PROBE METIER (Sonde) ---
-    // Pour ne pas inonder la console de 16 erreurs rouges si la connexion est "fantôme"
-    // On fait un test ultra-rapide et unique. S'il échoue (n'importe quelle raison), on annule les 15 autres appels.
+    // Pour ne pas inonder la console si hors ligne
     try {
-      const probeRes = await fetch(`${sb.supabaseUrl}/rest/v1/settings?select=key&limit=1`, {
-        method: 'GET',
-        headers: { 'apikey': sb.supabaseKey, 'Authorization': `Bearer ${sb.supabaseKey}` },
-        cache: 'no-store'
-      });
-      if (!probeRes.ok) throw new Error('Probe Fail');
-      AppState.isOnline = true; // RECOVERY: Connection is successfully restored!
+      const probeReq = await sb.from('settings').select('key').limit(1);
+      if (probeReq.error) throw probeReq.error;
+      AppState.isOnline = true;
     } catch(err) {
+      console.warn('[Flash] Sonde hors ligne:', err);
       AppState.isOnline = false;
       return; 
     }
