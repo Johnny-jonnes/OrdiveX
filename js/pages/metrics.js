@@ -35,9 +35,29 @@ async function renderMetrics(container) {
     const last7 = new Date(); last7.setDate(last7.getDate() - 7);
 
     // ── Ventes globales ──
-    const approvedReturns = returns.filter(r => r.status === 'approved');
+    // ── Filtres temporels croisés ──
+    const globalStartDate = window._metricsStartDate || null;
+    const globalEndDate = window._metricsEndDate || null;
+
+    let filteredSales = sales;
+    let filteredReturns = returns;
+    if (globalStartDate || globalEndDate) {
+        filteredSales = sales.filter(s => {
+            const sd = s.date.split('T')[0];
+            return (!globalStartDate || sd >= globalStartDate) && (!globalEndDate || sd <= globalEndDate);
+        });
+        filteredReturns = returns.filter(s => {
+            const sd = s.date.split('T')[0];
+            return (!globalStartDate || sd >= globalStartDate) && (!globalEndDate || sd <= globalEndDate);
+        });
+    }
+
+    const approvedReturns = filteredReturns.filter(r => r.status === 'approved');
     const totalRefunds = approvedReturns.reduce((a, r) => a + (r.refundAmount || 0), 0);
-    const completedSales = sales.filter(s => ['completed', 'paid'].includes(s.status));
+    const completedSales = filteredSales.filter(s => ['completed', 'paid'].includes(s.status));
+    
+    window._metricsExportData = completedSales; // Pour l'export CSV
+    
     const totalRevenue = completedSales.reduce((a, s) => a + (s.total || 0), 0) - totalRefunds;
     const totalTransactions = completedSales.length;
     const avgBasket = totalTransactions > 0 ? Math.round(totalRevenue / totalTransactions) : 0;
@@ -108,7 +128,10 @@ async function renderMetrics(container) {
     const potentialProfit = totalStockSellValue - totalStockValue;
 
     // ── Marges & COGS ──
-    const rawCOGS = saleItems.reduce((a, si) => a + (si.purchasePrice || 0) * (si.quantity || 0), 0);
+    const filteredSaleIds = new Set(completedSales.map(s => s.id));
+    const filteredSaleItems = saleItems.filter(si => filteredSaleIds.has(si.saleId));
+
+    const rawCOGS = filteredSaleItems.reduce((a, si) => a + (si.purchasePrice || 0) * (si.quantity || 0), 0);
     const refundsCOGS = approvedReturns.reduce((a, r) => {
       return a + (r.items || []).reduce((acc, ri) => {
         const si = saleItems.find(s => s.id === ri.saleItemId);
@@ -120,7 +143,7 @@ async function renderMetrics(container) {
     const globalMargin = totalRevenue > 0 ? (totalProfit / totalRevenue * 100).toFixed(1) : '0.0';
 
     // ── DSO — Délai Moyen de Recouvrement ──
-    const creditSales = sales.filter(s => ['credit', 'assurance'].includes(s.paymentMethod));
+    const creditSales = filteredSales.filter(s => ['credit', 'assurance'].includes(s.paymentMethod));
     const paidCredits = creditSales.filter(s => s.status === 'completed' || s.status === 'paid');
     const unpaidCredits = creditSales.filter(s => s.status === 'pending');
     const totalCreances = unpaidCredits.reduce((a, s) => {
@@ -189,8 +212,8 @@ async function renderMetrics(container) {
     }
 
     // ── Top Produits par Volume ET par Revenu ──
-    const topByVolume = getTopProducts(saleItems, 'qty');
-    const topByRevenue = getTopProducts(saleItems, 'revenue');
+    const topByVolume = getTopProducts(filteredSaleItems, 'qty');
+    const topByRevenue = getTopProducts(filteredSaleItems, 'revenue');
 
     // ── Moyenne journalière ──
     const avgDailyRevenue = daysSinceStart > 0 ? Math.round(totalRevenue / daysSinceStart) : 0;
@@ -224,11 +247,13 @@ async function renderMetrics(container) {
           <p style="font-size:13px; color:var(--text-muted); margin:4px 0 0 50px;">Analyse financière complète · ${products.length} produits · ${totalTransactions} transactions</p>
         </div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <div style="font-size:12px; background:var(--surface); border:1px solid var(--border); padding:6px 14px; border-radius:8px; color:var(--text-muted);">
-            <i data-lucide="calendar" style="width:13px;height:13px;vertical-align:text-bottom;margin-right:4px;"></i> Depuis le ${startedUsingDate}
-          </div>
-          <div style="font-size:12px; background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.3); padding:6px 14px; border-radius:8px; color:#27ae60; font-weight:600;">
-            ${activeDays}/30j actifs · ${activityRate}%
+          <input type="date" id="metrics-start-date" class="form-control" style="width:130px; font-size:12px; height:32px" value="${window._metricsStartDate || ''}" onchange="updateMetricsFilter()">
+          <span style="color:var(--text-muted); font-size:12px">au</span>
+          <input type="date" id="metrics-end-date" class="form-control" style="width:130px; font-size:12px; height:32px" value="${window._metricsEndDate || ''}" onchange="updateMetricsFilter()">
+          <button class="btn btn-sm btn-outline" onclick="exportMetricsCSV()" title="Exporter en CSV" style="height:32px; padding:0 10px"><i data-lucide="download" style="width:14px"></i> Export CSV</button>
+          
+          <div style="font-size:12px; background:rgba(46,204,113,0.1); border:1px solid rgba(46,204,113,0.3); padding:6px 14px; border-radius:8px; color:#27ae60; font-weight:600; margin-left:8px">
+            ${activeDays}/30j actifs
           </div>
         </div>
       </div>
@@ -386,9 +411,11 @@ async function renderMetrics(container) {
         <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:var(--shadow-sm);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="font-size:15px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
-              <i data-lucide="activity" style="color:var(--primary-color);width:18px;height:18px;"></i> Dynamique des Ventes (7 Jours)
+              <i data-lucide="activity" style="color:var(--primary-color);width:18px;height:18px;"></i> Dynamique (7 Jours)
             </h3>
-            <span style="font-size:12px; color:var(--text-muted);">Total: ${UI.formatCurrency(trendData.reduce((a,b) => a+b, 0))}</span>
+            <div style="display:flex; gap:10px;">
+              <span style="font-size:12px; color:var(--text-muted); font-weight:700">CA: ${UI.formatCurrency(trendData.reduce((a,b) => a+b, 0))}</span>
+            </div>
           </div>
           <canvas id="metrics-chart-trend" width="700" height="320" style="width:100%; height:auto;"></canvas>
         </div>
@@ -564,6 +591,29 @@ function getTopProducts(items, mode = 'qty') {
     .sort((a, b) => mode === 'revenue' ? b[1].revenue - a[1].revenue : b[1].qty - a[1].qty)
     .slice(0, 5)
     .map(([name, data]) => ({ name, qty: data.qty, revenue: data.revenue }));
+}
+
+window.updateMetricsFilter = function() {
+    window._metricsStartDate = document.getElementById('metrics-start-date').value;
+    window._metricsEndDate = document.getElementById('metrics-end-date').value;
+    Router.navigate('metrics');
+}
+
+window.exportMetricsCSV = function() {
+    const data = window._metricsExportData || [];
+    if(!data.length) { UI.toast("Aucune donnée à exporter pour cette période", "warning"); return; }
+    
+    let csvStr = "\\uFEFFDate,Facture,Patient,Montant Total GNF,ModePaiement,Statut\\n";
+    data.forEach(s => {
+       csvStr += \`\${s.date},\${s.id},"\${(s.patientName||'Comptoir Vente Directe').replace(/"/g, '""')}",\${s.total},\${s.paymentMethod},\${s.status}\\n\`;
+    });
+    
+    const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = \`Export_Pharma_BI_\${new Date().toISOString().split('T')[0]}.csv\`;
+    a.click();
+    UI.toast("Export complet !", "success");
 }
 
 window.renderMetrics = renderMetrics;

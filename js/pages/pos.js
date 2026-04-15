@@ -604,11 +604,12 @@ function refreshGrid() {
       ${marginInfo}
       <div class="prod-foot">
         <span class="prod-price">${UI.formatCurrency(p.salePrice)} <small style="font-size:10px; color:var(--text-muted)">/ bte</small></span>
-        <span class="prod-stock ${rupt ? 's-rupt' : low ? 's-low' : 's-ok'}">${rupt ? (alts.length ? '<i data-lucide="repeat"></i> Alt.' : '<i data-lucide="x-circle"></i> Rupture') : (low ? '<i data-lucide="alert-triangle"></i> ' : '') + ((p.allowUnitSale && p.unitsPerBox > 1) ? Math.floor(q / p.unitsPerBox) + ' bt ' + (q % p.unitsPerBox) + ' u' : q + ' btes')}</span>
+        <span class="prod-stock ${rupt ? 's-rupt' : low ? 's-low' : 's-ok'}">${rupt ? (alts.length ? '<i data-lucide="repeat"></i> Alt.' : '<i data-lucide="x-circle"></i> Rupture') : (low ? '<i data-lucide="alert-triangle"></i> ' : '') + ((p.allowUnitSale) ? (Math.floor(q / ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) + ' bt ' + (p.subUnitsPerBox > 1 ? Math.floor((q % ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) / p.unitsPerBox) + ' pl ' : '') + ((q % ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) % (p.unitsPerBox||1)) + ' u') : q + ' btes')}</span>
       </div>
-      <div style="display:flex; justify-content:space-between; margin-top:8px;">
-        ${!rupt ? `<button class="btn btn-xs btn-primary" style="flex:1; margin-right:4px;" onclick="addToCart(${p.id}, 'box')"><i data-lucide="package"></i> Boîte</button>` : ''}
-        ${!rupt && p.allowUnitSale ? `<button class="btn btn-xs btn-secondary" style="flex:1;" onclick="addToCart(${p.id}, 'unit')"><i data-lucide="pill"></i> Unité</button>` : ''}
+      <div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">
+        ${!rupt ? `<button class="btn btn-xs btn-primary" style="flex:1; min-width:30%" onclick="addToCart(${p.id}, 'box')"><i data-lucide="package"></i> Boîte</button>` : ''}
+        ${!rupt && p.allowUnitSale && p.subUnitsPerBox > 1 ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="addToCart(${p.id}, 'subunit')"><i data-lucide="layout-grid"></i> Plaq.</button>` : ''}
+        ${!rupt && p.allowUnitSale ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="addToCart(${p.id}, 'unit')"><i data-lucide="pill"></i> Unité</button>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -630,11 +631,26 @@ function addToCart(productId, mode = 'box') {
   const existing = posCart.find(c => c.productId === productId && (c.saleMode || 'box') === mode);
   
   // Calcul unités requises
-  const unitFactor = (mode === 'box' && p.allowUnitSale && p.unitsPerBox) ? p.unitsPerBox : 1;
-  const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => sum + (c.qty * ((c.saleMode === 'box' && p.allowUnitSale && p.unitsPerBox) ? p.unitsPerBox : 1)), 0);
+  let unitFactor = 1;
+  const totU = (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
+  if (p.allowUnitSale) {
+     if (mode === 'box') unitFactor = totU;
+     else if (mode === 'subunit') unitFactor = p.unitsPerBox || 1;
+     else unitFactor = 1;
+  }
+  
+  const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => {
+     let f = 1;
+     if (p.allowUnitSale) {
+        if (c.saleMode === 'box') f = totU;
+        else if (c.saleMode === 'subunit') f = p.unitsPerBox || 1;
+        else f = 1;
+     }
+     return sum + (c.qty * f);
+  }, 0);
   
   if ((currentlyInCart + unitFactor) > avail) {
-    UI.toast(`Stock insuffisant (${Math.floor(avail/(p.unitsPerBox||1))} boîte(s) et ${avail%(p.unitsPerBox||1)} u. dispo)`, 'warning'); return;
+    UI.toast(`Stock insuffisant (${Math.floor(avail/totU)} boîte(s) dispo)`, 'warning'); return;
   }
   
   // Alerte allergie patient
@@ -657,7 +673,7 @@ function addToCart(productId, mode = 'box') {
 
   if (existing) { existing.qty++; existing.total = existing.qty * existing.unitPrice; }
   else {
-    const price = mode === 'unit' ? (p.pricePerUnit || 0) : p.salePrice;
+    const price = mode === 'unit' ? (p.pricePerUnit || 0) : (mode === 'subunit' ? (p.pricePerSubUnit || 0) : p.salePrice);
     posCart.push({
       productId, name: p.name, dci: p.dci || '', dosage: p.dosage || '',
       unitPrice: price, purchasePrice: p.purchasePrice || 0,
@@ -675,7 +691,16 @@ function addToCart(productId, mode = 'box') {
 function checkStockCart(productId) {
   const p = posProducts.find(x => x.id === productId);
   const avail = posStock[productId] || 0;
-  const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => sum + (c.qty * ((c.saleMode === 'box' && p?.allowUnitSale && p?.unitsPerBox) ? p.unitsPerBox : 1)), 0);
+  const totU = (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
+  const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => {
+     let f = 1;
+     if (p?.allowUnitSale) {
+        if (c.saleMode === 'box') f = totU;
+        else if (c.saleMode === 'subunit') f = p.unitsPerBox || 1;
+        else f = 1;
+     }
+     return sum + (c.qty * f);
+  }, 0);
   return currentlyInCart <= avail;
 }
 
@@ -750,7 +775,7 @@ function refreshCartUI() {
       <div class="cart-line-info">
         <div class="cart-line-name">${item.name}${item.requiresPrescription ? ' <span class="tag-rx-xs">Rx</span>' : ''}</div>
         ${item.dci ? `<div class="cart-line-dci">${item.dci}${item.dosage ? ' · ' + item.dosage : ''}</div>` : ''}
-        <div class="cart-line-pu">${UI.formatCurrency(item.unitPrice)} / ${item.saleMode === 'unit' ? 'unité' : 'boîte'}</div>
+        <div class="cart-line-pu">${UI.formatCurrency(item.unitPrice)} / ${item.saleMode === 'unit' ? 'unité' : (item.saleMode === 'subunit' ? 'plaquette' : 'boîte')}</div>
       </div>
       <div class="cart-line-qty">
         <button class="qty-ctrl" onclick="changeQty(${item.productId}, '${item.saleMode}', -1)">−</button>
@@ -1473,8 +1498,28 @@ async function validerVente() {
     }
   }
 
-  if (method === 'credit' && !posCurrentPatient) {
-    UI.toast('Un patient doit être sélectionné pour une vente à crédit', 'error'); return;
+  if (method === 'credit') {
+    if (!posCurrentPatient) {
+      UI.toast('Un patient doit être sélectionné pour une vente à crédit', 'error'); return;
+    }
+    const limit = parseFloat(posCurrentPatient.creditLimit) || 0;
+    if (limit <= 0) {
+      UI.toast('⛔ Le crédit est bloqué pour ce patient (Plafond à 0).', 'error', 5000); return;
+    }
+    
+    // Check pending debt
+    try {
+      const allSales = await DB.dbGetAll('sales', 'patientId', posCurrentPatient.id);
+      const pendingSales = allSales.filter(s => s.status === 'pending' && s.paymentMethod === 'credit');
+      const totalDebt = pendingSales.reduce((a, s) => a + (s.total || 0), 0);
+      
+      if ((totalDebt + total) > limit) {
+        UI.toast(`⛔ Plafond de crédit dépassé.\n\nDettes actuelles: ${UI.formatCurrency(totalDebt)}\nTotal demandé: ${UI.formatCurrency(total)}\n\nPlafond autorisé: ${UI.formatCurrency(limit)}`, 'error', 10000);
+        return;
+      }
+    } catch (e) {
+      console.error('[Credit Check Error]', e);
+    }
   }
 
   const btn = document.getElementById('btn-valider');
@@ -1584,8 +1629,13 @@ async function validerVente() {
 
     for (const item of posCart) {
       const p = posProducts.find(x => x.id === item.productId);
-      const isBox = (item.saleMode !== 'unit');
-      const deductQty = (isBox && p?.allowUnitSale && p?.unitsPerBox > 1) ? item.qty * p.unitsPerBox : item.qty;
+      const isBox = (item.saleMode === 'box');
+      const isSub = (item.saleMode === 'subunit');
+      let deductQty = item.qty;
+      if (p?.allowUnitSale) {
+         if (isBox) deductQty = item.qty * (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
+         else if (isSub) deductQty = item.qty * (p.unitsPerBox || 1);
+      }
       
       // FEFO: décrémentation du lot le plus proche de l'expiration
       let assignedLotNumber = item.fefoLotNumber || null;

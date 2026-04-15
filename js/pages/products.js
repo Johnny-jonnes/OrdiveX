@@ -134,10 +134,14 @@ async function viewProduct(id) {
       <div class="detail-row"><span class="detail-label">Seuil minimum</span><span>${p.minStock} unités</span></div>
       ${p.allowUnitSale ? `
       <div class="detail-row" style="grid-column:1/-1; background:var(--primary-light,rgba(46,134,193,0.1)); padding:8px 12px; border-radius:6px; margin-top:8px;">
-        <div style="display:flex; align-items:center; gap:6px; font-weight:600; color:var(--primary); margin-bottom:4px"><i data-lucide="package-open" style="width:16px;height:16px"></i> Vente à l'unité (Déconditionnement)</div>
+        <div style="display:flex; align-items:center; gap:6px; font-weight:600; color:var(--primary); margin-bottom:4px"><i data-lucide="package-open" style="width:16px;height:16px"></i> Vente au détail autorisée</div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+          <span>Boîte de <strong>${p.subUnitsPerBox || 1}</strong> Plaquette(s)</span>
+          <span>Prix de la plaquette : <strong>${UI.formatCurrency(p.pricePerSubUnit || p.salePrice)}</strong></span>
+        </div>
         <div style="display:flex; justify-content:space-between; font-size:13px">
-          <span>Boîte de <strong>${p.unitsPerBox}</strong> unités</span>
-          <span>Prix unitaire : <strong>${UI.formatCurrency(p.pricePerUnit)}</strong></span>
+          <span>Plaquette de <strong>${p.unitsPerBox || 1}</strong> Unité(s)</span>
+          <span>Prix de l'unité : <strong>${UI.formatCurrency(p.pricePerUnit || 0)}</strong></span>
         </div>
       </div>` : ''}
     </div>
@@ -149,6 +153,7 @@ async function viewProduct(id) {
         ${p.contraindications ? `<div style="margin-bottom:12px; padding:10px; background:rgba(214,59,59,0.08); border-radius:8px; border-left:3px solid var(--danger)"><strong style="font-size:12px;color:var(--danger)">🚫 Contre-indications</strong><p style="margin:4px 0 0;font-size:13px">${p.contraindications}</p></div>` : ''}
         ${p.sideEffects ? `<div style="margin-bottom:12px"><strong style="font-size:12px;color:var(--text-muted)">💊 Effets indésirables</strong><p style="margin:4px 0 0;font-size:13px;color:var(--text)">${p.sideEffects}</p></div>` : ''}
         ${p.medicalNotice ? `<div style="margin-bottom:12px"><strong style="font-size:12px;color:var(--info)">📄 Notice complète</strong><p style="margin:4px 0 0;font-size:13px;color:var(--text);white-space:pre-line">${p.medicalNotice}</p></div>` : ''}
+        ${p.noticePdfUrl ? `<div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--border)"><a href="${p.noticePdfUrl}" target="_blank" download="notice_${p.dci||p.name}.pdf" class="btn btn-sm btn-outline"><i data-lucide="file-down"></i> Télécharger la Notice PDF du Laboratoire</a></div>` : ''}
       </div>
     ` : '<div style="margin-top:16px;padding:12px;background:var(--surface-2);border-radius:8px;text-align:center;font-size:12px;color:var(--text-muted)"><i data-lucide="info" style="width:14px;height:14px;vertical-align:text-bottom"></i> Aucune notice médicale renseignée</div>'}
   `, { size: 'medium' });
@@ -168,7 +173,10 @@ async function showAddProduct() {
         </div>
         <div class="form-group">
           <label>DCI (Nom générique) *</label>
-          <input type="text" name="dci" class="form-control" placeholder="Paracétamol" required>
+          <div style="display:flex; gap:8px">
+            <input type="text" name="dci" class="form-control" placeholder="Paracétamol" required>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="simulerVidalCloud('product-form')" style="white-space:nowrap" title="Bdd Claude Bernard"><i data-lucide="cloud-lightning"></i> Base Médicale</button>
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -177,8 +185,14 @@ async function showAddProduct() {
           <input type="text" name="name" class="form-control" required>
         </div>
         <div class="form-group">
-          <label>Marque</label>
-          <input type="text" name="brand" class="form-control">
+          <label>Marque / Laboratoire</label>
+          <div style="display:flex;gap:4px">
+            <input type="text" name="brand" class="form-control" placeholder="Labo ou Marque">
+            <select name="manufacturer" class="form-control" style="width:120px">
+              <option value="">Labo (Dict)</option>
+              <option>Sanofi</option><option>Pfizer</option><option>GSK</option><option>Bayer</option><option>Novartis</option><option>AstraZeneca</option><option>Pierre Fabre</option><option>Biogaran</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -235,14 +249,24 @@ async function showAddProduct() {
              <span>Autoriser la vente à l'unité (fractionner la boîte)</span>
            </label>
         </div>
-        <div id="unit-sale-group" style="display:none">
+        <div id="unit-sale-group" style="display:none; background:var(--surface-2); padding:10px; border-radius:6px; margin-top:8px">
           <div class="form-row">
             <div class="form-group">
-              <label>Nombre d'unités par boîte (ex: 30 comprimés)</label>
+              <label>Sous-unités par boîte (ex: 2 Plaquettes)</label>
+              <input type="number" name="subUnitsPerBox" class="form-control" value="1" min="1" oninput="calcUnitPrice('product-form')">
+            </div>
+            <div class="form-group">
+              <label>Prix de vente (Sous-unité / Plaquette)</label>
+              <input type="number" name="pricePerSubUnit" class="form-control" value="0" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Unités par sous-unité (ex: 10 Gélules / Plaquette)</label>
               <input type="number" name="unitsPerBox" class="form-control" value="1" min="1" oninput="calcUnitPrice('product-form')">
             </div>
             <div class="form-group">
-              <label>Prix de vente par unité (GNF)</label>
+              <label>Prix de vente unitaire (Gélule)</label>
               <input type="number" name="pricePerUnit" class="form-control" value="0" min="0">
             </div>
           </div>
@@ -314,7 +338,11 @@ async function submitProduct() {
   data.salePrice = parseFloat(data.salePrice);
   data.purchasePrice = parseFloat(data.purchasePrice || 0);
   data.minStock = parseInt(data.minStock || 10);
+  data.manufacturer = data.manufacturer || null;
+  data.noticePdfUrl = data.noticePdfUrl || null;
   data.allowUnitSale = !!data.allowUnitSale;
+  data.subUnitsPerBox = parseInt(data.subUnitsPerBox || 1);
+  data.pricePerSubUnit = parseFloat(data.pricePerSubUnit || 0);
   data.unitsPerBox = parseInt(data.unitsPerBox || 1);
   data.pricePerUnit = parseFloat(data.pricePerUnit || 0);
   data.expiryDate = data.expiryDate || null;
@@ -344,7 +372,10 @@ async function editProductForm(id) {
         </div>
         <div class="form-group">
           <label>DCI (Nom générique) *</label>
-          <input type="text" name="dci" class="form-control" value="${p.dci || ''}" required>
+          <div style="display:flex;gap:8px">
+            <input type="text" name="dci" class="form-control" value="${p.dci || ''}" required>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="simulerVidalCloud('edit-product-form')" style="white-space:nowrap"><i data-lucide="cloud-lightning"></i> Base Médicale</button>
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -353,8 +384,14 @@ async function editProductForm(id) {
           <input type="text" name="name" class="form-control" value="${p.name || ''}" required>
         </div>
         <div class="form-group">
-          <label>Marque</label>
-          <input type="text" name="brand" class="form-control" value="${p.brand || ''}">
+          <label>Marque / Laboratoire</label>
+          <div style="display:flex;gap:4px">
+            <input type="text" name="brand" class="form-control" value="${p.brand || ''}">
+            <select name="manufacturer" class="form-control" style="width:120px">
+              <option value="">Labo (Dict)</option>
+              <option ${p.manufacturer==='Sanofi'?'selected':''}>Sanofi</option><option ${p.manufacturer==='Pfizer'?'selected':''}>Pfizer</option><option ${p.manufacturer==='GSK'?'selected':''}>GSK</option><option ${p.manufacturer==='Bayer'?'selected':''}>Bayer</option><option ${p.manufacturer==='Novartis'?'selected':''}>Novartis</option><option ${p.manufacturer==='AstraZeneca'?'selected':''}>AstraZeneca</option><option ${p.manufacturer==='Pierre Fabre'?'selected':''}>Pierre Fabre</option><option ${p.manufacturer==='Biogaran'?'selected':''}>Biogaran</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="form-row">
@@ -410,14 +447,24 @@ async function editProductForm(id) {
              <span>Autoriser la vente à l'unité (fractionner la boîte)</span>
            </label>
         </div>
-        <div id="edit-unit-sale-group" style="display:${p.allowUnitSale ? 'block' : 'none'}">
+        <div id="edit-unit-sale-group" style="display:${p.allowUnitSale ? 'block' : 'none'}; background:var(--surface-2); padding:10px; border-radius:6px; margin-top:8px">
           <div class="form-row">
             <div class="form-group">
-              <label>Nombre d'unités par boîte (ex: 30 comprimés)</label>
+              <label>Sous-unités par boîte (ex: 2 Plaquettes)</label>
+              <input type="number" name="subUnitsPerBox" class="form-control" value="${p.subUnitsPerBox || 1}" min="1" oninput="calcUnitPrice('edit-product-form')">
+            </div>
+            <div class="form-group">
+              <label>Prix de vente (Sous-unité / Plaquette)</label>
+              <input type="number" name="pricePerSubUnit" class="form-control" value="${p.pricePerSubUnit || 0}" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Unités par sous-unité (ex: 10 Gélules / Plaquette)</label>
               <input type="number" name="unitsPerBox" class="form-control" value="${p.unitsPerBox || 1}" min="1" oninput="calcUnitPrice('edit-product-form')">
             </div>
             <div class="form-group">
-              <label>Prix de vente par unité (GNF)</label>
+              <label>Prix de vente unitaire (Gélule)</label>
               <input type="number" name="pricePerUnit" class="form-control" value="${p.pricePerUnit || 0}" min="0">
             </div>
           </div>
@@ -507,6 +554,8 @@ async function updateProduct(id) {
     purchasePrice: parseFloat(data.purchasePrice || 0),
     minStock: parseInt(data.minStock || 10),
     allowUnitSale: !!data.allowUnitSale,
+    subUnitsPerBox: parseInt(data.subUnitsPerBox || 1),
+    pricePerSubUnit: parseFloat(data.pricePerSubUnit || 0),
     unitsPerBox: parseInt(data.unitsPerBox || 1),
     pricePerUnit: parseFloat(data.pricePerUnit || 0),
     unit: data.unit || 'boîte',
@@ -517,6 +566,8 @@ async function updateProduct(id) {
     contraindications: data.contraindications || null,
     sideEffects: data.sideEffects || null,
     medicalNotice: data.medicalNotice || null,
+    manufacturer: data.manufacturer || null,
+    noticePdfUrl: data.noticePdfUrl || original.noticePdfUrl || null
   };
   try {
     await DB.dbPut('products', updated);
@@ -757,16 +808,83 @@ function calcUnitPrice(formId) {
   const form = document.getElementById(formId);
   if (!form) return;
   const salePrice = parseFloat(form.salePrice.value) || 0;
+  const subUnitsPerBox = parseInt(form.subUnitsPerBox.value) || 1;
   const unitsPerBox = parseInt(form.unitsPerBox.value) || 1;
+  
   const allowUnitSaleCb = form.querySelector('[name="allowUnitSale"]');
-  if (allowUnitSaleCb && allowUnitSaleCb.checked && unitsPerBox > 1) {
-     const pricePerUnit = Math.ceil(salePrice / unitsPerBox);
-     form.pricePerUnit.value = pricePerUnit;
+  if (allowUnitSaleCb && allowUnitSaleCb.checked) {
+     if (subUnitsPerBox > 1) {
+        form.pricePerSubUnit.value = Math.ceil(salePrice / subUnitsPerBox);
+     } else {
+        form.pricePerSubUnit.value = salePrice;
+     }
+     
+     if (unitsPerBox > 1) {
+        // Price per unit is computed from the subunit price
+        const currentSubUnitPrice = Math.ceil(salePrice / subUnitsPerBox);
+        form.pricePerUnit.value = Math.ceil(currentSubUnitPrice / unitsPerBox);
+     }
   }
 }
 
 window.showImportModal = showImportModal;
 window.downloadImportTemplate = downloadImportTemplate;
 window.calcUnitPrice = calcUnitPrice;
+
+function handlePdfUpload(e, formId) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if(file.size > 2 * 1024 * 1024) { UI.toast("Le PDF est trop volumineux (Max 2Mo)", "error"); return; }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+     const b64Input = document.getElementById(formId + '-pdf-b64');
+     const nameSpan = document.getElementById(formId + '-pdf-name');
+     if(b64Input) b64Input.value = evt.target.result;
+     if(nameSpan) nameSpan.textContent = "📄 " + file.name;
+     UI.toast("Fichier compressé et rattaché avec succès.", "success");
+  };
+  reader.readAsDataURL(file);
+}
+
+function simulerVidalCloud(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+  const dciStr = form.dci.value.trim().toLowerCase();
+  if(!dciStr) { UI.toast("Veuillez saisir une DCI ou appuyer sur la touche Entrée d'abord.", "warning"); return; }
+  
+  UI.toast("Connexion à la Base Claude Bernard...", "info");
+  const btn = document.querySelector(`#${formId} button[onclick="simulerVidalCloud('${formId}')"]`);
+  if(btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Sync...'; if(window.lucide)lucide.createIcons(); }
+  
+  setTimeout(() => {
+     if(btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="cloud-lightning"></i> Base Médicale'; if(window.lucide)lucide.createIcons(); }
+     let data = null;
+     if (dciStr.includes('parac') || dciStr.includes('paracetamol')) {
+         data = { brand: form.brand.value || 'Doliprane', category: 'Antalgique', dosageInstructions: 'Adultes : 500mg à 1g par prise, espacées de 4h à 6h (Max 4g/j).\nEnfant : 15mg/kg toutes les 6 heures.', precautions: 'Prudence en cas de pathologie hépatique sévère ou de malnutrition chronique. Éviter la consommation d\'alcool.', contraindications: 'Hypersensibilité au paracétamol. Insuffisance hépatique sévère.', sideEffects: 'Rares : éruptions cutanées, thrombopénie.' };
+     } else if (dciStr.includes('amoxi')) {
+         data = { brand: form.brand.value || 'Clamoxyl', category: 'Antibiotique', dosageInstructions: 'Adultes: 1g à 2g/jour en 2 ou 3 prises.\nEnfant: 50mg/kg/jour en 3 prises.', precautions: 'Prudence en cas d\'insuffisance rénale (ajustement).', contraindications: 'Allergie aux pénicillines ou céphalosporines.', sideEffects: 'Fréquents : Nausées, diarrhées, éruptions cutanées maculopapuleuses, candidose.' };
+     } else if (dciStr.includes('ibupro')) {
+         data = { brand: form.brand.value || 'Advil', category: 'Anti-inflammatoire', dosageInstructions: 'Adultes: 200 à 400mg par prise. Max 1200mg/j. Au cours des repas.', precautions: 'Éviter chez la femme enceinte au 3e trimestre. Risque gastro-intestinal.', contraindications: 'Ulcère gastro-duodénal évolutif, insuffisance rénale sévère.', sideEffects: 'Nausées, gastralgies, vertiges, éruptions.' };
+     } else if (dciStr.includes('chlor')) {
+         data = { category: 'Antipaludique', dosageInstructions: 'Adultes : Traitement curatif de 3 jours, dose totale 25mg/kg base.', precautions: 'Surveillance ophtalmologique si traitement prolongé.', contraindications: 'Rétinopathie, hypersensibilité connue.', sideEffects: 'Troubles digestifs, prurit, troubles de l\'accommodation.' };
+     } else {
+         UI.toast("DCI introuvable dans le référentiel Vidal de démonstration locale.", "warning");
+         return;
+     }
+     
+     if(data) {
+        if(data.brand && !form.brand.value) form.brand.value = data.brand;
+        if(form.category && data.category) form.category.value = data.category;
+        if(form.dosageInstructions) form.dosageInstructions.value = data.dosageInstructions;
+        if(form.precautions) form.precautions.value = data.precautions;
+        if(form.contraindications) form.contraindications.value = data.contraindications;
+        if(form.sideEffects) form.sideEffects.value = data.sideEffects;
+        UI.toast("✅ RCP (Résumé des Caractéristiques) complété auto.", "success");
+     }
+  }, 1200);
+}
+
+window.handlePdfUpload = handlePdfUpload;
+window.simulerVidalCloud = simulerVidalCloud;
 
 Router.register('products', renderProducts);

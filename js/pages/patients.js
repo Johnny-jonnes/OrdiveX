@@ -147,9 +147,13 @@ async function viewPatient(patientId) {
             ${patient.address ? `<span><i data-lucide="map-pin"></i> ${patient.address}</span>` : ''}
           </div>
           ${patient.allergies ? `<div class="allergy-alert"><i data-lucide="alert-triangle"></i> Allergie : <strong>${patient.allergies}</strong></div>` : ''}
+          <div style="margin-top:12px;display:flex;gap:12px;">
+            <span class="badge badge-${patient.status === 'ayant_droit' ? 'warning' : 'primary'}"><i data-lucide="users" style="width:12px;height:12px;margin-right:4px;"></i> ${patient.status === 'ayant_droit' ? 'Ayant Droit' : 'Souscripteur Principal'}</span>
+            ${patient.creditLimit > 0 ? `<span class="badge badge-success"><i data-lucide="file-clock" style="width:12px;height:12px;margin-right:4px;"></i> Crédit autorisé: ${UI.formatCurrency(patient.creditLimit)}</span>` : `<span class="badge badge-danger"><i data-lucide="lock" style="width:12px;height:12px;margin-right:4px;"></i> Crédit bloqué</span>`}
+          </div>
           ${patient.assurances && patient.assurances.length > 0 ? `
             <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
-              ${patient.assurances.map(a => `<span class="badge badge-info"><i data-lucide="shield" style="width:12px;height:12px;margin-right:4px;"></i> ${a.name} (${a.coverage}%) ${a.ref ? `- ${a.ref}` : ''}</span>`).join('')}
+              ${patient.assurances.map(a => `<span class="badge badge-info"><i data-lucide="shield" style="width:12px;height:12px;margin-right:4px;"></i> <b>${a.name}</b> ${a.enterprise ? `[${a.enterprise}]` : ''} (${a.coverage}%) ${a.ref ? `- Police: ${a.ref}` : ''}</span>`).join('')}
             </div>
           ` : ''}
         </div>
@@ -230,6 +234,7 @@ function showAddPatient() {
           <label>Date de naissance</label>
           <input type="date" name="dob" class="form-control">
         </div>
+      <div class="form-row">
         <div class="form-group">
           <label>Sexe</label>
           <select name="gender" class="form-control">
@@ -238,10 +243,23 @@ function showAddPatient() {
             <option value="F">Féminin</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Statut Assuré / Client</label>
+          <select name="status" class="form-control">
+            <option value="principal">Souscripteur Principal</option>
+            <option value="ayant_droit">Ayant droit (Enfant / Conjoint)</option>
+          </select>
+        </div>
       </div>
-      <div class="form-group">
-        <label>Adresse</label>
-        <input type="text" name="address" class="form-control" placeholder="Quartier, commune, ville">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Adresse</label>
+          <input type="text" name="address" class="form-control" placeholder="Quartier, commune, ville">
+        </div>
+        <div class="form-group">
+           <label><i data-lucide="file-clock"></i> Plafond de crédit (GNF)</label>
+           <input type="number" name="creditLimit" class="form-control" placeholder="0 = Bloqué" value="0">
+        </div>
       </div>
       <div class="form-group">
         <label><i data-lucide="alert-triangle"></i> Allergies connues</label>
@@ -281,7 +299,11 @@ window.addAssuranceRow = function(containerId, data = null) {
   row.style.cssText = "display:flex; gap:8px; margin-bottom:8px; align-items:end; background:var(--surface); padding:8px; border-radius:6px; border:1px solid var(--border);";
   row.innerHTML = `
     <div style="flex:2">
-      <label style="font-size:11px;color:var(--text-muted)">Nom de l'organisme / Employeur</label>
+      <label style="font-size:11px;color:var(--text-muted)">Entreprise (Employeur)</label>
+      <input type="text" name="assurEnterprise_${idx}" class="form-control form-control-sm" value="${data?.enterprise || ''}" placeholder="Ex: Rio Tinto, Braguinée...">
+    </div>
+    <div style="flex:2">
+      <label style="font-size:11px;color:var(--text-muted)">Assurance / Mutuelle</label>
       <input type="text" name="assurName_${idx}" class="form-control form-control-sm" value="${data?.name || ''}" placeholder="Ex: ASCOMA, CNSS..." required>
     </div>
     <div style="flex:1">
@@ -289,7 +311,7 @@ window.addAssuranceRow = function(containerId, data = null) {
       <input type="number" name="assurCoverage_${idx}" class="form-control form-control-sm" value="${data?.coverage || 80}" min="1" max="100" required>
     </div>
     <div style="flex:2">
-      <label style="font-size:11px;color:var(--text-muted)">N° Matricule / Référence</label>
+      <label style="font-size:11px;color:var(--text-muted)">N° Police / Matricule</label>
       <input type="text" name="assurRef_${idx}" class="form-control form-control-sm" value="${data?.ref || ''}" placeholder="Numéro assuré">
     </div>
     <div>
@@ -307,10 +329,12 @@ function extractAssurances(data) {
       const idx = k.split('_')[1];
       assurances.push({
         name: data[k],
+        enterprise: data['assurEnterprise_' + idx] || '',
         coverage: parseInt(data['assurCoverage_' + idx] || 0),
         ref: data['assurRef_' + idx] || ''
       });
       delete data[k];
+      delete data['assurEnterprise_' + idx];
       delete data['assurCoverage_' + idx];
       delete data['assurRef_' + idx];
     }
@@ -343,7 +367,27 @@ async function editPatient(patientId) {
       </div>
       <div class="form-row">
         <div class="form-group"><label>Date de naissance</label><input type="date" name="dob" class="form-control" value="${patient.dob || ''}"></div>
-        <div class="form-group"><label>Sexe</label><select name="gender" class="form-control"><option ${!patient.gender ? 'selected' : ''}>Non précisé</option><option value="M" ${patient.gender === 'M' ? 'selected' : ''}>Masculin</option><option value="F" ${patient.gender === 'F' ? 'selected' : ''}>Féminin</option></select></div>
+        <div class="form-group">
+          <label>Sexe</label>
+          <select name="gender" class="form-control">
+            <option ${!patient.gender ? 'selected' : ''}>Non précisé</option>
+            <option value="M" ${patient.gender === 'M' ? 'selected' : ''}>Masculin</option>
+            <option value="F" ${patient.gender === 'F' ? 'selected' : ''}>Féminin</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Statut Assuré / Client</label>
+          <select name="status" class="form-control">
+            <option value="principal" ${patient.status !== 'ayant_droit' ? 'selected' : ''}>Souscripteur Principal</option>
+            <option value="ayant_droit" ${patient.status === 'ayant_droit' ? 'selected' : ''}>Ayant droit (Enfant / Conjoint)</option>
+          </select>
+        </div>
+        <div class="form-group">
+           <label><i data-lucide="file-clock"></i> Plafond de crédit (GNF)</label>
+           <input type="number" name="creditLimit" class="form-control" placeholder="0 = Bloqué" value="${patient.creditLimit || 0}">
+        </div>
       </div>
       <div class="form-group"><label>Adresse</label><input type="text" name="address" class="form-control" value="${patient.address || ''}"></div>
       <div class="form-group"><label><i data-lucide="alert-triangle"></i> Allergies</label><input type="text" name="allergies" class="form-control" value="${patient.allergies || ''}"></div>
