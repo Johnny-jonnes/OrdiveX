@@ -240,7 +240,7 @@ function initSupportWidget() {
         
         @media (max-width: 480px) {
             #support-widget-container {
-                bottom: 16px;
+                bottom: 80px;
                 right: 16px;
             }
             .support-window {

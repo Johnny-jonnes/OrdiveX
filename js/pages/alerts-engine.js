@@ -401,9 +401,7 @@ function renderReorderTable() {
       </table>
     </div>
     
-    <div style="margin-top:16px; margin-bottom:16px;">
-      <button class="btn btn-primary btn-block" onclick="createOrderFromSuggestions()"><i data-lucide="shopping-cart"></i> Générer le Bon de Commande MASSIVE</button>
-    </div>
+    <!-- Le bouton de commande massive a été retiré -->
 
     <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 0;gap:12px;flex-wrap:wrap;">
       <span style="font-size:13px;color:var(--text-muted)">${suggestions.length.toLocaleString()} suggestions — Page ${window._reorderPage}/${totalPages}</span>
