@@ -767,8 +767,8 @@ async function processImportCSV(content) {
     }
   }
 
-  // Phase 3 : Écriture IndexedDB par gros lots via dbBulkPut (1 transaction par lot)
-  const BULK_SIZE = 5000;
+  // Phase 3 : Écriture IndexedDB par lots via dbBulkPut (1 transaction par lot)
+  const BULK_SIZE = 1000;
   const totalParsed = parsedProducts.length;
 
   for (let i = 0; i < totalParsed; i += BULK_SIZE) {
@@ -781,11 +781,13 @@ async function processImportCSV(content) {
       errors += chunk.length;
     }
 
-    // Mise à jour barre de progression + pause UI
-    const pct = Math.round(((i + chunk.length) / totalParsed) * 100);
+    // Mise à jour barre de progression + pause longue pour laisser le navigateur respirer
+    const done = Math.min(i + BULK_SIZE, totalParsed);
+    const pct = Math.round((done / totalParsed) * 100);
     if (fill) fill.style.width = pct + '%';
-    if (status) status.textContent = `Écriture : ${Math.min(i + BULK_SIZE, totalParsed)} / ${totalParsed}...`;
-    await new Promise(r => setTimeout(r, 5));
+    if (status) status.textContent = `Écriture : ${done.toLocaleString()} / ${totalParsed.toLocaleString()}...`;
+    // Pause de 50ms = laisse le navigateur rendre l'UI sans aucun blocage visible
+    await new Promise(r => setTimeout(r, 50));
   }
 
   // Phase 4 : Résultats

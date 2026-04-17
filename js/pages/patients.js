@@ -647,8 +647,8 @@ async function processImportPatientsCSV(content) {
     } catch (err) { errors++; }
   }
 
-  // Phase 3 : Écriture IndexedDB par gros lots via dbBulkPut
-  const BULK_SIZE = 5000;
+  // Phase 3 : Écriture IndexedDB par lots via dbBulkPut
+  const BULK_SIZE = 1000;
   let imported = 0;
 
   for (let i = 0; i < parsed.length; i += BULK_SIZE) {
@@ -660,10 +660,13 @@ async function processImportPatientsCSV(content) {
       console.error('[Import Patients] Erreur bulk:', err);
       errors += chunk.length;
     }
-    const pct = Math.round(((i + chunk.length) / parsed.length) * 100);
+    const done = Math.min(i + BULK_SIZE, parsed.length);
+    const pct = Math.round((done / parsed.length) * 100);
     if (fill) fill.style.width = pct + '%';
-    if (status) status.textContent = `Écriture : ${Math.min(i + BULK_SIZE, parsed.length)} / ${parsed.length}...`;
-    await new Promise(r => setTimeout(r, 5));
+    if (status) status.textContent = `Écriture : ${done.toLocaleString()} / ${parsed.length.toLocaleString()}...`;
+    
+    // Pause de 50ms pour laisser l'interface graphique se rafraîchir sans geler
+    await new Promise(r => setTimeout(r, 50));
   }
 
   // Phase 4 : Résultats
