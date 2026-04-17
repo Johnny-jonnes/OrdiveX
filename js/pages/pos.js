@@ -607,9 +607,10 @@ function refreshGrid() {
         <span class="prod-stock ${rupt ? 's-rupt' : low ? 's-low' : 's-ok'}">${rupt ? (alts.length ? '<i data-lucide="repeat"></i> Alt.' : '<i data-lucide="x-circle"></i> Rupture') : (low ? '<i data-lucide="alert-triangle"></i> ' : '') + ((p.allowUnitSale) ? (Math.floor(q / ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) + ' bt ' + (p.subUnitsPerBox > 1 ? Math.floor((q % ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) / p.unitsPerBox) + ' pl ' : '') + ((q % ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) % (p.unitsPerBox||1)) + ' u') : q + ' btes')}</span>
       </div>
       <div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">
-        ${!rupt ? `<button class="btn btn-xs btn-primary" style="flex:1; min-width:30%" onclick="addToCart(${p.id}, 'box')"><i data-lucide="package"></i> Boîte</button>` : ''}
-        ${!rupt && p.allowUnitSale && p.subUnitsPerBox > 1 ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="addToCart(${p.id}, 'subunit')"><i data-lucide="layout-grid"></i> Plaq.</button>` : ''}
-        ${!rupt && p.allowUnitSale ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="addToCart(${p.id}, 'unit')"><i data-lucide="pill"></i> Unité</button>` : ''}
+        ${!rupt ? `<button class="btn btn-xs btn-primary" style="flex:1; min-width:30%" onclick="event.stopPropagation(); addToCart(${p.id}, 'box')"><i data-lucide="package"></i> Boîte</button>` : ''}
+        ${!rupt && p.allowUnitSale && p.subUnitsPerBox > 1 ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="event.stopPropagation(); addToCart(${p.id}, 'subunit')"><i data-lucide="layout-grid"></i> Plaq.</button>` : ''}
+        ${!rupt && p.allowUnitSale ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="event.stopPropagation(); addToCart(${p.id}, 'unit')"><i data-lucide="pill"></i> Unité</button>` : ''}
+        <button class="btn btn-xs btn-ghost" style="min-width:32px; color:var(--info); border:1px solid var(--border)" onclick="event.stopPropagation(); showProductNotice(${p.id})" title="Notice médicale"><i data-lucide="info" style="width:14px;height:14px"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -1195,7 +1196,8 @@ function calcAge(dob) {
 
 async function showPatientRepertory() {
   const patients = await DB.dbGetAll('patients');
-  const sorted = patients.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'));
+  window._repertoryPatients = patients.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'fr'));
+  window._repertoryPage = 1;
 
   const content = `
     <div style="margin-bottom:15px">
@@ -1204,13 +1206,42 @@ async function showPatientRepertory() {
         <input type="text" class="pos-searchinput" placeholder="Chercher un nom, téléphone ou adresse..." oninput="filterRepertory(this.value)" autofocus>
       </div>
     </div>
-    <div id="repertory-list" style="max-height:450px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface)">
-      ${renderRepertoryItems(sorted)}
-    </div>
+    <div id="repertory-list" style="max-height:450px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface)"></div>
   `;
 
   UI.modal('Répertoire des Patients', content, { size: 'large' });
   if (window.lucide) lucide.createIcons();
+  renderRepertoryPage(1);
+}
+
+function renderRepertoryPage(page) {
+  window._repertoryPage = page || 1;
+  const PAGE_SIZE = 50;
+  const list = window._repertoryFilteredPatients || window._repertoryPatients || [];
+  const totalPages = Math.ceil(list.length / PAGE_SIZE) || 1;
+  const p = Math.max(1, Math.min(window._repertoryPage, totalPages));
+  const start = (p - 1) * PAGE_SIZE;
+  const pageItems = list.slice(start, start + PAGE_SIZE);
+
+  let html = renderRepertoryItems(pageItems);
+
+  if (totalPages > 1) {
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-top:1px solid var(--border); background:var(--bg)">
+        <span style="font-size:12px; color:var(--text-muted)">Page ${p} / ${totalPages} (${list.length} patients)</span>
+        <div style="display:flex; gap:8px">
+          <button class="btn btn-sm btn-secondary" onclick="renderRepertoryPage(${p - 1})" ${p <= 1 ? 'disabled' : ''}>◀ Préc.</button>
+          <button class="btn btn-sm btn-secondary" onclick="renderRepertoryPage(${p + 1})" ${p >= totalPages ? 'disabled' : ''}>Suiv. ▶</button>
+        </div>
+      </div>
+    `;
+  }
+
+  const container = document.getElementById('repertory-list');
+  if (container) {
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+  }
 }
 
 function renderRepertoryItems(list) {
@@ -1230,18 +1261,18 @@ function renderRepertoryItems(list) {
 
 window.filterRepertory = (val) => {
   const q = val.toLowerCase();
-  DB.dbGetAll('patients').then(all => {
-    const filtered = all.filter(p =>
-      (p.name || '').toLowerCase().includes(q) ||
-      (p.phone || '').includes(q) ||
-      (p.address || '').toLowerCase().includes(q)
-    );
-    const container = document.getElementById('repertory-list');
-    if (container) {
-      container.innerHTML = renderRepertoryItems(filtered);
-      if (window.lucide) lucide.createIcons();
-    }
-  });
+  const all = window._repertoryPatients || [];
+  if (!q) {
+    window._repertoryFilteredPatients = null;
+    renderRepertoryPage(1);
+    return;
+  }
+  window._repertoryFilteredPatients = all.filter(p =>
+    (p.name || '').toLowerCase().includes(q) ||
+    (p.phone || '').includes(q) ||
+    (p.address || '').toLowerCase().includes(q)
+  );
+  renderRepertoryPage(1);
 };
 
 function showQuickNewClient(prefill) {
@@ -2244,6 +2275,8 @@ window.MobileMoneyGateway = MobileMoneyGateway;
 window.showGenericAlternatives = showGenericAlternatives;
 window.applySort = applySort;
 window.loadRecentSales = loadRecentSales;
+window.showPatientRepertory = showPatientRepertory;
+window.renderRepertoryPage = renderRepertoryPage;
 
 // ═══════════════════════════════════════════════════════════════════
 // FEEDBACK AJOUT PANIER — Son + Animation
@@ -2309,12 +2342,15 @@ async function loadRecentSales() {
     const recent = sales
       .filter(s => s.status !== 'cancelled')
       .sort((a, b) => new Date(b.date) - new Date(a.date))
-      .slice(0, 5);
+      .slice(0, 10);
 
     if (!recent.length) {
       el.innerHTML = '<div style="text-align:center;padding:12px;opacity:0.5;font-size:12px">Aucune vente récente</div>';
       return;
     }
+
+    el.style.maxHeight = '320px';
+    el.style.overflowY = 'auto';
 
     el.innerHTML = recent.map((s, i) => {
       const d = new Date(s.date);

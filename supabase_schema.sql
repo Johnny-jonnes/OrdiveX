@@ -530,3 +530,17 @@ CREATE POLICY "settings_policy_update" ON "settings" FOR UPDATE USING (auth.uid(
 DROP POLICY IF EXISTS "settings_policy_delete" ON "settings";
 CREATE POLICY "settings_policy_delete" ON "settings" FOR DELETE USING (auth.uid() IS NOT NULL);
 
+CREATE TABLE IF NOT EXISTS pull_tracking (
+  id BIGSERIAL PRIMARY KEY,
+  device_id TEXT NOT NULL,
+  device_name TEXT,
+  pharmacy_name TEXT,
+  user_name TEXT,
+  pulled_at TIMESTAMPTZ DEFAULT NOW(),
+  items_pulled INTEGER DEFAULT 0,
+  ip_address TEXT
+);
+
+ALTER TABLE pull_tracking ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_insert" ON pull_tracking FOR INSERT WITH CHECK (true);
+CREATE POLICY "allow_select_admin" ON pull_tracking FOR SELECT USING (true);

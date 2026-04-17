@@ -771,6 +771,7 @@ async function syncToSupabase() {
  */
 async function pullFromSupabase() {
   let hasChanges = false;
+  let totalItemsPulled = 0;
   try {
     const sb = await getSupabaseClient();
     if (!sb || !navigator.onLine) {
@@ -870,6 +871,7 @@ async function pullFromSupabase() {
               await new Promise(r => setTimeout(r, 5));
             }
           }
+          totalItemsPulled += preparedItems.length;
           console.log(`[Flash] ✅ ${storeName}: ${preparedItems.length} importés`);
         }
       } catch (storeErr) {
@@ -880,6 +882,24 @@ async function pullFromSupabase() {
     }
 
     console.log('[Flash] ⚡ Pull terminé — données locales à jour');
+
+    // ── TRACKING DU PULL POUR LE SUIVI PHARMACIEN ──
+    if (totalItemsPulled > 0) {
+      try {
+        const settings = await DB.dbGetAll('settings');
+        const pharmacyName = settings.find(s => s.key === 'pharmacy_name')?.value || 'Inconnu';
+        await sb.from('pull_tracking').insert([{
+          device_id: localStorage.getItem('pharma_device_id') || 'N/A',
+          device_name: localStorage.getItem('pharma_device_name') || 'N/A',
+          pharmacy_name: pharmacyName,
+          user_name: AppState.currentUser?.name || AppState.currentUser?.username || 'Système',
+          items_pulled: totalItemsPulled,
+          pulled_at: new Date().toISOString()
+        }]);
+      } catch (trackErr) {
+        console.warn('[Flash] Erreur tracking pull:', trackErr);
+      }
+    }
 
     // Final refresh of display if settings were updated
     if (window.updatePharmacyDisplay) {

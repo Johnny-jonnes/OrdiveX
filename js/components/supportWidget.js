@@ -1,9 +1,20 @@
 /**
- * Support Widget Component
- * Chatbot d'assistance intégré pour PharmaProjet
+ * Support Widget Component — PharmaProjet
+ * Chatbot d'assistance intégré, intelligent et personnalisé
+ * Ne s'affiche qu'APRÈS la connexion de l'utilisateur
  */
 
+let supportChatOpen = false;
+let _widgetInitialized = false;
+
 function initSupportWidget() {
+    if (_widgetInitialized) {
+        // Widget déjà créé, juste le rendre visible
+        const w = document.getElementById('support-widget-container');
+        if (w) w.style.display = 'block';
+        return;
+    }
+
     // 1. Injecter le CSS
     const css = `
         #support-widget-container {
@@ -63,8 +74,8 @@ function initSupportWidget() {
             position: absolute;
             bottom: 80px;
             right: 0;
-            width: 320px;
-            height: 450px;
+            width: 360px;
+            height: 500px;
             background: #fff;
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
@@ -160,7 +171,7 @@ function initSupportWidget() {
             padding: 10px 14px;
             border-radius: 14px;
             font-size: 13px;
-            line-height: 1.4;
+            line-height: 1.5;
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
@@ -211,10 +222,52 @@ function initSupportWidget() {
         }
 
         .support-footer {
-            padding: 12px;
+            padding: 10px 12px;
             background: #fff;
             border-top: 1px solid rgba(0,0,0,0.05);
-            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .support-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .support-input-row input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .support-input-row input:focus {
+            border-color: #1B6FAE;
+        }
+
+        .support-send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #1B6FAE;
+            color: #fff;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .support-send-btn:hover {
+            background: #155a8a;
         }
         
         .whatsapp-btn {
@@ -224,9 +277,9 @@ function initSupportWidget() {
             background: #25D366;
             color: #fff;
             text-decoration: none;
-            padding: 10px 16px;
+            padding: 8px 14px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             transition: background 0.2s;
             width: 100%;
@@ -255,6 +308,12 @@ function initSupportWidget() {
     styleEl.innerHTML = css;
     document.head.appendChild(styleEl);
 
+    // Récupérer le nom de l'utilisateur connecté
+    const userName = (window.DB && DB.AppState && DB.AppState.currentUser) 
+        ? DB.AppState.currentUser.name || DB.AppState.currentUser.username 
+        : 'Pharmacien';
+    const firstName = userName.split(' ')[0];
+
     // 2. Injecter le HTML
     const html = `
         <div id="support-widget-container">
@@ -266,8 +325,8 @@ function initSupportWidget() {
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
                         </div>
                         <div>
-                            <div class="support-title">Assistant IA TrillionX</div>
-                            <div class="support-subtitle"><div class="support-status-dot"></div> Toujours en ligne</div>
+                            <div class="support-title">Aya — Assistant PharmaProjet</div>
+                            <div class="support-subtitle"><div class="support-status-dot"></div> Toujours disponible</div>
                         </div>
                     </div>
                     <button class="support-close" onclick="toggleSupportWindow()">
@@ -276,12 +335,18 @@ function initSupportWidget() {
                 </div>
                 <div class="support-body" id="support-chat-body">
                     <div class="chat-bubble chat-bot">
-                        Bonjour ! 👋 Je suis l'assistant virtuel de PharmaProjet. En quoi puis-je vous aider aujourd'hui ?
+                        Bonjour <strong>${firstName}</strong> ! 👋 Je suis Aya, votre assistante PharmaProjet. Comment puis-je vous aider aujourd'hui ?
                     </div>
                 </div>
                 <div class="support-footer">
+                    <div class="support-input-row">
+                        <input type="text" id="support-free-input" placeholder="Tapez votre question ici..." onkeydown="if(event.key==='Enter') submitFreeQuestion()">
+                        <button class="support-send-btn" onclick="submitFreeQuestion()" title="Envoyer">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                        </button>
+                    </div>
                     <a href="https://wa.me/224627171397?text=Bonjour%20TrillionX%2C%20j%27ai%20besoin%20d%27assistance%20avec%20PharmaProjet." target="_blank" class="whatsapp-btn">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                         Parler à un Humain (WhatsApp)
                     </a>
                 </div>
@@ -294,101 +359,279 @@ function initSupportWidget() {
     `;
 
     document.body.insertAdjacentHTML('beforeend', html);
-    showOptions();
+    _widgetInitialized = true;
+    showQuickOptions();
 }
 
-let supportChatOpen = false;
+function hideSupportWidget() {
+    const w = document.getElementById('support-widget-container');
+    if (w) w.style.display = 'none';
+    supportChatOpen = false;
+    const sw = document.getElementById('support-window');
+    if (sw) sw.classList.remove('open');
+}
 
 window.toggleSupportWindow = function() {
     const w = document.getElementById('support-window');
     const p = document.getElementById('support-pulse');
     if (supportChatOpen) {
         w.classList.remove('open');
-        p.style.display = 'block';
+        if (p) p.style.display = 'block';
     } else {
         w.classList.add('open');
-        p.style.display = 'none';
-        
-        // Hide native whatsapp floating button if it exists
+        if (p) p.style.display = 'none';
         const oldFab = document.getElementById('support-chat-fab');
         if(oldFab) oldFab.style.display = 'none';
+        // Focus sur l'input
+        setTimeout(() => {
+            const inp = document.getElementById('support-free-input');
+            if (inp) inp.focus();
+        }, 350);
     }
     supportChatOpen = !supportChatOpen;
-}
-
-// Fonction pour vérifier si on est sur la page de login et masquer le widget
-function checkWidgetVisibility() {
-    const widget = document.getElementById('support-widget-container');
-    if (!widget) return;
-    const isLogin = document.getElementById('login-page') && document.getElementById('login-page').style.display !== 'none';
-    widget.style.display = isLogin ? 'none' : 'block';
-}
-
-// Observer les changements du DOM pour masquer/afficher selon la page
-const observer = new MutationObserver((mutations) => {
-    checkWidgetVisibility();
-});
-window.addEventListener('DOMContentLoaded', () => {
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
-});
-
-const FAQ_DATABASE = {
-    'dette': "Pour gérer les ardoises, allez dans 'Point de Vente' et sélectionnez le paiement par 'Crédit'. Le plafond est configuré dans le dossier Patient.",
-    'ventes': "Les ventes récentes se trouvent dans 'Historique des Ventes'. Cliquez sur l'œil noir pour voir ou annuler la facture.",
-    'assurance': "Dans la fiche patient, activez 'Statut Assuré', puis au Point de Vente, choisissez Paiement par Assurance. L'ERP isolera la part prise en charge.",
-    'peremption': "Le tableau de bord signale automatiquement les lots proches (>3mois) à expirer. Allez dans 'Gestion des Stocks > FEFO' pour valider le déstockage.",
-    'imprimante': "Utilisez une imprimante thermique Bluetooth (Ex: Xprinter). Allez dans les Paramètres Android pour l'appairer, PharmaProjet s'en charge ensuite."
 };
 
-function showOptions() {
+// ═══════════════════════════════════════════════════════════════════
+// BASE DE CONNAISSANCES FAQ — 20+ topics couvrant TOUT PharmaProjet
+// ═══════════════════════════════════════════════════════════════════
+const FAQ_DATABASE = [
+    {
+        keywords: ['dette', 'crédit', 'ardoise', 'impayé', 'doit'],
+        question: 'Comment gérer les crédits / dettes ?',
+        answer: "Pour créer une vente à crédit, allez dans le **Point de Vente**, choisissez le mode de paiement **« Crédit »**, puis sélectionnez une date d'échéance. Le patient doit être identifié.\n\nPour encaisser une dette, rendez-vous dans **Historique des Ventes** et cliquez sur le bouton **« Encaisser la dette »** à côté de la vente concernée. 💰"
+    },
+    {
+        keywords: ['vente', 'annuler', 'supprimer', 'historique', 'facture', 'reçu'],
+        question: 'Comment annuler ou voir une vente ?',
+        answer: "Allez dans **Historique des Ventes** depuis le menu. Chaque vente a un bouton 👁️ pour voir le détail complet (reçu, articles, patient).\n\nPour annuler, cliquez sur la vente puis utilisez le bouton d'annulation. Le stock sera automatiquement réajusté. 📋"
+    },
+    {
+        keywords: ['assurance', 'mutuelle', 'tiers', 'payant', 'prise en charge', 'couverture'],
+        question: 'Comment fonctionne la prise en charge Assurance ?',
+        answer: "Au **Point de Vente**, choisissez le paiement **« Assurance »**. Renseignez :\n• Le nom de l'organisme (ex: CNSS, ASCOMA)\n• La référence de prise en charge\n• Le montant couvert par l'entreprise\n\nLe système calcule automatiquement le **ticket modérateur** (part patient) et l'encaisse immédiatement. La part entreprise reste en attente de règlement. 🛡️"
+    },
+    {
+        keywords: ['péremption', 'expiration', 'périmé', 'fefo', 'lot', 'date'],
+        question: 'Comment gérer les dates de péremption ?',
+        answer: "PharmaProjet utilise la méthode **FEFO** (First Expired, First Out) automatiquement ! Lors d'une vente, le lot avec la date d'expiration la plus proche est déstocké en priorité.\n\nLes alertes de péremption apparaissent dans le **Centre d'Alertes** quand un lot arrive à moins de 3 mois de sa date limite. ⏰"
+    },
+    {
+        keywords: ['imprimante', 'bluetooth', 'ticket', 'impression', 'xprinter'],
+        question: 'Comment connecter mon imprimante ?',
+        answer: "Utilisez une imprimante thermique Bluetooth (ex: Xprinter). Allez dans les **paramètres Bluetooth** de votre appareil pour l'appairer.\n\nPour imprimer un reçu, validez une vente puis cliquez sur **« Imprimer »** dans la fenêtre de confirmation. Le format est optimisé pour les rouleaux de 58mm et 80mm. 🖨️"
+    },
+    {
+        keywords: ['stock', 'inventaire', 'quantité', 'rupture', 'disponible'],
+        question: 'Comment consulter et gérer le stock ?',
+        answer: "Allez dans **Gestion des Stocks** pour voir tous vos produits avec leurs quantités en temps réel.\n\nVous pouvez :\n• Faire un **inventaire** pour corriger les écarts\n• Voir les **mouvements** (entrées/sorties) de chaque produit\n• Identifier les **ruptures** et **stocks bas** d'un coup d'œil\n\nLes produits en rupture sont signalés avec une pastille rouge. 📦"
+    },
+    {
+        keywords: ['commande', 'fournisseur', 'commander', 'achat', 'réception', 'bon'],
+        question: 'Comment passer une commande fournisseur ?',
+        answer: "Allez dans **Fournisseurs & Achats** :\n1. Créez d'abord un fournisseur si ce n'est pas fait\n2. Cliquez sur **« Nouvelle Commande »**\n3. Ajoutez les produits et quantités\n4. Envoyez la commande\n\nÀ la livraison, cliquez **« Réceptionner »** pour valider les quantités reçues, les lots et les dates de péremption. Le stock est mis à jour automatiquement ! 📦➡️"
+    },
+    {
+        keywords: ['déconditionnement', 'unité', 'plaquette', 'fractionner', 'comprimé', 'boîte'],
+        question: 'Comment vendre à l\'unité (déconditionnement) ?',
+        answer: "Dans le **Catalogue Produits**, modifiez le produit et activez **« Autoriser la vente à l'unité »**.\n\nConfigurez :\n• Nombre de sous-unités par boîte (ex: 2 plaquettes)\n• Nombre d'unités par sous-unité (ex: 10 gélules/plaquette)\n• Prix de vente par plaquette et par unité\n\nAu POS, des boutons **Boîte / Plaq. / Unité** apparaîtront automatiquement ! 💊"
+    },
+    {
+        keywords: ['patient', 'client', 'fiche', 'dossier', 'allergie'],
+        question: 'Comment gérer les dossiers patients ?',
+        answer: "Allez dans **Dossiers Patients** pour créer ou consulter une fiche :\n• Nom, téléphone, adresse, sexe\n• **Allergies** — le POS vous alertera si vous ajoutez un médicament allergène !\n• Statut : Souscripteur principal ou Ayant Droit\n• Historique complet des achats et ordonnances\n\nVous pouvez aussi créer un patient **directement depuis le POS** avec le bouton '+'. 👤"
+    },
+    {
+        keywords: ['ordonnance', 'prescription', 'médecin', 'docteur'],
+        question: 'Comment créer et lier une ordonnance ?',
+        answer: "Au **Point de Vente**, activez le toggle **« Ordonnance »** puis :\n1. Cliquez **« Lier une ordonnance »** pour en sélectionner une existante\n2. Ou **créez-en une nouvelle** avec le médecin prescripteur et les médicaments\n\nLes produits de l'ordonnance sont automatiquement ajoutés au panier. Le pharmacien dispose d'un bouton de **validation pharmaceutique**. 📄"
+    },
+    {
+        keywords: ['statistique', 'tableau', 'bord', 'chiffre', 'affaire', 'marge', 'panier', 'moyen', 'pilotage'],
+        question: 'Comment accéder aux statistiques ?',
+        answer: "Deux vues disponibles :\n\n📊 **Tableau de Bord** : Vue globale avec les KPIs du jour (CA, nombre de ventes, top produits, graphiques)\n\n📈 **Pilotage** : Analyses détaillées avec le **Panier Moyen**, la **Marge Nette**, le **CA par période**, les **tendances de ventes** et la **répartition financière**.\n\nExportez vos rapports en un clic ! 🎯"
+    },
+    {
+        keywords: ['sauvegarde', 'backup', 'restaurer', 'données', 'json'],
+        question: 'Comment sauvegarder mes données ?',
+        answer: "Allez dans **Paramètres > Synchronisation** :\n\n💾 **Sauvegarde locale** : Cliquez « Sauvegarder maintenant » pour télécharger un fichier JSON contenant toutes vos données.\n\n☁️ **Cloud (Supabase)** : Si configuré, vos données se synchronisent automatiquement. Pensez à faire un **PULL** régulièrement pour récupérer les données des autres appareils !"
+    },
+    {
+        keywords: ['synchronisation', 'sync', 'cloud', 'supabase', 'pull', 'push', 'appareil', 'mobile'],
+        question: 'Comment synchroniser entre plusieurs appareils ?',
+        answer: "PharmaProjet fonctionne en mode **offline-first** :\n\n1. Configurez Supabase dans **Paramètres > Appareil & Cloud**\n2. Les données se **PUSH** (envoient) automatiquement\n3. Faites un **PULL** (dans Paramètres) pour récupérer les données d'un autre appareil\n\n⚠️ Pensez à faire un PULL chaque semaine si vous travaillez hors-ligne depuis longtemps ! 🔄"
+    },
+    {
+        keywords: ['caisse', 'clôture', 'journée', 'encaissement', 'espèce', 'orange money'],
+        question: 'Comment fonctionne la caisse ?',
+        answer: "La **Caisse** affiche en temps réel :\n• Le total des ventes du jour\n• La répartition par mode de paiement (Espèces, Orange Money, MTN MoMo)\n• Les ventes à crédit et les couvertures assurance\n• Le montant total en attente de règlement\n\nChaque vente du jour est listée avec ses détails. C'est votre tableau de bord financier quotidien ! 💵"
+    },
+    {
+        keywords: ['alerte', 'notification', 'rupture', 'stock bas', 'centre'],
+        question: 'Comment fonctionnent les alertes ?',
+        answer: "Le **Centre d'Alertes** détecte automatiquement :\n\n🔴 **Ruptures de stock** : Produits à 0 unité\n🟡 **Stock bas** : En dessous du seuil configuré\n⏰ **Péremptions proches** : Lots expirant dans les 3 prochains mois\n\nLes alertes sont triées par priorité et vous pouvez les filtrer. Le badge rouge dans le menu indique le nombre d'alertes non lues. 🔔"
+    },
+    {
+        keywords: ['interaction', 'médicament', 'contre-indication', 'allergie', 'combinaison'],
+        question: 'Comment sont gérées les interactions médicamenteuses ?',
+        answer: "PharmaProjet vérifie automatiquement les **30 interactions critiques** les plus courantes à chaque ajout au panier !\n\n🚨 **Grave** : Alerte rouge (ex: Warfarine + Aspirine = Hémorragie)\n⚠️ **Modéré** : Alerte orange (ex: Fer + Ciprofloxacine = Absorption réduite)\n\nDe plus, si le patient a des **allergies** renseignées, le POS vous alertera immédiatement. 💊"
+    },
+    {
+        keywords: ['sms', 'message', 'envoi', 'africastalking', 'rappel'],
+        question: 'Comment envoyer des SMS aux patients ?',
+        answer: "Configurez le service SMS dans **Paramètres > Configuration SMS** :\n1. Choisissez le fournisseur (AfricasTalking recommandé)\n2. Entrez votre clé API et l'expéditeur\n3. Testez avec le bouton « Tester l'envoi »\n\nVous pouvez ensuite envoyer des rappels de dette, des notifications de commande prête, etc. 📱"
+    },
+    {
+        keywords: ['notice', 'rcp', 'posologie', 'effet', 'indésirable', 'précaution'],
+        question: 'Comment consulter la notice d\'un médicament ?',
+        answer: "Deux façons d'accéder à la notice :\n\n1. **Au POS** : Cliquez le bouton **ℹ️** sur la carte du produit ou dans le panier\n2. **Au Catalogue** : Ouvrez la fiche du produit\n\nLa notice affiche : Posologie, Précautions d'emploi, Contre-indications, Effets indésirables et le RCP complet. Vous pouvez aussi télécharger le PDF du laboratoire si disponible. 📖"
+    },
+];
+
+const GREETINGS = [
+    "Bien sûr ! Voici ce que je peux vous dire :",
+    "Excellente question ! 😊",
+    "Avec plaisir, voici la réponse :",
+    "Je vais vous expliquer ça tout de suite 👇",
+    "Bonne question ! Voici comment faire :",
+    "Je suis là pour ça ! Voici l'info :",
+];
+
+function getGreeting() {
+    return GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+}
+
+function getUserName() {
+    if (window.DB && DB.AppState && DB.AppState.currentUser) {
+        return DB.AppState.currentUser.name || DB.AppState.currentUser.username || 'Pharmacien';
+    }
+    return 'Pharmacien';
+}
+
+function matchFAQ(input) {
+    const q = input.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const entry of FAQ_DATABASE) {
+        let score = 0;
+        for (const kw of entry.keywords) {
+            const kwNorm = kw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (q.includes(kwNorm)) {
+                score += kwNorm.length; // Weight by keyword length (more specific = higher score)
+            }
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            bestMatch = entry;
+        }
+    }
+
+    return bestScore >= 3 ? bestMatch : null;
+}
+
+function showQuickOptions() {
     const body = document.getElementById('support-chat-body');
+    if (!body) return;
     const acts = document.createElement('div');
     acts.className = 'support-actions';
-    acts.innerHTML = `
-        <button class="support-btn" onclick="askQuestion('Comment gérer les crédits/dettes ?', 'dette')">Dettes & Crédit</button>
-        <button class="support-btn" onclick="askQuestion('Comment annuler une vente ?', 'ventes')">Annuler Vente</button>
-        <button class="support-btn" onclick="askQuestion('Où gérer le Tiers-Payant / Assurance ?', 'assurance')">Assurance</button>
-        <button class="support-btn" onclick="askQuestion('Comment connecter l\'imprimante ?', 'imprimante')">Imprimante</button>
-    `;
+    // Afficher les 6 sujets les plus fréquents
+    const quickTopics = [
+        { label: '💳 Crédits & Dettes', idx: 0 },
+        { label: '🛡️ Assurance', idx: 2 },
+        { label: '📦 Stock', idx: 5 },
+        { label: '💊 Déconditionnement', idx: 7 },
+        { label: '📊 Statistiques', idx: 10 },
+        { label: '🔄 Synchronisation', idx: 12 },
+    ];
+    acts.innerHTML = quickTopics.map(t => 
+        `<button class="support-btn" onclick="askByIndex(${t.idx})">${t.label}</button>`
+    ).join('');
     body.appendChild(acts);
     body.scrollTop = body.scrollHeight;
 }
 
-window.askQuestion = function(text, key) {
+window.askByIndex = function(idx) {
+    const entry = FAQ_DATABASE[idx];
+    if (!entry) return;
+    askQuestion(entry.question, entry);
+};
+
+window.submitFreeQuestion = function() {
+    const input = document.getElementById('support-free-input');
+    if (!input || !input.value.trim()) return;
+    const text = input.value.trim();
+    input.value = '';
+
+    const match = matchFAQ(text);
+    if (match) {
+        askQuestion(text, match);
+    } else {
+        // Aucun match trouvé
+        const body = document.getElementById('support-chat-body');
+        if (!body) return;
+        const oldActs = body.querySelectorAll('.support-actions');
+        oldActs.forEach(e => e.remove());
+
+        body.innerHTML += `<div class="chat-bubble chat-user">${text}</div>`;
+        body.scrollTop = body.scrollHeight;
+
+        const typingId = 'typing-' + Date.now();
+        setTimeout(() => {
+            body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot" style="color:#888;">Aya réfléchit...</div>`;
+            body.scrollTop = body.scrollHeight;
+            setTimeout(() => {
+                const t = document.getElementById(typingId);
+                if(t) t.remove();
+                const name = getUserName().split(' ')[0];
+                body.innerHTML += `<div class="chat-bubble chat-bot">Hmm, je ne suis pas sûre de pouvoir répondre à cette question, ${name}. 🤔\n\nEssayez avec un mot-clé plus précis (ex: "stock", "crédit", "assurance"), ou contactez notre support humain via WhatsApp ci-dessous.\n\nVoici les sujets que je maîtrise :</div>`;
+                setTimeout(() => showQuickOptions(), 400);
+                body.scrollTop = body.scrollHeight;
+            }, 1000);
+        }, 300);
+    }
+};
+
+function askQuestion(text, faqEntry) {
     const body = document.getElementById('support-chat-body');
-    
-    // Remove previous action buttons to clean up history
+    if (!body) return;
+
     const oldActs = body.querySelectorAll('.support-actions');
     oldActs.forEach(e => e.remove());
 
-    // Add User Message
     body.innerHTML += `<div class="chat-bubble chat-user">${text}</div>`;
     body.scrollTop = body.scrollHeight;
 
-    // Simulate typing
     const typingId = 'typing-' + Date.now();
     setTimeout(() => {
-        body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot" style="color:#888;">L'assistant rédige...</div>`;
+        body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot" style="color:#888;">Aya rédige...</div>`;
         body.scrollTop = body.scrollHeight;
         
+        // Délai réaliste variant entre 800ms et 1500ms
+        const delay = 800 + Math.random() * 700;
         setTimeout(() => {
             const t = document.getElementById(typingId);
             if(t) t.remove();
-            body.innerHTML += `<div class="chat-bubble chat-bot">${FAQ_DATABASE[key] || "Je ne suis pas sûr de comprendre. Pouvez-vous contacter le support WhatsApp pour ça ?"}</div>`;
+
+            const greeting = getGreeting();
+            // Convertir le markdown simple en HTML
+            const htmlAnswer = faqEntry.answer
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+
+            body.innerHTML += `<div class="chat-bubble chat-bot">${greeting}<br><br>${htmlAnswer}</div>`;
             
             setTimeout(() => {
-               showOptions();
+                showQuickOptions();
             }, 500);
             
             body.scrollTop = body.scrollHeight;
-        }, 1200);
+        }, delay);
 
     }, 300);
 }
 
-// Initialiser le widget si le script est chargé
-if(document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSupportWidget);
-} else {
-    initSupportWidget();
-}
+window.askQuestion = askQuestion;
+
+// Exposer les fonctions globales
+window.initSupportWidget = initSupportWidget;
+window.hideSupportWidget = hideSupportWidget;

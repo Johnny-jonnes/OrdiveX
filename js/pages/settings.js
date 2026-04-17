@@ -6,6 +6,7 @@ function renderLogin(container) {
   document.getElementById('app-sidebar')?.style.setProperty('display', 'none');
   document.getElementById('app-topbar')?.style.setProperty('display', 'none');
   document.getElementById('app-content').style.marginLeft = '0';
+  if (window.hideSupportWidget) hideSupportWidget();
   document.getElementById('app-content').style.paddingTop = '0';
 
   container.innerHTML = `
@@ -107,6 +108,7 @@ async function handleLogin(event) {
       initSidebar();
       updateTopbar();
       if (window.updatePharmacyDisplay) await updatePharmacyDisplay();
+      if (window.initSupportWidget) initSupportWidget();
       Router.navigate('dashboard');
       UI.toast(`Bienvenue, ${user.name} !`, 'success');
     } else {
