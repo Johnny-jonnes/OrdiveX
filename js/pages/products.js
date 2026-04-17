@@ -723,74 +723,73 @@ async function processImportCSV(content) {
   let errors = 0;
   const total = lines.length - 1;
 
-  // 1. Charger tous les produits existants d'un coup (Évite 50,000 requêtes unitaires)
-  const allExistingProducts = await DB.dbGetAll('products');
+  // Phase 1 : Charger tous les produits existants pour mapper les doublons
+  if (status) status.textContent = 'Chargement de la base existante...';
+  const allExisting = await DB.dbGetAll('products');
   const codeMap = new Map();
-  allExistingProducts.forEach(p => codeMap.set(p.code.toLowerCase(), p));
+  allExisting.forEach(p => { if (p.code) codeMap.set(p.code.toLowerCase(), p); });
 
-  // 2. Traitement par lot (Batching) pour ne pas geler le navigateur
-  const BATCH_SIZE = 500;
-  
-  for (let i = 1; i < lines.length; i += BATCH_SIZE) {
-    const batch = lines.slice(i, i + BATCH_SIZE);
-    const dbOperations = [];
+  // Phase 2 : Parser TOUTES les lignes en mémoire (rapide, JS pur)
+  if (status) status.textContent = 'Analyse du fichier...';
+  const parsedProducts = [];
 
-    for (const line of batch) {
-      try {
-        const row = line.split(sep).map(v => v.replace(/"/g, '').trim());
-        if (row.length < columns.length) continue;
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const row = lines[i].split(sep).map(v => v.replace(/"/g, '').trim());
+      if (row.length < 3) continue; // Ligne trop courte
 
-        const product = {
-          code: row[map.code],
-          name: row[map.name],
-          dci: map.dci !== -1 ? row[map.dci] : '',
-          brand: map.brand !== -1 ? row[map.brand] : '',
-          category: map.category !== -1 ? row[map.category] : 'Autre',
-          salePrice: parseFloat(row[map.salePrice].replace(/[^\d.]/g, '')) || 0,
-          purchasePrice: map.purchasePrice !== -1 ? parseFloat(row[map.purchasePrice].replace(/[^\d.]/g, '')) || 0 : 0,
-          requiresPrescription: map.rx !== -1 ? (row[map.rx].toLowerCase().includes('oui') || row[map.rx] === '1') : false,
-          minStock: 10,
-          status: 'active',
-          unit: 'boîte'
-        };
+      const code = row[map.code] || '';
+      const name = row[map.name] || '';
+      if (!code || !name) { errors++; continue; }
 
-        if (!product.code || !product.name) {
-          errors++;
-          continue;
-        }
+      const existing = codeMap.get(code.toLowerCase());
+      const product = {
+        ...(existing || {}),
+        code,
+        name,
+        dci: map.dci !== -1 ? (row[map.dci] || '') : (existing?.dci || ''),
+        brand: map.brand !== -1 ? (row[map.brand] || '') : (existing?.brand || ''),
+        category: map.category !== -1 ? (row[map.category] || 'Autre') : (existing?.category || 'Autre'),
+        salePrice: parseFloat((row[map.salePrice] || '0').replace(/[^\d.]/g, '')) || 0,
+        purchasePrice: map.purchasePrice !== -1 ? parseFloat((row[map.purchasePrice] || '0').replace(/[^\d.]/g, '')) || 0 : (existing?.purchasePrice || 0),
+        requiresPrescription: map.rx !== -1 ? (row[map.rx]?.toLowerCase().includes('oui') || row[map.rx] === '1') : (existing?.requiresPrescription || false),
+        minStock: existing?.minStock || 10,
+        status: 'active',
+        unit: existing?.unit || 'boîte',
+        _createdAt: existing?._createdAt || Date.now()
+      };
 
-        // Vérification ultra rapide depuis la Map
-        const existing = codeMap.get(product.code.toLowerCase());
-        
-        if (existing) {
-          dbOperations.push(DB.dbPut('products', { ...existing, ...product }));
-        } else {
-          dbOperations.push(DB.dbAdd('products', product));
-          // Ajouter au codeMap en cas de doublons dans le même fichier
-          codeMap.set(product.code.toLowerCase(), product);
-        }
-
-        imported++;
-      } catch (err) {
-        console.warn('Import row error:', err);
-        errors++;
-      }
+      parsedProducts.push(product);
+      // Empêcher les doublons dans le fichier lui-même
+      codeMap.set(code.toLowerCase(), product);
+    } catch (err) {
+      errors++;
     }
-
-    // Exécuter le lot en parallèle
-    await Promise.all(dbOperations);
-
-    // Mettre à jour l'UI asynchronement et laisser respirer le navigateur (évite le freeze)
-    const currentProgress = Math.min(i + BATCH_SIZE - 1, total);
-    const pct = Math.round((currentProgress / total) * 100);
-    if (fill) fill.style.width = pct + '%';
-    if (status) status.textContent = `Importation : ${currentProgress} / ${total}...`;
-
-    // Pause de 10ms pour permettre au navigateur de rendre la barre de progression
-    await new Promise(r => setTimeout(r, 10));
   }
 
-  // Final Results
+  // Phase 3 : Écriture IndexedDB par gros lots via dbBulkPut (1 transaction par lot)
+  const BULK_SIZE = 5000;
+  const totalParsed = parsedProducts.length;
+
+  for (let i = 0; i < totalParsed; i += BULK_SIZE) {
+    const chunk = parsedProducts.slice(i, i + BULK_SIZE);
+    try {
+      await DB.dbBulkPut('products', chunk);
+      imported += chunk.length;
+    } catch (err) {
+      console.error('[Import] Erreur bulk lot:', err);
+      errors += chunk.length;
+    }
+
+    // Mise à jour barre de progression + pause UI
+    const pct = Math.round(((i + chunk.length) / totalParsed) * 100);
+    if (fill) fill.style.width = pct + '%';
+    if (status) status.textContent = `Écriture : ${Math.min(i + BULK_SIZE, totalParsed)} / ${totalParsed}...`;
+    await new Promise(r => setTimeout(r, 5));
+  }
+
+  // Phase 4 : Résultats
+  if (fill) fill.style.width = '100%';
   if (status) status.textContent = 'Importation terminée.';
   if (results) {
     results.style.display = 'block';

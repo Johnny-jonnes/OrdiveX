@@ -20,7 +20,8 @@ async function renderPatients(container) {
         <p class="page-subtitle">${patients.length} patients enregistrés — Données confidentielles</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="exportPatients()"><i data-lucide="download"></i> Exporter (anonymisé)</button>
+        <button class="btn btn-secondary" onclick="showImportPatientsModal()"><i data-lucide="upload"></i> Importer</button>
+        <button class="btn btn-secondary" onclick="exportPatients()"><i data-lucide="download"></i> Exporter</button>
         <button class="btn btn-primary" onclick="showAddPatient()"><i data-lucide="plus"></i> Nouveau Patient</button>
       </div>
     </div>
@@ -509,6 +510,183 @@ async function sendPatientSms(patientId) {
   }
 }
 
+/* ══════════════════════════════════════════════════════
+ * IMPORT CSV PATIENTS — Architecture Bulk (dbBulkPut)
+ * ══════════════════════════════════════════════════════ */
+
+function showImportPatientsModal() {
+  UI.modal('<i data-lucide="upload" class="modal-icon-inline"></i> Importation de Patients (CSV)', `
+    <div class="import-container">
+      <p class="mb-1 text-sm">Importez vos dossiers patients depuis un fichier CSV. Colonnes attendues : <strong>Nom, Téléphone, Adresse, Sexe, Allergies</strong>.</p>
+      
+      <div id="import-patients-drop-zone" class="import-drop-zone">
+        <i data-lucide="file-up"></i>
+        <div>
+          <strong>Cliquez pour choisir un fichier</strong> ou glissez-le ici
+          <p class="text-sm text-muted mt-0-5">Format CSV (.csv) uniquement</p>
+        </div>
+        <input type="file" id="import-patients-file-input" accept=".csv" hidden>
+      </div>
+
+      <div id="import-patients-progress" class="import-progress-container">
+        <div class="import-progress-bar"><div id="import-patients-progress-fill" class="import-progress-fill"></div></div>
+        <div id="import-patients-status" class="import-status-text">Préparation...</div>
+      </div>
+
+      <div id="import-patients-results" class="import-results"></div>
+
+      <a href="#" class="import-template-link" onclick="downloadPatientsTemplate(event)">
+        <i data-lucide="download" style="width:12px;height:12px"></i> Télécharger un modèle de fichier
+      </a>
+    </div>
+  `, {
+    footer: `<button class="btn btn-secondary" onclick="UI.closeModal()">Fermer</button>`
+  });
+
+  const zone = document.getElementById('import-patients-drop-zone');
+  const input = document.getElementById('import-patients-file-input');
+
+  if (zone && input) {
+    zone.onclick = () => input.click();
+    input.onchange = (e) => handleImportPatientsFile(e.target.files[0]);
+    zone.ondragover = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
+    zone.ondragleave = () => zone.classList.remove('dragover');
+    zone.ondrop = (e) => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleImportPatientsFile(e.dataTransfer.files[0]);
+    };
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+async function handleImportPatientsFile(file) {
+  if (!file) return;
+  if (!file.name.endsWith('.csv')) { UI.toast('Veuillez sélectionner un fichier CSV', 'error'); return; }
+
+  const zone = document.getElementById('import-patients-drop-zone');
+  const progress = document.getElementById('import-patients-progress');
+  const results = document.getElementById('import-patients-results');
+  if (zone) zone.style.display = 'none';
+  if (progress) progress.style.display = 'block';
+  if (results) results.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => await processImportPatientsCSV(e.target.result);
+  reader.onerror = () => UI.toast('Erreur de lecture du fichier', 'error');
+  reader.readAsText(file, 'UTF-8');
+}
+
+async function processImportPatientsCSV(content) {
+  const status = document.getElementById('import-patients-status');
+  const fill = document.getElementById('import-patients-progress-fill');
+  const results = document.getElementById('import-patients-results');
+
+  const lines = content.split(/\r?\n/).filter(l => l.trim() !== '');
+  if (lines.length <= 1) {
+    if (status) status.textContent = 'Fichier vide.';
+    if (results) { results.style.display='block'; results.className='import-results error'; results.innerHTML='<strong>Erreur :</strong> Le fichier est vide.'; }
+    return;
+  }
+
+  const header = lines[0];
+  const sep = header.includes(';') ? ';' : ',';
+  const cols = header.split(sep).map(c => c.replace(/"/g, '').trim().toLowerCase());
+
+  const map = {
+    name: cols.findIndex(c => c.includes('nom') || c.includes('name')),
+    phone: cols.findIndex(c => c.includes('tel') || c.includes('phone') || c.includes('mobile')),
+    address: cols.findIndex(c => c.includes('adresse') || c.includes('address')),
+    sex: cols.findIndex(c => c.includes('sexe') || c.includes('sex') || c.includes('genre')),
+    allergies: cols.findIndex(c => c.includes('allergie') || c.includes('allerg')),
+    email: cols.findIndex(c => c.includes('email') || c.includes('mail')),
+    dob: cols.findIndex(c => c.includes('naissance') || c.includes('birth') || c.includes('dob')),
+  };
+
+  if (map.name === -1) {
+    if (status) status.textContent = 'Colonne Nom manquante.';
+    if (results) { results.style.display='block'; results.className='import-results error'; results.innerHTML='<strong>Erreur :</strong> La colonne "Nom" est obligatoire.'; }
+    return;
+  }
+
+  // Phase 1 : Charger les patients existants pour dédoublonnage par téléphone
+  if (status) status.textContent = 'Chargement de la base existante...';
+  const allExisting = await DB.dbGetAll('patients');
+  const phoneMap = new Map();
+  allExisting.forEach(p => { if (p.phone) phoneMap.set(p.phone.replace(/\s/g, ''), p); });
+
+  // Phase 2 : Parser toutes les lignes en mémoire
+  if (status) status.textContent = 'Analyse du fichier...';
+  const parsed = [];
+  let errors = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const row = lines[i].split(sep).map(v => v.replace(/"/g, '').trim());
+      const name = row[map.name] || '';
+      if (!name) { errors++; continue; }
+
+      const phone = map.phone !== -1 ? (row[map.phone] || '') : '';
+      const existing = phone ? phoneMap.get(phone.replace(/\s/g, '')) : null;
+
+      const patient = {
+        ...(existing || {}),
+        name,
+        phone,
+        address: map.address !== -1 ? (row[map.address] || '') : (existing?.address || ''),
+        sex: map.sex !== -1 ? (row[map.sex] || '') : (existing?.sex || ''),
+        allergies: map.allergies !== -1 ? (row[map.allergies] || '') : (existing?.allergies || ''),
+        email: map.email !== -1 ? (row[map.email] || '') : (existing?.email || ''),
+        dateOfBirth: map.dob !== -1 ? (row[map.dob] || '') : (existing?.dateOfBirth || ''),
+        status: 'active',
+        _createdAt: existing?._createdAt || Date.now()
+      };
+
+      parsed.push(patient);
+      if (phone) phoneMap.set(phone.replace(/\s/g, ''), patient);
+    } catch (err) { errors++; }
+  }
+
+  // Phase 3 : Écriture IndexedDB par gros lots via dbBulkPut
+  const BULK_SIZE = 5000;
+  let imported = 0;
+
+  for (let i = 0; i < parsed.length; i += BULK_SIZE) {
+    const chunk = parsed.slice(i, i + BULK_SIZE);
+    try {
+      await DB.dbBulkPut('patients', chunk);
+      imported += chunk.length;
+    } catch (err) {
+      console.error('[Import Patients] Erreur bulk:', err);
+      errors += chunk.length;
+    }
+    const pct = Math.round(((i + chunk.length) / parsed.length) * 100);
+    if (fill) fill.style.width = pct + '%';
+    if (status) status.textContent = `Écriture : ${Math.min(i + BULK_SIZE, parsed.length)} / ${parsed.length}...`;
+    await new Promise(r => setTimeout(r, 5));
+  }
+
+  // Phase 4 : Résultats
+  if (fill) fill.style.width = '100%';
+  if (status) status.textContent = 'Importation terminée.';
+  if (results) {
+    results.style.display = 'block';
+    results.className = `import-results ${imported > 0 ? 'success' : 'error'}`;
+    results.innerHTML = `<strong>Résultat :</strong> ${imported} patients importés. ${errors > 0 ? `<br><small>${errors} lignes ignorées.</small>` : ''}`;
+  }
+  await DB.writeAudit('BULK_IMPORT_PATIENTS', 'patients', null, { imported, errors });
+  setTimeout(() => renderPatients(document.getElementById('app-content')), 1500);
+}
+
+function downloadPatientsTemplate(e) {
+  e.preventDefault();
+  const csv = '\uFEFFNom,Téléphone,Adresse,Sexe,Allergies,Email,Date de naissance\nMamadou Diallo,625000000,Conakry Kaloum,M,Pénicilline,mamadou@email.com,1985-03-15\nFatoumata Bah,621000000,Conakry Ratoma,F,,fatou@email.com,1990-07-22';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'modele_patients.csv'; a.click();
+  UI.toast('Modèle téléchargé', 'success');
+}
+
 window.filterPatients = filterPatients;
 window.viewPatient = viewPatient;
 window.showAddPatient = showAddPatient;
@@ -518,5 +696,7 @@ window.updatePatient = updatePatient;
 window.exportPatients = exportPatients;
 window.openSmsModal = openSmsModal;
 window.sendPatientSms = sendPatientSms;
+window.showImportPatientsModal = showImportPatientsModal;
+window.downloadPatientsTemplate = downloadPatientsTemplate;
 
 Router.register('patients', renderPatients);

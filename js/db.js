@@ -495,6 +495,43 @@ async function dbCount(storeName) {
   });
 }
 
+/**
+ * Bulk Put — Insertion/mise à jour de masse via UNE SEULE transaction IndexedDB.
+ * Conçu pour supporter des centaines de milliers d'enregistrements sans geler le navigateur.
+ * @param {string} storeName - Nom du store IndexedDB
+ * @param {Array} dataArray - Tableau d'objets à insérer/mettre à jour
+ * @returns {Promise<number>} - Nombre d'objets traités avec succès
+ */
+async function dbBulkPut(storeName, dataArray) {
+  if (!db) await initDB();
+  if (!dataArray || dataArray.length === 0) return 0;
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const store = tx.objectStore(storeName);
+    let count = 0;
+
+    for (const item of dataArray) {
+      try {
+        store.put({ ...item, _updatedAt: Date.now(), _synced: false });
+        count++;
+      } catch (e) {
+        console.warn(`[DB] BulkPut erreur item:`, e);
+      }
+    }
+
+    tx.oncomplete = () => resolve(count);
+    tx.onerror = () => {
+      console.error(`[DB] BulkPut transaction erreur:`, tx.error);
+      reject(tx.error);
+    };
+    tx.onabort = () => {
+      console.error(`[DB] BulkPut transaction annulée:`, tx.error);
+      reject(tx.error);
+    };
+  });
+}
+
 // Audit log writer
 async function writeAudit(action, entity, entityId, details, userId) {
   try {
@@ -1201,4 +1238,4 @@ window.addEventListener('offline', () => {
   }
 });
 
-window.DB = { initDB, dbAdd, dbPut, dbGet, dbGetAll, dbGetRecent, dbDelete, dbCount, writeAudit, seedDemoData, syncToSupabase, pullFromSupabase, resetSupabaseClient, forceSyncAll, trackInstallation, getSupabaseClient, STORES, AppState, doBackup, startAutoBackup, startAutoPull, autoBackupToStorage, restoreFromBackup };
+window.DB = { initDB, dbAdd, dbPut, dbBulkPut, dbGet, dbGetAll, dbGetRecent, dbDelete, dbCount, writeAudit, seedDemoData, syncToSupabase, pullFromSupabase, resetSupabaseClient, forceSyncAll, trackInstallation, getSupabaseClient, STORES, AppState, doBackup, startAutoBackup, startAutoPull, autoBackupToStorage, restoreFromBackup };
