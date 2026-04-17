@@ -513,7 +513,7 @@ async function dbBulkPut(storeName, dataArray) {
 
     for (const item of dataArray) {
       try {
-        store.put({ ...item, _updatedAt: Date.now(), _synced: false });
+        store.put({ ...item, _updatedAt: Date.now(), _synced: true });
         count++;
       } catch (e) {
         console.warn(`[DB] BulkPut erreur item:`, e);
