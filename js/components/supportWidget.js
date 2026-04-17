@@ -588,39 +588,129 @@ window.askByIndex = function(idx) {
     askQuestion(entry.question, entry);
 };
 
+// ═══════════════════════════════════════════════════════════════════
+// CONVERSATION NATURELLE — Réponses sans API IA
+// ═══════════════════════════════════════════════════════════════════
+const CONVERSATIONS = [
+    {
+        triggers: ['bonjour', 'bonsoir', 'salut', 'hello', 'hi', 'hey', 'coucou', 'yo'],
+        responses: [
+            "Bonjour {name} ! 😊 Comment puis-je vous aider aujourd'hui ? N'hésitez pas à me poser une question ou cliquez sur un sujet ci-dessous !",
+            "Salut {name} ! 👋 Ravie de vous revoir ! Que puis-je faire pour vous ?",
+            "Bonjour {name} ! 🌟 Je suis Naomie, votre assistante. Dites-moi ce dont vous avez besoin !",
+        ]
+    },
+    {
+        triggers: ['merci', 'remercie', 'thanks', 'thank', 'top', 'parfait', 'genial', 'super', 'excellent', 'bravo', 'nickel'],
+        responses: [
+            "Avec plaisir, {name} ! 😊 N'hésitez pas si vous avez d'autres questions !",
+            "Je suis ravie d'avoir pu vous aider, {name} ! 💙 À votre service !",
+            "De rien ! C'est mon rôle de vous accompagner, {name} ! 🌟 Autre chose ?",
+        ]
+    },
+    {
+        triggers: ['au revoir', 'bye', 'a bientot', 'a plus', 'bonne journee', 'bonne soiree', 'adieu'],
+        responses: [
+            "À bientôt {name} ! 👋 Bonne continuation et n'hésitez pas à revenir !",
+            "Au revoir {name} ! 😊 Passez une excellente journée ! À très vite !",
+            "À la prochaine {name} ! 💙 Je suis toujours là si besoin !",
+        ]
+    },
+    {
+        triggers: ['ca va', 'comment vas', 'comment tu vas', 'comment ca', 'la forme', 'quoi de neuf', 'comment allez'],
+        responses: [
+            "Je vais très bien, merci {name} ! 😊 Et vous ? Prêt(e) à conquérir la journée ? Dites-moi comment je peux vous aider !",
+            "Toujours au top, {name} ! 💪 Je suis disponible 24h/24 pour vous. Que puis-je faire ?",
+            "Je suis en pleine forme ! 🌟 Merci de demander, {name}. Comment puis-je vous assister aujourd'hui ?",
+        ]
+    },
+    {
+        triggers: ['qui es tu', 'c est quoi', 'tu es qui', 'ton nom', 'tu fais quoi', 'tu sers a quoi', 'quel est ton role'],
+        responses: [
+            "Je suis <strong>Naomie</strong>, votre assistante virtuelle PharmaProjet ! 🤖💙<br><br>Je suis là pour vous guider dans l'utilisation de l'application : ventes, stocks, patients, fournisseurs, statistiques... Posez-moi n'importe quelle question !",
+        ]
+    },
+    {
+        triggers: ['aide', 'help', 'besoin d aide', 'aider', 'comment faire', 'je ne sais pas', 'je comprends pas'],
+        responses: [
+            "Bien sûr {name}, je suis là pour ça ! 💙<br><br>Dites-moi ce que vous cherchez à faire, ou cliquez sur l'un des sujets ci-dessous pour obtenir une réponse détaillée :",
+        ]
+    },
+    {
+        triggers: ['oui', 'ok', 'daccord', 'd accord', 'entendu', 'compris', 'je vois', 'ah ok', 'bien'],
+        responses: [
+            "Parfait {name} ! 👍 Autre chose que je peux faire pour vous ?",
+            "Super ! 😊 N'hésitez pas si une autre question vous vient à l'esprit !",
+        ]
+    },
+    {
+        triggers: ['non', 'pas besoin', 'rien', 'c est bon', 'c est tout', 'rien d autre'],
+        responses: [
+            "D'accord {name} ! 😊 Je reste ici si jamais vous avez besoin. Bonne continuation ! 💙",
+            "Très bien ! N'hésitez pas à revenir quand vous voulez, {name}. Je suis toujours disponible ! 🌟",
+        ]
+    },
+];
+
+function matchConversation(input) {
+    const q = input.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/['']/g, ' ');
+    for (const conv of CONVERSATIONS) {
+        for (const trigger of conv.triggers) {
+            const trigNorm = trigger.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (q.includes(trigNorm)) {
+                return conv.responses[Math.floor(Math.random() * conv.responses.length)];
+            }
+        }
+    }
+    return null;
+}
+
 window.submitFreeQuestion = function() {
     const input = document.getElementById('support-free-input');
     if (!input || !input.value.trim()) return;
     const text = input.value.trim();
     input.value = '';
 
+    const body = document.getElementById('support-chat-body');
+    if (!body) return;
+    const oldActs = body.querySelectorAll('.support-actions');
+    oldActs.forEach(e => e.remove());
+    body.innerHTML += `<div class="chat-bubble chat-user">${text}</div>`;
+    body.scrollTop = body.scrollHeight;
+
+    // 1. Chercher dans la FAQ
     const match = matchFAQ(text);
     if (match) {
         askQuestion(text, match);
-    } else {
-        // Aucun match trouvé
-        const body = document.getElementById('support-chat-body');
-        if (!body) return;
-        const oldActs = body.querySelectorAll('.support-actions');
-        oldActs.forEach(e => e.remove());
+        return;
+    }
 
-        body.innerHTML += `<div class="chat-bubble chat-user">${text}</div>`;
+    // 2. Chercher dans la conversation naturelle
+    const convReply = matchConversation(text);
+    const typingId = 'typing-' + Date.now();
+
+    setTimeout(() => {
+        body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot" style="color:#888;">Naomie réfléchit...</div>`;
         body.scrollTop = body.scrollHeight;
-
-        const typingId = 'typing-' + Date.now();
+        const delay = 600 + Math.random() * 500;
         setTimeout(() => {
-            body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot" style="color:#888;">Naomie réfléchit...</div>`;
-            body.scrollTop = body.scrollHeight;
-            setTimeout(() => {
-                const t = document.getElementById(typingId);
-                if(t) t.remove();
-                const name = getUserName().split(' ')[0];
+            const t = document.getElementById(typingId);
+            if(t) t.remove();
+            const name = getUserName().split(' ')[0];
+
+            if (convReply) {
+                // Réponse conversationnelle
+                const reply = convReply.replace(/\{name\}/g, name);
+                body.innerHTML += `<div class="chat-bubble chat-bot">${reply}</div>`;
+                setTimeout(() => showQuickOptions(), 400);
+            } else {
+                // Aucun match
                 body.innerHTML += `<div class="chat-bubble chat-bot">Hmm, je ne suis pas sûre de pouvoir répondre à cette question, ${name}. 🤔<br><br>Essayez avec un mot-clé plus précis (ex: <strong>"stock"</strong>, <strong>"crédit"</strong>, <strong>"commande"</strong>, <strong>"fournisseur"</strong>), ou contactez notre support humain via WhatsApp ci-dessous.<br><br>Voici les sujets que je maîtrise :</div>`;
                 setTimeout(() => showQuickOptions(), 400);
-                body.scrollTop = body.scrollHeight;
-            }, 1000);
-        }, 300);
-    }
+            }
+            body.scrollTop = body.scrollHeight;
+        }, delay);
+    }, 300);
 };
 
 function askQuestion(text, faqEntry) {
