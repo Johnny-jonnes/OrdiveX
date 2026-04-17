@@ -711,7 +711,7 @@ async function triggerPull() {
 
   try {
     UI.toast('Début de la récupération des données...', 'info');
-    await DB.pullFromSupabase();
+    await DB.pullFromSupabase(true);
     UI.toast('Données récupérées avec succès ! Vos catalogues sont à jour.', 'success');
     setTimeout(() => location.reload(), 2000);
   } catch (err) {

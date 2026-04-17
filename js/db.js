@@ -766,10 +766,10 @@ async function syncToSupabase() {
 }
 
 /**
- * PULL : Download data from Supabase to local IndexedDB
- * ⚡ Flash Retrieve — Récupération parallèle de toutes les tables
+ * PULL DEPUIS SUPABASE (Cloud → Local)
+ * @param {boolean} isManual Indique si c'est un pull déclenché manuellement par l'utilisateur
  */
-async function pullFromSupabase() {
+async function pullFromSupabase(isManual = false) {
   let hasChanges = false;
   let totalItemsPulled = 0;
   try {
@@ -884,7 +884,7 @@ async function pullFromSupabase() {
     console.log('[Flash] ⚡ Pull terminé — données locales à jour');
 
     // ── TRACKING DU PULL POUR LE SUIVI PHARMACIEN ──
-    if (totalItemsPulled > 0) {
+    if (isManual && totalItemsPulled > 0) {
       try {
         const settings = await DB.dbGetAll('settings');
         const pharmacyName = settings.find(s => s.key === 'pharmacy_name')?.value || 'Inconnu';
