@@ -745,7 +745,10 @@ async function syncToSupabase() {
         }
 
         if (lastError && navigator.onLine) {
-          console.error(`[Flash] ❌ ${storeName}:`, lastError.message || lastError);
+          // Ignorer les erreurs RLS connues (settings upsert en anon mode)
+          if (!lastError.message?.includes('row-level security')) {
+            console.error(`[Flash] ❌ ${storeName}:`, lastError.message || lastError);
+          }
         }
       } catch (storeError) {
         // Silencieux si hors-ligne
@@ -797,7 +800,7 @@ async function syncToSupabase() {
       }
     } catch(e) {}
 
-    console.log(`[Flash] ⚡ Sync terminée — ${totalPendingCount} éléments envoyés`);
+    if (totalPendingCount > 0) console.log(`[Flash] ⚡ Sync terminée — ${totalPendingCount} éléments envoyés`);
 
     // ── TRACKING DU PUSH (SAUVEGARDE) POUR LE SUIVI ADMINISTRATEUR ──
     if (totalPendingCount > 0) {
@@ -890,7 +893,7 @@ async function pullFromSupabase(isManual = false) {
 
         if (allData.length > 0) {
           hasChanges = true;
-          console.log(`[Flash] 📦 ${storeName}: ${allData.length} éléments à importer...`);
+          // Log uniquement au premier pull ou si beaucoup de données
 
           // Préparer tous les items
           const mustBeString = [
@@ -930,7 +933,7 @@ async function pullFromSupabase(isManual = false) {
             }
           }
           totalItemsPulled += preparedItems.length;
-          console.log(`[Flash] ✅ ${storeName}: ${preparedItems.length} importés`);
+          // Log silencieux en production
         }
       } catch (storeErr) {
         if (!storeErr?.message?.includes('Failed to fetch')) {
@@ -939,7 +942,7 @@ async function pullFromSupabase(isManual = false) {
       }
     }
 
-    console.log('[Flash] ⚡ Pull terminé — données locales à jour');
+    if (hasChanges) console.log(`[Flash] ⚡ Pull terminé — ${totalItemsPulled} éléments mis à jour`);
 
     // ── TRACKING DU PULL POUR LE SUIVI PHARMACIEN ──
     if (isManual && totalItemsPulled > 0) {
