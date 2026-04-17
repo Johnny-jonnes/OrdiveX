@@ -360,9 +360,11 @@ let _syncTimer = null;
 let _syncInProgress = false;
 
 function _scheduleSyncToSupabase() {
+  if (!navigator.onLine) return; // Ne rien faire si hors-ligne
   if (_syncTimer) clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
     _syncTimer = null;
+    if (!navigator.onLine) return; // Double vérification
     syncToSupabase().catch(() => { });
   }, 2000); // Réduit de 5s → 2s pour une réactivité cloud optimale
 }
@@ -742,11 +744,12 @@ async function syncToSupabase() {
           }
         }
 
-        if (lastError) {
+        if (lastError && navigator.onLine) {
           console.error(`[Flash] ❌ ${storeName}:`, lastError.message || lastError);
         }
       } catch (storeError) {
-        console.error(`[Flash] Exception ${storeName}:`, storeError);
+        // Silencieux si hors-ligne
+        if (navigator.onLine) console.error(`[Flash] Exception ${storeName}:`, storeError);
       }
     }));
 
@@ -849,7 +852,6 @@ async function pullFromSupabase(isManual = false) {
       if (probeReq.error) throw probeReq.error;
       AppState.isOnline = true;
     } catch(err) {
-      console.warn('[Flash] Sonde hors ligne:', err);
       AppState.isOnline = false;
       return; 
     }
@@ -1106,12 +1108,13 @@ function startAutoPull() {
   if (_autoPullTimer) clearTimeout(_autoPullTimer);
   
   const loop = async () => {
-    if (navigator.onLine) {
+    if (navigator.onLine && AppState.isOnline !== false) {
       try {
         await pullFromSupabase();
       } catch (e) { }
     }
-    const delay = (navigator.onLine && AppState.isOnline === false) ? 60000 : 15000;
+    // En mode hors ligne : vérifier toutes les 60s. En ligne : toutes les 15s.
+    const delay = (!navigator.onLine || AppState.isOnline === false) ? 60000 : 15000;
     _autoPullTimer = setTimeout(loop, delay); 
   };
   
