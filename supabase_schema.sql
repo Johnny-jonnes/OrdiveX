@@ -530,12 +530,6 @@ CREATE POLICY "settings_policy_update" ON "settings" FOR UPDATE USING (auth.uid(
 DROP POLICY IF EXISTS "settings_policy_delete" ON "settings";
 CREATE POLICY "settings_policy_delete" ON "settings" FOR DELETE USING (auth.uid() IS NOT NULL);
 
-CREATE TABLE IF NOT EXISTS pull_tracking (
-  id BIGSERIAL PRIMARY KEY,
-  device_id TEXT NOT NULL,
-  device_name TEXT,
-  pharmacy_name TEXT,
-  user_name TEXT,
 ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "createdBy" BIGINT;
 ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "receivedAt" TEXT;
 ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "receiveNote" TEXT;
