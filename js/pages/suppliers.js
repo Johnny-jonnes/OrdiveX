@@ -456,7 +456,6 @@ function showNewOrderForm() {
 }
 
 function addOrderItem() {
-  const products = window._allProducts || [];
   const listEl = document.getElementById('order-items-list');
   if (!listEl) return;
   listEl.querySelector('.rx-empty-items')?.remove();
@@ -468,11 +467,10 @@ function addOrderItem() {
   div.id = `order-item-${idx}`;
   div.innerHTML = `
     <div class="rx-item-fields">
-      <div class="form-group flex-grow">
-        <select class="form-control" id="order-prod-${idx}" onchange="updateOrderTotal()">
-          <option value="">Sélectionner produit...</option>
-          ${products.map(p => `<option value="${p.id}" data-price="${p.purchasePrice || 0}" data-name="${p.name}">${p.name} (${p.code})</option>`).join('')}
-        </select>
+      <div class="form-group flex-grow" style="position:relative">
+        <input type="text" class="form-control" id="order-search-${idx}" placeholder="Rechercher un produit..." autocomplete="off" oninput="orderProductSearch(${idx})">
+        <input type="hidden" id="order-prod-${idx}">
+        <div id="order-dropdown-${idx}" class="order-product-dropdown" style="display:none"></div>
       </div>
       <div class="form-group" style="width:100px">
         <input type="number" class="form-control" id="order-qty-${idx}" placeholder="Qté" min="1" value="1" oninput="updateOrderTotal()">
@@ -486,6 +484,58 @@ function addOrderItem() {
   if (window.lucide) lucide.createIcons();
 }
 
+// Recherche autocomplete de produits pour les commandes fournisseurs
+function orderProductSearch(idx) {
+  const input = document.getElementById(`order-search-${idx}`);
+  const dropdown = document.getElementById(`order-dropdown-${idx}`);
+  const hidden = document.getElementById(`order-prod-${idx}`);
+  if (!input || !dropdown) return;
+
+  const q = input.value.trim().toLowerCase();
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+  const products = window._allProducts || [];
+  const matches = products.filter(p =>
+    (p.name || '').toLowerCase().includes(q) ||
+    (p.code || '').toLowerCase().includes(q) ||
+    (p.dci || '').toLowerCase().includes(q)
+  ).slice(0, 15);
+
+  if (!matches.length) {
+    dropdown.innerHTML = '<div class="order-dd-empty">Aucun produit trouvé</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(p => `
+    <div class="order-dd-item" onclick="selectOrderProduct(${idx}, ${p.id}, '${(p.name || '').replace(/'/g, "\\'")}', ${p.purchasePrice || 0})">
+      <strong>${p.name}</strong> <span style="color:var(--text-muted);font-size:11px">(${p.code})</span>
+      ${p.purchasePrice ? `<span style="float:right;color:var(--primary);font-weight:700">${UI.formatCurrency(p.purchasePrice)}</span>` : ''}
+    </div>
+  `).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectOrderProduct(idx, productId, productName, purchasePrice) {
+  const input = document.getElementById(`order-search-${idx}`);
+  const hidden = document.getElementById(`order-prod-${idx}`);
+  const dropdown = document.getElementById(`order-dropdown-${idx}`);
+  const priceInput = document.getElementById(`order-price-${idx}`);
+
+  if (input) input.value = productName;
+  if (hidden) { hidden.value = productId; hidden.dataset.name = productName; hidden.dataset.price = purchasePrice; }
+  if (priceInput && !priceInput.value) priceInput.value = purchasePrice || '';
+  if (dropdown) dropdown.style.display = 'none';
+  updateOrderTotal();
+}
+
+// Fermer les dropdowns au clic ailleurs
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.order-product-dropdown') && !e.target.matches('[id^="order-search-"]')) {
+    document.querySelectorAll('.order-product-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
+
 function removeOrderItem(idx) {
   document.getElementById(`order-item-${idx}`)?.remove();
   updateOrderTotal();
@@ -496,10 +546,10 @@ function updateOrderTotal() {
   document.querySelectorAll('.rx-item-row[id^="order-item-"]').forEach(row => {
     const idx = row.id.replace('order-item-', '');
     const qty = parseFloat(document.getElementById(`order-qty-${idx}`)?.value || 0);
-    const sel = document.getElementById(`order-prod-${idx}`);
+    const hidden = document.getElementById(`order-prod-${idx}`);
     let price = parseFloat(document.getElementById(`order-price-${idx}`)?.value || 0);
-    if (!price && sel?.value) {
-      price = parseFloat(sel.options[sel.selectedIndex]?.dataset?.price || 0);
+    if (!price && hidden?.value) {
+      price = parseFloat(hidden.dataset.price || 0);
       const priceInput = document.getElementById(`order-price-${idx}`);
       if (priceInput && !priceInput.value) priceInput.placeholder = price.toString();
     }
@@ -518,11 +568,11 @@ async function submitOrder(status) {
   const items = [];
   document.querySelectorAll('.rx-item-row[id^="order-item-"]').forEach(row => {
     const idx = row.id.replace('order-item-', '');
-    const sel = document.getElementById(`order-prod-${idx}`);
+    const hidden = document.getElementById(`order-prod-${idx}`);
     const qty = parseInt(document.getElementById(`order-qty-${idx}`)?.value || 0);
-    const price = parseFloat(document.getElementById(`order-price-${idx}`)?.value || sel?.options[sel.selectedIndex]?.dataset?.price || 0);
-    if (sel?.value && qty > 0) {
-      items.push({ productId: parseInt(sel.value), productName: sel.options[sel.selectedIndex]?.dataset?.name, quantity: qty, unitPrice: price, receivedQty: 0 });
+    const price = parseFloat(document.getElementById(`order-price-${idx}`)?.value || hidden?.dataset?.price || 0);
+    if (hidden?.value && qty > 0) {
+      items.push({ productId: parseInt(hidden.value), productName: hidden.dataset?.name || '', quantity: qty, unitPrice: price, receivedQty: 0 });
     }
   });
 
@@ -865,6 +915,8 @@ window.viewOrder = viewOrder;
 window.showAddComplaint = showAddComplaint;
 window.submitComplaint = submitComplaint;
 window.resolveComplaint = resolveComplaint;
+window.orderProductSearch = orderProductSearch;
+window.selectOrderProduct = selectOrderProduct;
 
 Router.register('suppliers', renderSuppliers);
 Router.register('purchase-orders', renderPurchaseOrders);
