@@ -580,6 +580,9 @@ function showQuickOptions() {
     ).join('');
     body.appendChild(acts);
     body.scrollTop = body.scrollHeight;
+    if (window.lucide) {
+        setTimeout(() => lucide.createIcons(), 50);
+    }
 }
 
 window.askByIndex = function(idx) {
@@ -639,7 +642,7 @@ const CONVERSATIONS = [
     {
         triggers: ['fonctionnalite', 'ce que tu peux faire', 'tes capacites', 'ce que l appli peut faire', 'avantage', 'pourquoi pharmaprojet', 'pourquoi choisir', 'que faire'],
         responses: [
-            "<strong>PharmaProjet</strong> est le logiciel de gestion de pharmacie le plus complet et adapté à notre marché ! 🏆<br><br>Voici ses super-pouvoirs :<br>🛒 <strong>Point de Vente (POS)</strong> ultra-rapide avec scan code-barres<br>📦 <strong>Stock intelligent (FEFO)</strong> qui gère automatiquement les péremptions<br>💳 <strong>Paiements locaux</strong> : Support natif de Orange Money & MTN MoMo<br>📶 <strong>100% Hors-ligne</strong> : Fonctionne parfaitement même sans connexion internet !<br>☁️ <strong>Cloud Sync</strong> : Synchronisation des données entre plusieurs appareils<br>💊 <strong>Vente au détail</strong> : Gestion fluide des boîtes, plaquettes et unités<br>⚠️ <strong>Sécurité Patient</strong> : Alertes sur 30+ interactions médicamenteuses et allergies !<br><br>Et moi, Naomie, je suis là pour vous former sur tout ça ! 😎"
+            "<strong>PharmaProjet</strong> est le logiciel de gestion de pharmacie le plus complet et adapté à notre marché ! 🏆<br><br>Voici ses super-pouvoirs :<br><i data-lucide='shopping-cart' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Point de Vente (POS)</strong> ultra-rapide avec scan code-barres<br><i data-lucide='box' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Stock intelligent (FEFO)</strong> qui gère automatiquement les péremptions<br><i data-lucide='smartphone' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Paiements locaux</strong> : Support natif de Orange Money & MTN MoMo<br><i data-lucide='wifi-off' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>100% Hors-ligne</strong> : Fonctionne parfaitement même sans connexion internet !<br><i data-lucide='cloud-lightning' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Cloud Sync</strong> : Synchronisation des données entre plusieurs appareils<br><i data-lucide='pills' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Vente au détail</strong> : Gestion fluide des boîtes, plaquettes et unités<br><i data-lucide='shield-alert' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#e74c3c'></i> <strong>Sécurité Patient</strong> : Alertes sur 30+ interactions médicamenteuses et allergies !<br><br>Et moi, Naomie, je suis là pour vous former sur tout ça ! 😎"
         ]
     },
     {
@@ -720,23 +723,23 @@ const CONVERSATIONS = [
         getResponse: function() {
             const page = (window.Router && window.Router.currentPage) ? window.Router.currentPage : 'dashboard';
             const pageNames = {
-                'pos': '🛒 Point de Vente (POS)',
-                'products': '💊 Catalogue Produits',
-                'stock': '📦 Gestion des Stocks',
-                'patients': '👤 Dossiers Patients',
-                'suppliers': '🚚 Fournisseurs & Achats',
-                'purchase-orders': '📋 Bons de Commande',
-                'sales': '📋 Historique des Ventes',
-                'dashboard': '📊 Tableau de Bord',
-                'metrics': '📈 Pilotage & Analyses',
-                'caisse': '💰 Caisse',
-                'alerts': '🔔 Centre d\'Alertes',
-                'reorder': '📦 Réapprovisionnement',
-                'prescriptions': '📄 Ordonnances',
-                'settings': '⚙️ Paramètres',
-                'print': '🖨️ Centre d\'Impression',
-                'returns': '🔄 Retours',
-                'traceability': '🔍 Traçabilité',
+                'pos': '<i data-lucide="shopping-cart" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Point de Vente (POS)',
+                'products': '<i data-lucide="pill" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Catalogue Produits',
+                'stock': '<i data-lucide="box" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Gestion des Stocks',
+                'patients': '<i data-lucide="users" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Dossiers Patients',
+                'suppliers': '<i data-lucide="truck" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Fournisseurs & Achats',
+                'purchase-orders': '<i data-lucide="clipboard-list" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Bons de Commande',
+                'sales': '<i data-lucide="history" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Historique des Ventes',
+                'dashboard': '<i data-lucide="layout-dashboard" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Tableau de Bord',
+                'metrics': '<i data-lucide="bar-chart-3" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Pilotage & Analyses',
+                'caisse': '<i data-lucide="calculator" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Caisse',
+                'alerts': '<i data-lucide="bell" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Centre d\'Alertes',
+                'reorder': '<i data-lucide="shopping-bag" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Réapprovisionnement',
+                'prescriptions': '<i data-lucide="file-text" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Ordonnances',
+                'settings': '<i data-lucide="settings" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Paramètres',
+                'print': '<i data-lucide="printer" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Centre d\'Impression',
+                'returns': '<i data-lucide="rotate-ccw" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Retours',
+                'traceability': '<i data-lucide="search" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;"></i> Traçabilité',
             };
             const pageName = pageNames[page] || '📊 Tableau de Bord';
             return `Vous êtes actuellement sur la page <strong>${pageName}</strong>, {name} ! 📍<br><br>Besoin d'aide pour utiliser cette section ? Demandez-moi ! 😊`;
