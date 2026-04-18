@@ -702,6 +702,59 @@ const CONVERSATIONS = [
             "PharmaProjet se distingue sur plusieurs points clés, {name} ! 🏆<br><br>✅ <strong>Offline-first</strong> — Fonctionne sans internet (essentiel en Afrique)<br>✅ <strong>FEFO automatique</strong> — Gestion des lots et péremptions en temps réel<br>✅ <strong>Multi-appareils</strong> — Synchronisation cloud entre PC et mobile<br>✅ <strong>Interactions médicamenteuses</strong> — 30+ alertes critiques intégrées<br>✅ <strong>Mobile Money</strong> — Orange Money, MTN MoMo natifs<br><br>Peu de solutions offrent tout ça sur le marché africain ! 💎",
         ]
     },
+    {
+        triggers: ['je suis ou', 'ou suis je', 'quelle page', 'ou je suis', 'page actuelle', 'je me trouve', 'c est quoi cette page'],
+        dynamic: true,
+        getResponse: function() {
+            const hash = window.location.hash?.replace('#','') || '';
+            const pageNames = {
+                'pos': '🛒 Point de Vente (POS)',
+                'products': '💊 Catalogue Produits',
+                'stock': '📦 Gestion des Stocks',
+                'patients': '👤 Dossiers Patients',
+                'suppliers': '🚚 Fournisseurs & Achats',
+                'purchase-orders': '📋 Bons de Commande',
+                'sales': '📋 Historique des Ventes',
+                'dashboard': '📊 Tableau de Bord',
+                'metrics': '📈 Pilotage & Analyses',
+                'caisse': '💰 Caisse',
+                'alerts': '🔔 Centre d\'Alertes',
+                'reorder': '📦 Réapprovisionnement',
+                'prescriptions': '📄 Ordonnances',
+                'settings': '⚙️ Paramètres',
+                'print': '🖨️ Centre d\'Impression',
+                'returns': '🔄 Retours',
+                'traceability': '🔍 Traçabilité',
+            };
+            const pageName = pageNames[hash] || '📊 Tableau de Bord';
+            return `Vous êtes actuellement sur la page <strong>${pageName}</strong>, {name} ! 📍<br><br>Besoin d'aide pour utiliser cette section ? Demandez-moi ! 😊`;
+        }
+    },
+    {
+        triggers: ['combien de produit', 'combien de medicament', 'nombre de produit', 'combien j ai', 'nombre de patient', 'combien de patient'],
+        dynamic: true,
+        getResponse: async function() {
+            try {
+                const products = await DB.dbGetAll('products');
+                const patients = await DB.dbGetAll('patients');
+                const stock = await DB.dbGetAll('stock');
+                const totalStock = stock.reduce((s, e) => s + (e.quantity || 0), 0);
+                return `Voici vos chiffres actuels, {name} ! 📊<br><br>💊 <strong>${products.length.toLocaleString()}</strong> produits dans le catalogue<br>👤 <strong>${patients.length.toLocaleString()}</strong> patients enregistrés<br>📦 <strong>${totalStock.toLocaleString()}</strong> unités en stock<br><br>Besoin d'autres informations ? 😊`;
+            } catch(e) { return "Je n'ai pas pu accéder aux données pour l'instant, {name}. Réessayez dans quelques instants ! 🔄"; }
+        }
+    },
+    {
+        triggers: ['raccourci', 'touche', 'clavier', 'shortcut', 'rapide'],
+        responses: [
+            "Voici les <strong>raccourcis clavier</strong> du POS, {name} ! ⌨️<br><br>🔍 <strong>F2</strong> — Focus sur la barre de recherche<br>💳 <strong>F4</strong> — Valider la vente<br>🗑️ <strong>F8</strong> — Vider le panier<br>📷 <strong>F9</strong> — Scanner un code-barres<br><br>Ces raccourcis fonctionnent uniquement sur la page Point de Vente ! 🚀",
+        ]
+    },
+    {
+        triggers: ['version', 'mise a jour', 'update', 'changelog', 'nouveaute'],
+        responses: [
+            "Vous utilisez <strong>PharmaProjet v4.4</strong>, {name} ! 🆕<br><br>Dernières améliorations :<br>✅ Import massif CSV (50k+ produits)<br>✅ Console propre en production<br>✅ Cartes produit POS compactes<br>✅ Formes pharma (sirop, tube, flacon...)<br>✅ Recherche autocomplete dans les commandes<br>✅ Moi-même : Naomie v2 ! 🤖💙<br><br>Les mises à jour sont automatiques via GitHub Pages !",
+        ]
+    },
 ];
 
 
@@ -711,7 +764,10 @@ function matchConversation(input) {
         for (const trigger of conv.triggers) {
             const trigNorm = trigger.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             if (q.includes(trigNorm)) {
-                return conv.responses[Math.floor(Math.random() * conv.responses.length)];
+                if (conv.dynamic && conv.getResponse) {
+                    return { dynamic: true, getResponse: conv.getResponse };
+                }
+                return { dynamic: false, text: conv.responses[Math.floor(Math.random() * conv.responses.length)] };
             }
         }
     }
@@ -752,16 +808,27 @@ window.submitFreeQuestion = function() {
             const name = getUserName().split(' ')[0];
 
             if (convReply) {
-                // Réponse conversationnelle avec variables dynamiques
+                // Variables dynamiques communes
                 const now = new Date();
                 const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                 const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                const reply = convReply
-                    .replace(/\{name\}/g, name)
-                    .replace(/\{time\}/g, timeStr)
-                    .replace(/\{date\}/g, dateStr);
-                body.innerHTML += `<div class="chat-bubble chat-bot">${reply}</div>`;
-                setTimeout(() => showQuickOptions(), 400);
+
+                const applyVars = (str) => str.replace(/\{name\}/g, name).replace(/\{time\}/g, timeStr).replace(/\{date\}/g, dateStr);
+
+                if (convReply.dynamic && convReply.getResponse) {
+                    // Réponse dynamique (peut être async)
+                    Promise.resolve(convReply.getResponse()).then(dynText => {
+                        const reply = applyVars(dynText);
+                        body.innerHTML += `<div class="chat-bubble chat-bot">${reply}</div>`;
+                        setTimeout(() => showQuickOptions(), 400);
+                        body.scrollTop = body.scrollHeight;
+                    });
+                } else {
+                    // Réponse statique
+                    const reply = applyVars(convReply.text);
+                    body.innerHTML += `<div class="chat-bubble chat-bot">${reply}</div>`;
+                    setTimeout(() => showQuickOptions(), 400);
+                }
             } else {
                 // Aucun match — réponse intelligente contextuelle
                 const page = window.location.hash?.replace('#','') || 'dashboard';
