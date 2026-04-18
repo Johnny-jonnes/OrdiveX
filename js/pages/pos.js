@@ -591,6 +591,26 @@ function refreshGrid() {
     const alts = rupt ? findGenericAlternatives(p) : [];
     const isRx = p.requiresPrescription;
     const marginInfo = isAdmin && p.purchasePrice ? `<span class="prod-margin">Marge: ${Math.round(((p.salePrice - p.purchasePrice) / p.salePrice) * 100)}%</span>` : '';
+
+    // Forme pharmaceutique intelligente
+    const unitLabels = { 'boîte': 'bte', 'flacon': 'fl', 'tube': 'tube', 'sachet': 'sach', 'ampoule': 'amp', 'suppositoire': 'sup', 'spray': 'spray', 'patch': 'patch', 'seringue': 'ser', 'poche': 'poche' };
+    const rawUnit = (p.unit || 'boîte').toLowerCase();
+    const unitShort = unitLabels[rawUnit] || rawUnit.substring(0, 4);
+    const unitFull = p.unit || 'Boîte';
+
+    // Stock affiché de manière intelligente
+    let stockText = '';
+    if (rupt) {
+      stockText = alts.length ? '<i data-lucide="repeat"></i> Alt.' : '<i data-lucide="x-circle"></i> Rupture';
+    } else if (p.allowUnitSale) {
+      const totU = (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
+      const boxes = Math.floor(q / totU);
+      const remain = q % totU;
+      stockText = (low ? '<i data-lucide="alert-triangle"></i> ' : '') + boxes + ' ' + unitShort + (remain > 0 ? ' +' + remain + 'u' : '');
+    } else {
+      stockText = (low ? '<i data-lucide="alert-triangle"></i> ' : '') + q + ' ' + unitShort;
+    }
+
     return `<div class="prod-card ${rupt ? 'prod-rupt' : ''} ${inCart ? 'prod-incart' : ''} ${low ? 'prod-low' : ''}"
        onclick="${rupt ? (alts.length ? `showGenericAlternatives(${p.id})` : "UI.toast('Rupture de stock — aucune alternative DCI en stock','error')") : `addToCart(${p.id})`}">
       <div class="prod-top">
@@ -603,14 +623,14 @@ function refreshGrid() {
       <div class="prod-dci">${p.dci || p.brand || ''}</div>
       ${marginInfo}
       <div class="prod-foot">
-        <span class="prod-price">${UI.formatCurrency(p.salePrice)} <small style="font-size:10px; color:var(--text-muted)">/ bte</small></span>
-        <span class="prod-stock ${rupt ? 's-rupt' : low ? 's-low' : 's-ok'}">${rupt ? (alts.length ? '<i data-lucide="repeat"></i> Alt.' : '<i data-lucide="x-circle"></i> Rupture') : (low ? '<i data-lucide="alert-triangle"></i> ' : '') + ((p.allowUnitSale) ? (Math.floor(q / ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) + ' bt ' + (p.subUnitsPerBox > 1 ? Math.floor((q % ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) / p.unitsPerBox) + ' pl ' : '') + ((q % ((p.unitsPerBox||1)*(p.subUnitsPerBox||1))) % (p.unitsPerBox||1)) + ' u') : q + ' btes')}</span>
+        <span class="prod-price">${UI.formatCurrency(p.salePrice)} <small style="font-size:9px;color:var(--text-muted)">/ ${unitShort}</small></span>
+        <span class="prod-stock ${rupt ? 's-rupt' : low ? 's-low' : 's-ok'}">${stockText}</span>
       </div>
-      <div style="display:flex; gap:4px; margin-top:8px; flex-wrap:wrap;">
-        ${!rupt ? `<button class="btn btn-xs btn-primary" style="flex:1; min-width:30%" onclick="event.stopPropagation(); addToCart(${p.id}, 'box')"><i data-lucide="package"></i> Boîte</button>` : ''}
-        ${!rupt && p.allowUnitSale && p.subUnitsPerBox > 1 ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="event.stopPropagation(); addToCart(${p.id}, 'subunit')"><i data-lucide="layout-grid"></i> Plaq.</button>` : ''}
-        ${!rupt && p.allowUnitSale ? `<button class="btn btn-xs btn-secondary" style="flex:1; min-width:30%" onclick="event.stopPropagation(); addToCart(${p.id}, 'unit')"><i data-lucide="pill"></i> Unité</button>` : ''}
-        <button class="btn btn-xs btn-ghost" style="min-width:32px; color:var(--info); border:1px solid var(--border)" onclick="event.stopPropagation(); showProductNotice(${p.id})" title="Notice médicale"><i data-lucide="info" style="width:14px;height:14px"></i></button>
+      <div style="display:flex; gap:3px; margin-top:4px; flex-wrap:wrap;">
+        ${!rupt ? `<button class="btn btn-xs btn-primary" style="flex:1;min-width:28%;padding:3px 4px;font-size:10px" onclick="event.stopPropagation(); addToCart(${p.id}, 'box')"><i data-lucide="package" style="width:11px;height:11px"></i> ${unitFull}</button>` : ''}
+        ${!rupt && p.allowUnitSale && p.subUnitsPerBox > 1 ? `<button class="btn btn-xs btn-secondary" style="flex:1;min-width:28%;padding:3px 4px;font-size:10px" onclick="event.stopPropagation(); addToCart(${p.id}, 'subunit')"><i data-lucide="layout-grid" style="width:11px;height:11px"></i> Plaq.</button>` : ''}
+        ${!rupt && p.allowUnitSale ? `<button class="btn btn-xs btn-secondary" style="flex:1;min-width:28%;padding:3px 4px;font-size:10px" onclick="event.stopPropagation(); addToCart(${p.id}, 'unit')"><i data-lucide="pill" style="width:11px;height:11px"></i> Unité</button>` : ''}
+        <button class="btn btn-xs btn-ghost" style="min-width:26px;padding:3px;color:var(--info);border:1px solid var(--border)" onclick="event.stopPropagation(); showProductNotice(${p.id})" title="Notice"><i data-lucide="info" style="width:11px;height:11px"></i></button>
       </div>
     </div>`;
   }).join('');

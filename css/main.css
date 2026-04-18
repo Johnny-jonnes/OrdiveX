@@ -3446,8 +3446,8 @@ textarea.form-control {
   flex: 1;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 6px;
   align-content: start;
   padding-bottom: 8px;
 }
@@ -3463,16 +3463,16 @@ textarea.form-control {
 /* Carte produit */
 .prod-card {
   background: var(--surface);
-  border: 2px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 10px 8px;
+  padding: 7px 6px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   transition: all var(--transition);
   position: relative;
-  min-height: 108px;
+  min-height: 80px;
 }
 
 .prod-card:hover:not(.prod-rupt) {
@@ -3608,10 +3608,15 @@ textarea.form-control {
 }
 
 .prod-name {
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text);
-  line-height: 1.3;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .prod-dci {
@@ -3627,15 +3632,24 @@ textarea.form-control {
 }
 
 .prod-price {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: var(--primary);
   white-space: nowrap;
-  overflow: visible;
+}
+
+.prod-unit {
+  font-size: 9px;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-top: 1px;
 }
 
 .prod-stock {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
 }
 
