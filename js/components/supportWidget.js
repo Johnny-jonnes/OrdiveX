@@ -627,7 +627,19 @@ const CONVERSATIONS = [
     {
         triggers: ['qui es tu', 'c est quoi', 'tu es qui', 'ton nom', 'tu fais quoi', 'tu sers a quoi', 'quel est ton role'],
         responses: [
-            "Je suis <strong>Naomie</strong>, votre assistante virtuelle PharmaProjet ! 🤖💙<br><br>Je suis conçue pour vous guider dans l'utilisation complète de l'application : ventes, stocks, patients, fournisseurs, analyses financières...<br><br>Je connais <strong>plus de 25 sujets</strong> à fond ! Posez-moi n'importe quelle question, et si je ne sais pas répondre, je vous oriente vers le support humain via WhatsApp. 😊",
+            "Je suis <strong>Naomie</strong>, votre assistante virtuelle PharmaProjet ! 🤖💙<br><br>Je suis conçue par l'entreprise technologique <strong>TrillionX</strong> pour vous guider dans l'utilisation complète de l'application : ventes, stocks, patients, fournisseurs, analyses financières...<br><br>Je connais <strong>plus de 25 sujets</strong> à fond ! Posez-moi n'importe quelle question, et si je ne sais pas répondre, je vous oriente vers le support humain via WhatsApp. 😊",
+        ]
+    },
+    {
+        triggers: ['createur', 'trillionx', 'qui t a cree', 'qui t as cree', 'developpeur', 'entreprise', 'societe', 'qui a developpe'],
+        responses: [
+            "J'ai été conçue et développée par <strong>TrillionX</strong> ! 🚀<br><br>TrillionX est une entreprise technologique innovante spécialisée dans le développement de solutions logicielles de pointe, comme le puissant ERP <strong>PharmaProjet</strong>.<br><br>Leur mission : moderniser et sécuriser la gestion des pharmacies en Afrique avec des outils hors-ligne, rapides et ultra-sécurisés ! 🛡️💻"
+        ]
+    },
+    {
+        triggers: ['fonctionnalite', 'ce que tu peux faire', 'tes capacites', 'ce que l appli peut faire', 'avantage', 'pourquoi pharmaprojet', 'pourquoi choisir', 'que faire'],
+        responses: [
+            "<strong>PharmaProjet</strong> est le logiciel de gestion de pharmacie le plus complet et adapté à notre marché ! 🏆<br><br>Voici ses super-pouvoirs :<br>🛒 <strong>Point de Vente (POS)</strong> ultra-rapide avec scan code-barres<br>📦 <strong>Stock intelligent (FEFO)</strong> qui gère automatiquement les péremptions<br>💳 <strong>Paiements locaux</strong> : Support natif de Orange Money & MTN MoMo<br>📶 <strong>100% Hors-ligne</strong> : Fonctionne parfaitement même sans connexion internet !<br>☁️ <strong>Cloud Sync</strong> : Synchronisation des données entre plusieurs appareils<br>💊 <strong>Vente au détail</strong> : Gestion fluide des boîtes, plaquettes et unités<br>⚠️ <strong>Sécurité Patient</strong> : Alertes sur 30+ interactions médicamenteuses et allergies !<br><br>Et moi, Naomie, je suis là pour vous former sur tout ça ! 😎"
         ]
     },
     {
