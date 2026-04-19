@@ -1480,16 +1480,75 @@ img, canvas, video, iframe {
   }
 
   .panel-title {
-    font-size: 12px !important;
+    font-size: 13px !important;
   }
 
-  .top-name { font-size: 11px !important; }
-  .top-revenue { font-size: 11px !important; }
-  .top-rank { width: 22px !important; height: 22px !important; font-size: 10px !important; }
+  /* =============== TOP PRODUITS =============== */
+  .top-item {
+    gap: 8px !important;
+    padding: 6px 0 !important;
+  }
+  .top-rank {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 10px !important;
+    min-width: 20px !important;
+  }
+  .top-name {
+    font-size: 11px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .top-revenue {
+    font-size: 11px !important;
+  }
   
-  .alert-type, .alert-msg { font-size: 11px !important; }
+  /* =============== ALERTES RÉCENTES =============== */
+  .alert-item {
+    padding: 8px !important;
+    gap: 8px !important;
+    align-items: flex-start !important;
+  }
+  .alert-type {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    margin-bottom: 2px !important;
+  }
+  .alert-type svg, .alert-type i {
+    width: 12px !important;
+    height: 12px !important;
+  }
+  .alert-msg {
+    font-size: 11px !important;
+    white-space: normal !important; /* Force le retour à la ligne propre */
+    line-height: 1.3 !important;
+    color: var(--text) !important;
+  }
+  .alert-item button.btn-xs {
+    padding: 4px !important;
+    width: 24px !important;
+    height: 24px !important;
+    min-height: auto !important;
+  }
   
-  .stock-name, .stock-qty { font-size: 11px !important; }
+  /* =============== STOCKS BAS =============== */
+  .stock-alert-item {
+    padding: 4px 0 !important;
+  }
+  .stock-name {
+    font-size: 11px !important;
+    max-width: 65% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .stock-qty {
+    font-size: 11px !important;
+  }
 
   /* Stat/info boxes */
   .info-grid,
