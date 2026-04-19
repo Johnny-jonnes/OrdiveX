@@ -1566,6 +1566,106 @@ img, canvas, video, iframe {
   }
 
 
+  /* ─────────────────────────────────────────────────────────────
+     §1.19  AUDIT REPORT — Responsive mobile
+     ───────────────────────────────────────────────────────────── */
+
+  .audit-report-summary {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .audit-report-header {
+    flex-direction: column !important;
+    gap: 12px !important;
+    text-align: center;
+  }
+
+  .audit-report-header > div:last-child {
+    text-align: center;
+  }
+
+  .audit-report-logo {
+    justify-content: center;
+  }
+
+  .audit-report-breakdown-label {
+    min-width: 100px !important;
+    font-size: 11px !important;
+  }
+
+  .compliance-card-header {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .compliance-score {
+    flex-direction: row !important;
+    gap: 12px !important;
+  }
+
+  .planning-card-header {
+    flex-direction: column !important;
+  }
+
+  .audit-report-config {
+    flex-direction: column !important;
+  }
+
+
+  /* ─────────────────────────────────────────────────────────────
+     §1.20  ALERTES PAGE — Responsive mobile
+     ───────────────────────────────────────────────────────────── */
+
+  .alerts-stats-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .alerts-filters-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .alerts-filter-group {
+    width: 100% !important;
+  }
+
+  .alerts-filter-input,
+  .alerts-filter-select {
+    flex: 1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .alerts-clear-btn {
+    margin-left: 0 !important;
+  }
+
+  .alerts-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+
+  /* ─────────────────────────────────────────────────────────────
+     §1.21  FAB CHAT — Repositionnement mobile
+     ───────────────────────────────────────────────────────────── */
+
+  #support-chat-fab {
+    bottom: 80px !important;
+    right: 16px !important;
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  #support-chat-fab svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  #support-chat-fab .fab-label {
+    display: none !important;
+  }
+
+
 } /* fin @media (max-width: 767px) */
 
 
@@ -1621,6 +1721,29 @@ img, canvas, video, iframe {
   }
 
 } /* fin @media (max-width: 374px) */
+
+
+/* ═══════════════════════════════════════════════════════════════
+   §2b  MICRO-MOBILE ALERTES — max-width: 480px
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .alerts-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .alerts-stat-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .alerts-stat-value {
+    font-size: 22px !important;
+  }
+
+  .page-header {
+    flex-direction: column !important;
+  }
+}
 
 
 /* ═══════════════════════════════════════════════════════════════

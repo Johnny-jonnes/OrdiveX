@@ -3351,21 +3351,6 @@ textarea.form-control {
   border-radius: 20px 20px 0 0;
 }
 
-@media (max-width: 768px) {
-  .pos-cart-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .cart-toggle-icon {
-    transition: transform 0.3s ease;
-  }
-
-  .pos-cart-panel.expanded .cart-toggle-icon {
-    transform: rotate(180deg);
-  }
-}
 
 .pos-searchicon {
   position: absolute;
@@ -7519,11 +7504,6 @@ a:focus-visible {
   }
 }
 
-@media (max-width: 768px) {
-  .pay-methods {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
 /* ===== COMMAND PALETTE (Elite Design) ===== */
 .cp-overlay {
@@ -9206,48 +9186,6 @@ kbd {
    RESPONSIVE â€” Audit features
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-@media (max-width: 768px) {
-  .audit-report-summary {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .audit-report-header {
-    flex-direction: column;
-    gap: 12px;
-    text-align: center;
-  }
-
-  .audit-report-header > div:last-child {
-    text-align: center;
-  }
-
-  .audit-report-logo {
-    justify-content: center;
-  }
-
-  .audit-report-breakdown-label {
-    min-width: 100px;
-    font-size: 11px;
-  }
-
-  .compliance-card-header {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .compliance-score {
-    flex-direction: row;
-    gap: 12px;
-  }
-
-  .planning-card-header {
-    flex-direction: column;
-  }
-
-  .audit-report-config {
-    flex-direction: column !important;
-  }
-}
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    ALERTS PAGE â€” Centre d'Alertes Moderne
@@ -9653,54 +9591,8 @@ kbd {
   border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .alerts-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
 
-  .alerts-filters-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
 
-  .alerts-filter-group {
-    width: 100%;
-  }
-
-  .alerts-filter-input,
-  .alerts-filter-select {
-    flex: 1;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .alerts-clear-btn {
-    margin-left: 0;
-  }
-
-  .alerts-cards-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 480px) {
-  .alerts-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .alerts-stat-card:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .alerts-stat-value {
-    font-size: 22px;
-  }
-
-  .page-header {
-    flex-direction: column;
-  }
-}
 
 /* ═══════════════════════════════════════════════════════════════
    SUPPORT CHAT FAB — WhatsApp Widget Flottant
@@ -9836,28 +9728,3 @@ body:has(#onboarding-container) #support-chat-fab {
 .complaint-status.open { background: rgba(232, 145, 58, 0.1); color: var(--warning); }
 .complaint-status.resolved { background: rgba(46, 175, 125, 0.1); color: var(--success); }
 
-/* Mobile — repositionner le FAB au-dessus de la tabbar */
-@media (max-width: 767px) {
-  #support-chat-fab {
-    bottom: 80px;
-    right: 16px;
-    width: 50px;
-    height: 50px;
-  }
-
-  #support-chat-fab svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  #support-chat-fab .fab-label {
-    display: none;
-  }
-
-  .panel-title { font-size: 12px; }
-  .top-name { font-size: 11px; }
-  .top-revenue { font-size: 11px; }
-  .top-rank { width: 22px; height: 22px; font-size: 10px; }
-  .alert-type, .alert-msg { font-size: 11px; }
-  .stock-name, .stock-qty { font-size: 11px; }
-}
