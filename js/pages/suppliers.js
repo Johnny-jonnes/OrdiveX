@@ -376,6 +376,7 @@ function filterOrders() {
         <button class="btn btn-xs btn-primary" onclick="viewOrder(${r.id})"><i data-lucide="eye"></i> Voir</button>
         ${r.status === 'pending' ? `<button class="btn btn-xs btn-secondary" onclick="sendOrder(${r.id})"><i data-lucide="send"></i> Envoyer</button>` : ''}
         ${['sent', 'partial'].includes(r.status) ? `<button class="btn btn-xs btn-success" onclick="receiveOrder(${r.id})"><i data-lucide="package"></i> Réceptionner</button>` : ''}
+        ${['pending', 'sent'].includes(r.status) ? `<button class="btn btn-xs btn-danger" onclick="cancelOrder(${r.id})" title="Annuler cette commande"><i data-lucide="x-circle"></i> Annuler</button>` : ''}
       </div>` },
   ], data, { emptyMessage: 'Aucune commande', emptyIcon: 'file-text' });
   if (window.lucide) lucide.createIcons();
@@ -604,6 +605,19 @@ async function sendOrder(orderId) {
   await DB.dbPut('purchaseOrders', { ...order, status: 'sent', sentAt: Date.now() });
   await DB.writeAudit('SEND_ORDER', 'purchaseOrders', orderId, {});
   UI.toast('Commande marquée comme envoyée', 'success');
+  Router.navigate('purchase-orders');
+}
+
+async function cancelOrder(orderId) {
+  const order = await DB.dbGet('purchaseOrders', orderId);
+  if (!order) return;
+  
+  const confirm = await UI.confirm(`Voulez-vous vraiment annuler la commande ${order.orderNumber || 'BC-'+orderId} ?`);
+  if (!confirm) return;
+
+  await DB.dbPut('purchaseOrders', { ...order, status: 'cancelled', cancelledAt: Date.now() });
+  await DB.writeAudit('CANCEL_ORDER', 'purchaseOrders', orderId, { status: 'cancelled' });
+  UI.toast('Commande annulée avec succès', 'success');
   Router.navigate('purchase-orders');
 }
 
@@ -908,6 +922,7 @@ window.updateOrderTotal = updateOrderTotal;
 window.submitOrder = submitOrder;
 window.filterOrders = filterOrders;
 window.sendOrder = sendOrder;
+window.cancelOrder = cancelOrder;
 window.receiveOrder = receiveOrder;
 window.renderReceivePagination = renderReceivePagination;
 window.confirmReceiveOrder = confirmReceiveOrder;

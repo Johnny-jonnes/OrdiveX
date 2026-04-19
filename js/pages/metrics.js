@@ -241,7 +241,7 @@ async function renderMetrics(container) {
       <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:28px;">
         <div>
           <h1 style="font-size:26px; font-weight:800; margin:0; display:flex; align-items:center; gap:10px; color:var(--text);">
-            <div style="width:40px;height:40px;background:linear-gradient(135deg, var(--primary-color), #2980b9);border-radius:12px;display:flex;align-items:center;justify-content:center;"><i data-lucide="bar-chart-2" style="color:#fff;width:22px;height:22px;"></i></div>
+            <div style="width:40px;height:40px;background:rgba(27,111,174,0.12);border-radius:12px;display:flex;align-items:center;justify-content:center;"><i data-lucide="bar-chart-2" style="color:var(--primary-color);width:22px;height:22px;"></i></div>
             Business Intelligence
           </h1>
           <p style="font-size:13px; color:var(--text-muted); margin:4px 0 0 50px;">Analyse financière complète · ${products.length} produits · ${totalTransactions} transactions</p>
@@ -411,13 +411,14 @@ async function renderMetrics(container) {
         <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:var(--shadow-sm);">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h3 style="font-size:15px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px;">
-              <i data-lucide="activity" style="color:var(--primary-color);width:18px;height:18px;"></i> Dynamique (7 Jours)
+              <i data-lucide="activity" style="color:var(--primary-color);width:18px;height:18px;"></i> Tendance des Ventes
             </h3>
-            <div style="display:flex; gap:10px;">
-              <span style="font-size:12px; color:var(--text-muted); font-weight:700">CA: ${UI.formatCurrency(trendData.reduce((a,b) => a+b, 0))}</span>
+            <div style="display:flex; gap:10px; align-items:center;">
+              <span style="font-size:11px; color:var(--text-muted); background:var(--surface-2); padding:4px 10px; border-radius:6px; font-weight:600">7 derniers jours</span>
             </div>
           </div>
-          <canvas id="metrics-chart-trend" width="700" height="320" style="width:100%; height:auto;"></canvas>
+          <div style="font-size:36px; font-weight:900; color:var(--text); margin-bottom:16px; letter-spacing:-1px;">${UI.formatCurrency(trendData.reduce((a,b) => a+b, 0))}</div>
+          <canvas id="metrics-chart-trend" width="700" height="280" style="width:100%; height:auto;"></canvas>
         </div>
 
         <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow:var(--shadow-sm);">
@@ -554,7 +555,8 @@ async function renderMetrics(container) {
     requestAnimationFrame(() => {
       Charts.line('metrics-chart-trend', last7DaysLabels, [{
         data: trendData,
-        color: '#0B3D6F' 
+        color: '#7C3AED',
+        gradient: ['rgba(124,58,237,0.35)', 'rgba(196,167,255,0.08)']
       }], { title: '' });
 
       // Donut des modes de paiement

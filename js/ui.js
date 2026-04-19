@@ -607,13 +607,20 @@ const Charts = {
         y: pad.top + chartH - (val / maxVal) * chartH
       }));
 
-      // Area fill
+      // Area fill with custom gradient support
       ctx.beginPath();
       ctx.moveTo(points[0].x, pad.top + chartH);
       points.forEach(p => ctx.lineTo(p.x, p.y));
       ctx.lineTo(points[points.length - 1].x, pad.top + chartH);
       ctx.closePath();
-      ctx.fillStyle = color + '22';
+      if (dataset.gradient && dataset.gradient.length >= 2) {
+        const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+        grad.addColorStop(0, dataset.gradient[0]);
+        grad.addColorStop(1, dataset.gradient[1]);
+        ctx.fillStyle = grad;
+      } else {
+        ctx.fillStyle = color + '22';
+      }
       ctx.fill();
 
       // Line

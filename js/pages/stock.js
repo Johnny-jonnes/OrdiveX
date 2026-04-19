@@ -230,10 +230,9 @@ function renderStockEntry() {
     <form id="stock-entry-form" class="form-grid">
       <div class="form-group">
         <label>Produit *</label>
-        <select name="productId" class="form-control" required>
-          <option value="">Sélectionner un produit...</option>
-          ${products.map(p => `<option value="${p.id}">${p.name} (${p.code})</option>`).join('')}
-        </select>
+        <input type="text" id="stock-entry-product-search" class="form-control" placeholder="Tapez pour chercher un produit..." autocomplete="off" oninput="filterStockEntryProducts(this.value)">
+        <input type="hidden" name="productId" id="stock-entry-product-id" required>
+        <div id="stock-entry-product-results" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;display:none;margin-top:4px;background:var(--surface);"></div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -357,57 +356,111 @@ async function renderStockInventory() {
     id: p.id,
     code: p.code,
     name: p.name,
+    dci: p.dci || '—',
+    form: p.form || '—',
     category: p.category,
+    purchasePrice: p.purchasePrice || 0,
+    salePrice: p.salePrice || 0,
     systemQty: stockMap[p.id] || 0,
     physicalQty: stockMap[p.id] || 0,
     justification: '',
   }));
+
+  window._inventoryItems = inventoryItems;
+  window._invPage = 1;
+  window._invSearch = '';
+
+  const renderInventoryPage = () => {
+    const PAGE_SIZE = 50;
+    const search = (window._invSearch || '').toLowerCase();
+    let filtered = window._inventoryItems;
+    if (search) {
+      filtered = filtered.filter(i =>
+        i.name.toLowerCase().includes(search) ||
+        i.code.toLowerCase().includes(search) ||
+        (i.dci || '').toLowerCase().includes(search)
+      );
+    }
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (window._invPage > totalPages) window._invPage = totalPages;
+    const start = (window._invPage - 1) * PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+    const tbody = document.getElementById('inventory-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = pageItems.map(item => `
+      <tr id="inv-row-${item.id}">
+        <td><code class="code-tag">${item.code}</code></td>
+        <td><strong>${item.name}</strong><br><span class="text-muted text-sm">${item.dci}</span></td>
+        <td><span class="category-tag">${item.category}</span></td>
+        <td class="text-muted text-sm">${item.form}</td>
+        <td class="ta-r text-sm">${UI.formatCurrency(item.purchasePrice)}</td>
+        <td class="ta-r text-sm">${UI.formatCurrency(item.salePrice)}</td>
+        <td class="ta-c"><strong>${item.systemQty}</strong></td>
+        <td>
+          <input type="number" class="form-control inv-qty-input" id="inv-qty-${item.id}"
+            value="${item.systemQty}" min="0" style="width:80px"
+            oninput="calcInventoryGap(${item.id}, ${item.systemQty})">
+        </td>
+        <td class="ta-c" id="inv-gap-${item.id}">
+          <span class="badge badge-success">0</span>
+        </td>
+        <td>
+          <input type="text" class="form-control" id="inv-just-${item.id}"
+            placeholder="Motif..." style="width:130px">
+        </td>
+      </tr>
+    `).join('');
+
+    const pagInfo = document.getElementById('inv-pag-info');
+    if (pagInfo) pagInfo.innerHTML = `
+      <span style="font-size:12px;color:var(--text-muted)">${filtered.length} produits — Page ${window._invPage}/${totalPages}</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" ${window._invPage <= 1 ? 'disabled' : ''} onclick="window._invPage--;window._renderInventoryPage()">◀ Préc.</button>
+        <button class="btn btn-secondary btn-sm" ${window._invPage >= totalPages ? 'disabled' : ''} onclick="window._invPage++;window._renderInventoryPage()">Suiv. ▶</button>
+      </div>
+    `;
+
+    // Update gap count
+    const totalGaps = (window._inventoryItems || []).filter(i => {
+      const el = document.getElementById(`inv-qty-${i.id}`);
+      return el && parseInt(el.value || 0) !== i.systemQty;
+    }).length;
+    const summary = document.getElementById('inv-gap-count');
+    if (summary) summary.textContent = totalGaps;
+  };
+
+  window._renderInventoryPage = renderInventoryPage;
 
   UI.modal('<i data-lucide="clipboard-list" class="modal-icon-inline"></i> Inventaire Physique', `
     <div class="inventory-module">
       <div class="inventory-header-info">
         <p><strong>Date :</strong> ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
         <p><strong>Responsable :</strong> ${DB.AppState.currentUser?.name || '—'}</p>
-        <p class="text-muted">Saisissez la quantité physique comptée pour chaque produit. Les écarts seront automatiquement calculés.</p>
+        <p class="text-muted">Saisissez la quantité physique comptée. Les écarts sont calculés automatiquement.</p>
       </div>
       <div class="filter-bar" style="margin:12px 0">
-        <input type="text" id="inv-search" placeholder="Filtrer les produits..." class="filter-input" oninput="filterInventory()">
+        <input type="text" id="inv-search" placeholder="Filtrer par nom, code ou DCI..." class="filter-input" oninput="window._invSearch=this.value;window._invPage=1;window._renderInventoryPage()">
       </div>
+      <div id="inv-pag-info" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;flex-wrap:wrap;"></div>
       <div class="table-wrapper" style="max-height:50vh;overflow-y:auto">
         <table class="data-table" id="inventory-table">
           <thead>
             <tr>
               <th>Code</th>
-              <th>Produit</th>
+              <th>Produit / DCI</th>
               <th>Catégorie</th>
-              <th>Stock Système</th>
+              <th>Forme</th>
+              <th>P. Achat</th>
+              <th>P. Vente</th>
+              <th>Stock Syst.</th>
               <th>Qté Physique</th>
               <th>Écart</th>
               <th>Justification</th>
             </tr>
           </thead>
-          <tbody>
-            ${inventoryItems.map((item, i) => `
-              <tr id="inv-row-${item.id}" data-name="${item.name.toLowerCase()}" data-code="${item.code.toLowerCase()}">
-                <td><code class="code-tag">${item.code}</code></td>
-                <td><strong>${item.name}</strong></td>
-                <td><span class="category-tag">${item.category}</span></td>
-                <td class="ta-c"><strong>${item.systemQty}</strong></td>
-                <td>
-                  <input type="number" class="form-control inv-qty-input" id="inv-qty-${item.id}"
-                    value="${item.systemQty}" min="0" style="width:80px"
-                    oninput="calcInventoryGap(${item.id}, ${item.systemQty})">
-                </td>
-                <td class="ta-c" id="inv-gap-${item.id}">
-                  <span class="badge badge-success">0</span>
-                </td>
-                <td>
-                  <input type="text" class="form-control" id="inv-just-${item.id}"
-                    placeholder="Motif si écart..." style="width:150px">
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
+          <tbody id="inventory-tbody"></tbody>
         </table>
       </div>
       <div class="inventory-summary" id="inv-summary" style="margin-top:12px;padding:12px;background:var(--bg-secondary,#f8f9fa);border-radius:8px">
@@ -423,7 +476,7 @@ async function renderStockInventory() {
     `
   });
   if (window.lucide) lucide.createIcons();
-  window._inventoryItems = inventoryItems;
+  renderInventoryPage();
 }
 
 function filterInventory() {
@@ -549,5 +602,41 @@ window.filterInventory = filterInventory;
 window.calcInventoryGap = calcInventoryGap;
 window.validateInventory = validateInventory;
 window.exportInventory = exportInventory;
+
+window.filterStockEntryProducts = function(query) {
+  const resultsDiv = document.getElementById('stock-entry-product-results');
+  if (!resultsDiv) return;
+  if (!query || query.length < 2) {
+    resultsDiv.style.display = 'none';
+    return;
+  }
+  const q = query.toLowerCase();
+  const products = window._stockData || [];
+  const matches = products.filter(p =>
+    p.name.toLowerCase().includes(q) ||
+    (p.code || '').toLowerCase().includes(q) ||
+    (p.dci || '').toLowerCase().includes(q)
+  ).slice(0, 20);
+
+  if (matches.length === 0) {
+    resultsDiv.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:13px;text-align:center;">Aucun produit trouvé</div>';
+  } else {
+    resultsDiv.innerHTML = matches.map(p => `
+      <div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center;"
+           onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''"
+           onclick="selectStockEntryProduct(${p.id}, '${p.name.replace(/'/g, "\\'")} (${p.code})')">
+        <div><strong>${p.name}</strong> <span class="text-muted">${p.dci || ''}</span></div>
+        <code class="code-tag">${p.code}</code>
+      </div>
+    `).join('');
+  }
+  resultsDiv.style.display = 'block';
+};
+
+window.selectStockEntryProduct = function(id, label) {
+  document.getElementById('stock-entry-product-id').value = id;
+  document.getElementById('stock-entry-product-search').value = label;
+  document.getElementById('stock-entry-product-results').style.display = 'none';
+};
 
 Router.register('stock', renderStock);
