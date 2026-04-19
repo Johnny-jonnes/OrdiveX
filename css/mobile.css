@@ -1449,8 +1449,16 @@ img, canvas, video, iframe {
   }
 
   .panel-title {
-    font-size: 14px !important;
+    font-size: 12px !important;
   }
+
+  .top-name { font-size: 11px !important; }
+  .top-revenue { font-size: 11px !important; }
+  .top-rank { width: 22px !important; height: 22px !important; font-size: 10px !important; }
+  
+  .alert-type, .alert-msg { font-size: 11px !important; }
+  
+  .stock-name, .stock-qty { font-size: 11px !important; }
 
   /* Stat/info boxes */
   .info-grid,
