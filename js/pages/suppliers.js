@@ -61,71 +61,113 @@ async function renderSuppliers(container) {
       </div>
     </div>
 
-    <div id="suppliers-grid" class="suppliers-grid">
-      ${suppliers.length === 0 ? '<div class="empty-state"><div class="empty-icon"><i data-lucide="factory"></i></div><p>Aucun fournisseur enregistré</p></div>' :
-      suppliers.map(sup => {
-        const stats = supplierStats[sup.id] || { total: 0, count: 0, lastOrder: null };
-        // Calcul du score fournisseur réel
-        const supOrders = orders.filter(o => o.supplierId === sup.id);
-        let score = 50; // Base
-        if (supOrders.length > 0) {
-          // 1. Taux de livraison à temps (40%)
-          const deliveredOrders = supOrders.filter(o => o.status === 'received');
-          const onTimeOrders = deliveredOrders.filter(o => {
-            if (!o.expectedDate || !o.receivedAt) return true; // Pas d'info = considéré OK
-            return new Date(o.receivedAt) <= new Date(o.expectedDate);
-          });
-          const onTimeRate = deliveredOrders.length > 0 ? onTimeOrders.length / deliveredOrders.length : 0.5;
-          // 2. Taux de complétion (40%) — commandes reçues vs total
-          const completionRate = deliveredOrders.length / supOrders.length;
-          // 3. Volume bonus (20%) — plus de commandes = plus fiable
-          const volumeBonus = Math.min(1, supOrders.length / 10); // Plafond à 10 commandes
-          score = Math.round((onTimeRate * 40) + (completionRate * 40) + (volumeBonus * 20));
-          score = Math.max(10, Math.min(100, score)); // Clamp 10-100
-        }
-        return `
-          <div class="supplier-card">
-            <div class="supplier-card-header">
-              <div class="supplier-avatar">${sup.name?.charAt(0) || 'S'}</div>
-              <div class="supplier-info">
-                <h3 class="supplier-name">${sup.name}</h3>
-                <div class="supplier-meta">
-                  ${sup.agrément ? `<code class="code-tag">${sup.agrément}</code>` : ''}
-                  <span class="badge badge-${sup.status === 'active' ? 'success' : 'neutral'}">${sup.status === 'active' ? 'Actif' : 'Inactif'}</span>
-                </div>
-              </div>
-              <div class="supplier-score">
-                <div class="score-circle score-${score >= 80 ? 'good' : score >= 60 ? 'medium' : 'bad'}">${score}</div>
-                <span class="score-label">Score</span>
-              </div>
-            </div>
-            <div class="supplier-contact">
-              ${sup.phone ? `<span><i data-lucide="phone"></i> ${sup.phone}</span>` : ''}
-              ${sup.email ? `<span><i data-lucide="mail"></i> ${sup.email}</span>` : ''}
-            </div>
-            <div class="supplier-stats-row">
-              <div class="supplier-stat">
-                <span class="stat-val-sm">${stats.count}</span>
-                <span class="stat-lbl-sm">Commandes</span>
-              </div>
-              <div class="supplier-stat">
-                <span class="stat-val-sm">${UI.formatCurrency(stats.total)}</span>
-                <span class="stat-lbl-sm">Total achats</span>
-              </div>
-              <div class="supplier-stat">
-                <span class="stat-val-sm">${sup.paymentTerms || 30}j</span>
-                <span class="stat-lbl-sm">Délai paiement</span>
-              </div>
-            </div>
-            <div class="supplier-actions">
-              <button class="btn btn-sm btn-primary" onclick="showNewOrder(${sup.id}, '${sup.name}')"><i data-lucide="plus"></i> Commander</button>
-              <button class="btn btn-sm btn-secondary" onclick="viewSupplierDetail(${sup.id})">Détail <i data-lucide="arrow-right"></i></button>
-            </div>
-          </div>`;
-      }).join('')}
-    </div>
+    <div id="suppliers-grid" class="suppliers-grid"></div>
   `;
+
+  // Pagination des fournisseurs
+  window._suppliersAll = suppliers;
+  window._supplierStats = supplierStats;
+  window._supplierOrders = orders;
+  window._suppliersPage = 1;
+  renderSuppliersPage();
   if (window.lucide) lucide.createIcons();
+}
+
+function renderSuppliersPage() {
+  const suppliers = window._suppliersAll || [];
+  const supplierStats = window._supplierStats || {};
+  const orders = window._supplierOrders || [];
+  const page = window._suppliersPage || 1;
+  const perPage = 20;
+  const totalPages = Math.max(1, Math.ceil(suppliers.length / perPage));
+  const start = (page - 1) * perPage;
+  const pageData = suppliers.slice(start, start + perPage);
+
+  const container = document.getElementById('suppliers-grid');
+  if (!container) return;
+
+  if (suppliers.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-lucide="factory"></i></div><p>Aucun fournisseur enregistré</p></div>';
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = pageData.map(sup => {
+    const stats = supplierStats[sup.id] || { total: 0, count: 0, lastOrder: null };
+    const supOrders = orders.filter(o => o.supplierId === sup.id);
+    let score = 50;
+    if (supOrders.length > 0) {
+      const deliveredOrders = supOrders.filter(o => o.status === 'received');
+      const onTimeOrders = deliveredOrders.filter(o => {
+        if (!o.expectedDate || !o.receivedAt) return true;
+        return new Date(o.receivedAt) <= new Date(o.expectedDate);
+      });
+      const onTimeRate = deliveredOrders.length > 0 ? onTimeOrders.length / deliveredOrders.length : 0.5;
+      const completionRate = deliveredOrders.length / supOrders.length;
+      const volumeBonus = Math.min(1, supOrders.length / 10);
+      score = Math.round((onTimeRate * 40) + (completionRate * 40) + (volumeBonus * 20));
+      score = Math.max(10, Math.min(100, score));
+    }
+    return `
+      <div class="supplier-card">
+        <div class="supplier-card-header">
+          <div class="supplier-avatar">${sup.name?.charAt(0) || 'S'}</div>
+          <div class="supplier-info">
+            <h3 class="supplier-name">${sup.name}</h3>
+            <div class="supplier-meta">
+              ${sup.agrément ? `<code class="code-tag">${sup.agrément}</code>` : ''}
+              <span class="badge badge-${sup.status === 'active' ? 'success' : 'neutral'}">${sup.status === 'active' ? 'Actif' : 'Inactif'}</span>
+            </div>
+          </div>
+          <div class="supplier-score">
+            <div class="score-circle score-${score >= 80 ? 'good' : score >= 60 ? 'medium' : 'bad'}">${score}</div>
+            <span class="score-label">Score</span>
+          </div>
+        </div>
+        <div class="supplier-contact">
+          ${sup.phone ? `<span><i data-lucide="phone"></i> ${sup.phone}</span>` : ''}
+          ${sup.email ? `<span><i data-lucide="mail"></i> ${sup.email}</span>` : ''}
+        </div>
+        <div class="supplier-stats-row">
+          <div class="supplier-stat">
+            <span class="stat-val-sm">${stats.count}</span>
+            <span class="stat-lbl-sm">Commandes</span>
+          </div>
+          <div class="supplier-stat">
+            <span class="stat-val-sm">${UI.formatCurrency(stats.total)}</span>
+            <span class="stat-lbl-sm">Total achats</span>
+          </div>
+          <div class="supplier-stat">
+            <span class="stat-val-sm">${sup.paymentTerms || 30}j</span>
+            <span class="stat-lbl-sm">Délai paiement</span>
+          </div>
+        </div>
+        <div class="supplier-actions">
+          <button class="btn btn-sm btn-primary" onclick="showNewOrder(${sup.id}, '${sup.name}')"><i data-lucide="plus"></i> Commander</button>
+          <button class="btn btn-sm btn-secondary" onclick="viewSupplierDetail(${sup.id})">Détail <i data-lucide="arrow-right"></i></button>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Barre de pagination
+  if (totalPages > 1) {
+    container.insertAdjacentHTML('beforeend', `
+      <div style="grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;padding:16px 0;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:13px;color:var(--text-muted)">${suppliers.length} fournisseurs — Page ${page}/${totalPages}</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" onclick="goSuppliersPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>◀ Précédent</button>
+          <button class="btn btn-secondary btn-sm" onclick="goSuppliersPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Suivant ▶</button>
+        </div>
+      </div>
+    `);
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function goSuppliersPage(p) {
+  window._suppliersPage = p;
+  renderSuppliersPage();
 }
 
 function showAddSupplier() {
@@ -378,7 +420,7 @@ function filterOrders() {
         ${['sent', 'partial'].includes(r.status) ? `<button class="btn btn-xs btn-success" onclick="receiveOrder(${r.id})"><i data-lucide="package"></i> Réceptionner</button>` : ''}
         ${['pending', 'sent'].includes(r.status) ? `<button class="btn btn-xs btn-danger" onclick="cancelOrder(${r.id})" title="Annuler cette commande"><i data-lucide="x-circle"></i> Annuler</button>` : ''}
       </div>` },
-  ], data, { emptyMessage: 'Aucune commande', emptyIcon: 'file-text' });
+  ], data, { emptyMessage: 'Aucune commande', emptyIcon: 'file-text', pageSize: 20 });
   if (window.lucide) lucide.createIcons();
 }
 
@@ -932,6 +974,8 @@ window.submitComplaint = submitComplaint;
 window.resolveComplaint = resolveComplaint;
 window.orderProductSearch = orderProductSearch;
 window.selectOrderProduct = selectOrderProduct;
+window.goSuppliersPage = goSuppliersPage;
+window.renderSuppliersPage = renderSuppliersPage;
 
 Router.register('suppliers', renderSuppliers);
 Router.register('purchase-orders', renderPurchaseOrders);

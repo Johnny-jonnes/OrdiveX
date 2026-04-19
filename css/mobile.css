@@ -1313,6 +1313,37 @@ img, canvas, video, iframe {
     grid-template-columns: 1fr !important;
   }
 
+  /* Metrics — En-tête BI + filtres dates responsive */
+  #app-content > div > div[style*="justify-content:space-between"][style*="margin-bottom:28px"] {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  #app-content > div > div[style*="justify-content:space-between"][style*="margin-bottom:28px"] > div:last-child {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  #app-content > div > div[style*="justify-content:space-between"][style*="margin-bottom:28px"] input[type="date"] {
+    width: 100px !important;
+    font-size: 11px !important;
+    height: 30px !important;
+    padding: 2px 4px !important;
+  }
+
+  #app-content > div > div[style*="justify-content:space-between"][style*="margin-bottom:28px"] .btn {
+    font-size: 11px !important;
+    height: 30px !important;
+    padding: 0 8px !important;
+  }
+
+  /* Metrics BI title */
+  #app-content h1[style*="font-size:26px"] {
+    font-size: 18px !important;
+  }
+
 
   /* ─────────────────────────────────────────────────────────────
      §1.16  REÇU / FACTURE — Adapté mobile
