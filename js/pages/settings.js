@@ -380,6 +380,9 @@ async function renderSettings(container) {
     </div>
   `;
 
+  // Rendre les icônes Lucide IMMÉDIATEMENT pour éviter le layout shift
+  if (window.lucide) lucide.createIcons();
+
   // Charger le compteur d'appareils automatiquement
   setTimeout(() => { if (window.loadDeviceCount) loadDeviceCount(); }, 500);
 }

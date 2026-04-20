@@ -1068,17 +1068,29 @@ img, canvas, video, iframe {
   .settings-grid {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
   }
 
   .settings-card {
-    padding: 16px !important;
+    padding: 14px !important;
     border-radius: 12px !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    word-break: break-word !important;
   }
 
   .settings-card-title {
-    font-size: 15px !important;
+    font-size: 14px !important;
     gap: 8px !important;
     flex-wrap: wrap;
+  }
+
+  .settings-card-title svg,
+  .settings-card-title i {
+    width: 18px !important;
+    height: 18px !important;
+    flex-shrink: 0 !important;
   }
 
   .settings-card-wide {
@@ -1098,14 +1110,22 @@ img, canvas, video, iframe {
   }
 
   .settings-card .form-group input,
-  .settings-card .form-group select {
+  .settings-card .form-group select,
+  .settings-card .form-group textarea {
     width: 100% !important;
+    font-size: 16px !important; /* Empêche le zoom auto iOS */
+    box-sizing: border-box !important;
+  }
+
+  .settings-card label {
+    font-size: 13px !important;
   }
 
   /* Boutons dans settings — pleine largeur */
   .settings-card .btn {
     width: 100% !important;
     justify-content: center !important;
+    font-size: 13px !important;
   }
 
   .settings-card .btn-sm,
@@ -1122,6 +1142,46 @@ img, canvas, video, iframe {
 
   .settings-card .panel-header .btn {
     width: 100% !important;
+  }
+
+  /* Sync panel — boutons stack vertical */
+  .settings-card .sync-actions,
+  .settings-card .sync-repair-zone div[style*="flex-direction"] {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .settings-card .sync-actions .btn,
+  .settings-card .sync-repair-zone .btn {
+    width: 100% !important;
+    font-size: 12px !important;
+  }
+
+  .sync-status-row {
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+    font-size: 13px !important;
+  }
+
+  /* User cards inline — stack vertical */
+  .settings-card .user-item-card,
+  .settings-card div[style*="display:flex"][style*="align-items:center"][style*="gap:12px"] {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 12px !important;
+  }
+
+  .settings-card .user-info {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .settings-card .user-name {
+    font-size: 13px !important;
+  }
+
+  .settings-card .user-meta code {
+    font-size: 10px !important;
   }
 
   /* Toggle switches */
