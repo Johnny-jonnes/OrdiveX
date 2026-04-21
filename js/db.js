@@ -681,6 +681,9 @@ async function syncToSupabase() {
           // Ces colonnes n'existent pas sur Supabase et causeraient des erreurs 400
           const _localOnlyColumns = {
             products: ['subUnitsPerBox', 'pricePerSubUnit', 'controlledClass', 'isControlled', 'manufacturer', 'noticePdfUrl'],
+            lots: ['productionDate'],
+            stock: ['lastUpdate', 'minQuantity'],
+            patients: ['createdAt', 'creditLimit'],
             prescriptions: ['notes', 'patientName', 'dispensedAt', 'dispensedBy', 'saleId'],
             sales: ['assuranceName', 'assuranceRef', 'assuranceAmount', 'paymentDetails', 'paidAt', 'paidDate', 'paidMethod', 'returnStatus', 'lastReturnId', 'lastReturnDate', 'patientName', 'patientPhone'],
             cashRegister: ['reference', 'saleId'],
