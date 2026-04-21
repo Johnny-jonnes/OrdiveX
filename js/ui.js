@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — UI Utilities
  */
 
@@ -132,7 +132,7 @@ const UI = {
     }
 
     // Auto-pagination pour prévenir les crashs
-    const pageSize = options.pageSize || 50;
+    const pageSize = options.pageSize || 100;
     const isPaginated = options.paginate !== false && rows.length > pageSize;
     let currentPage = parseInt(container.dataset.page || '1');
     

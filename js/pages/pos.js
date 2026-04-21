@@ -526,6 +526,7 @@ function initPosSearch() {
   input.addEventListener('input', e => {
     posSearch = e.target.value.toLowerCase();
     document.getElementById('pos-clearsearch').style.display = posSearch ? 'flex' : 'none';
+    posCurrentPage = 0; // Reset à la page 1 quand on cherche
     // Debounce: attend 250ms après la dernière frappe avant de filtrer
     clearTimeout(_posSearchTimer);
     _posSearchTimer = setTimeout(() => refreshGrid(), 250);
@@ -534,6 +535,7 @@ function initPosSearch() {
 
 function clearPosSearch() {
   posSearch = '';
+  posCurrentPage = 0;
   const inp = document.getElementById('pos-search');
   if (inp) inp.value = '';
   document.getElementById('pos-clearsearch').style.display = 'none';
@@ -541,40 +543,27 @@ function clearPosSearch() {
 }
 
 let posSortMode = 'default';
-let posGridLimit = 40;
+let posPageSize = 100;
+let posCurrentPage = 0;
 
 function applySort(mode) {
   posSortMode = mode;
+  posCurrentPage = 0;
   refreshGrid();
 }
+
+function posNextPage() { posCurrentPage++; refreshGrid(); }
+function posPrevPage() { if (posCurrentPage > 0) { posCurrentPage--; refreshGrid(); } }
+function posGoToPage(n) { posCurrentPage = n; refreshGrid(); }
 
 function refreshGrid() {
   const grid = document.getElementById('pos-grid');
   if (!grid) return;
   const isAdmin = ['admin', 'pharmacien'].includes(DB.AppState.currentUser?.role);
 
-  // Si aucune recherche et aucun filtre catégorie → afficher le message d'invitation
-  if (!posSearch && !posActiveCategory) {
-    const totalCount = posProducts.length;
-    grid.innerHTML = `<div class="grid-empty" style="flex-direction:column;gap:10px;padding:60px 20px">
-      <i data-lucide="search" style="width:48px;height:48px;color:var(--primary);opacity:0.4"></i>
-      <div style="font-size:18px;font-weight:700;color:var(--text)">Recherchez un médicament</div>
-      <div style="font-size:13px;color:var(--text-muted)">Tapez le nom, la DCI ou le code-barres dans la barre de recherche ci-dessus</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">📦 ${totalCount.toLocaleString('fr')} produits disponibles dans le catalogue</div>
-    </div>`;
-    if (window.lucide) lucide.createIcons();
-    return;
-  }
-
   let list = posProducts;
   if (posActiveCategory) list = list.filter(p => p.category === posActiveCategory);
   if (posSearch) {
-    // Recherche rapide : on compare uniquement si la longueur est >= 2
-    if (posSearch.length < 2) {
-      grid.innerHTML = `<div class="grid-empty"><i data-lucide="type"></i> Tapez au moins 2 caractères...</div>`;
-      if (window.lucide) lucide.createIcons();
-      return;
-    }
     list = list.filter(p =>
       (p.name || '').toLowerCase().includes(posSearch) ||
       (p.dci || '').toLowerCase().includes(posSearch) ||
@@ -606,7 +595,13 @@ function refreshGrid() {
     return;
   }
 
-  const visibleList = list.slice(0, posGridLimit);
+  // ── Pagination ──
+  const totalPages = Math.ceil(list.length / posPageSize);
+  if (posCurrentPage >= totalPages) posCurrentPage = totalPages - 1;
+  if (posCurrentPage < 0) posCurrentPage = 0;
+  const start = posCurrentPage * posPageSize;
+  const visibleList = list.slice(start, start + posPageSize);
+
   grid.innerHTML = visibleList.map(p => {
     const q = posStock[p.id] || 0;
     const inCart = posCart.find(c => c.productId === p.id);
@@ -659,9 +654,26 @@ function refreshGrid() {
     </div>`;
   }).join('');
 
-  // Scroll infini
-  if (list.length > posGridLimit) {
-    grid.insertAdjacentHTML('beforeend', `<div id="pos-load-more" class="grid-empty" style="cursor:pointer;padding:20px" onclick="posGridLimit+=60;refreshGrid()"><i data-lucide="chevrons-down"></i> Afficher plus (${list.length - posGridLimit} restants)</div>`);
+  // ── Barre de Pagination ──
+  if (totalPages > 1) {
+    const pageInfo = `Page ${posCurrentPage + 1} / ${totalPages} — ${list.length.toLocaleString('fr')} produits`;
+    grid.insertAdjacentHTML('beforeend', `
+      <div class="pos-pagination" style="grid-column:1/-1; display:flex; justify-content:center; align-items:center; gap:8px; padding:16px 0; flex-wrap:wrap;">
+        <button class="btn btn-sm btn-secondary" onclick="posGoToPage(0)" ${posCurrentPage === 0 ? 'disabled' : ''} style="padding:6px 10px">
+          <i data-lucide="chevrons-left" style="width:14px;height:14px"></i>
+        </button>
+        <button class="btn btn-sm btn-secondary" onclick="posPrevPage()" ${posCurrentPage === 0 ? 'disabled' : ''} style="padding:6px 12px">
+          <i data-lucide="chevron-left" style="width:14px;height:14px"></i> Préc.
+        </button>
+        <span style="font-size:13px; font-weight:600; color:var(--text-muted); padding:0 8px">${pageInfo}</span>
+        <button class="btn btn-sm btn-secondary" onclick="posNextPage()" ${posCurrentPage >= totalPages - 1 ? 'disabled' : ''} style="padding:6px 12px">
+          Suiv. <i data-lucide="chevron-right" style="width:14px;height:14px"></i>
+        </button>
+        <button class="btn btn-sm btn-secondary" onclick="posGoToPage(${totalPages - 1})" ${posCurrentPage >= totalPages - 1 ? 'disabled' : ''} style="padding:6px 10px">
+          <i data-lucide="chevrons-right" style="width:14px;height:14px"></i>
+        </button>
+      </div>
+    `);
   }
   if (window.lucide) lucide.createIcons();
 }

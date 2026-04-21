@@ -111,6 +111,8 @@ WHERE schemaname = 'public' AND rowsecurity = false;
 | 2026-04-17 | Import 50k produits freeze + crash navigateur | `dbBulkPut()` — 1 transaction IndexedDB par lot de 5000 au lieu de 50k transactions individuelles |
 | 2026-04-17 | Sidebar vide après login (rôle `manager` non reconnu) | Ajout puis suppression du rôle `manager`, standardisé sur `admin` uniquement |
 | 2026-04-17 | Erreur SQL `syntax error near TABLE` dans supabase_schema.sql | Fragment de code `CREATE TABLE pull_tracking` coupé en deux par erreur d'insertion |
+| 2026-04-21 | POS freeze avec 100k produits (crash navigateur) | Pagination à 100 + debounce recherche 250ms + lazy-load des lots |
+| 2026-04-21 | Restauration backup bloquée à 9303 éléments | `restoreFromBackup` réécrit avec `dbBulkPut` par chunks de 10 000 |
 
 ---
 
@@ -125,3 +127,6 @@ WHERE schemaname = 'public' AND rowsecurity = false;
 | 2026-04-17 | Import CSV patients (nouveau module complet) | `✅ Done` |
 | 2026-04-17 | Chatbot Naomie (renommage + conversation naturelle + FAQ enrichie) | `✅ Done` |
 | 2026-04-17 | Tracking push/pull Cloud (tables Supabase) | `✅ Done` |
+| 2026-04-21 | Pagination universelle à 100 (POS, Produits, Stock, Patients, Ventes, Rx, Fournisseurs) | `✅ Done` |
+| 2026-04-21 | Guide utilisateur téléchargeable en PDF + smooth scroll | `✅ Done` |
+| 2026-04-21 | Générateur de données massives (100k produits + 30k patients + stocks) | `✅ Done` |

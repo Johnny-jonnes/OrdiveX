@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Module Ordonnances
  * Enregistrement, validation, archivage légal 10 ans
  */
@@ -183,7 +183,7 @@ function renderPrescriptionsTable(data) {
   UI.table(container, columns, data, {
     emptyMessage: 'Aucune ordonnance trouvée',
     emptyIcon: 'file-text',
-    pageSize: 20
+    pageSize: 100
   });
   if (window.lucide) lucide.createIcons();
 }

@@ -114,3 +114,7 @@ if (!apiUrl) throw new Error('NEXT_PUBLIC_API_URL manquante')
 | 2026-04-17 | Ajout de `dbBulkPut()` dans db.js | IndexedDB crashait avec 50k+ transactions individuelles. Une seule transaction par lot de 5000 règle le problème. |
 | 2026-04-17 | Architecture import en 4 phases (load, parse, bulk, result) | Séparer le parsing JS pur (rapide) de l'écriture DB (lourde) évite le freeze navigateur |
 | 2026-04-17 | Dédoublonnage par Map() en mémoire | Évite 50k requêtes `dbGetAll` individuelles pour vérifier les doublons |
+| 2026-04-21 | Pagination universelle à 100 éléments | Toutes les pages (POS, Produits, Stock, Patients, Ventes, Ordonnances, Fournisseurs) paginées à 100 éléments par page |
+| 2026-04-21 | Lazy-loading des lots dans le POS | Les lots FEFO ne sont plus chargés au démarrage mais uniquement lors de la validation d'une vente |
+| 2026-04-21 | Debounce 250ms sur la recherche POS | Évite de filtrer 100k produits à chaque frappe de touche |
+| 2026-04-21 | `restoreFromBackup` via `dbBulkPut` par chunks de 10k | Remplace l'ancien import unitaire qui crashait à 9303 éléments |

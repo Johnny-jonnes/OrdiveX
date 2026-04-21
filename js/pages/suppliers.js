@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Module Achats & Fournisseurs
  * Commandes, réceptions, litiges, évaluation fournisseurs
  */
@@ -420,7 +420,7 @@ function filterOrders() {
         ${['sent', 'partial'].includes(r.status) ? `<button class="btn btn-xs btn-success" onclick="receiveOrder(${r.id})"><i data-lucide="package"></i> Réceptionner</button>` : ''}
         ${['pending', 'sent'].includes(r.status) ? `<button class="btn btn-xs btn-danger" onclick="cancelOrder(${r.id})" title="Annuler cette commande"><i data-lucide="x-circle"></i> Annuler</button>` : ''}
       </div>` },
-  ], data, { emptyMessage: 'Aucune commande', emptyIcon: 'file-text', pageSize: 20 });
+  ], data, { emptyMessage: 'Aucune commande', emptyIcon: 'file-text', pageSize: 100 });
   if (window.lucide) lucide.createIcons();
 }
 
@@ -706,7 +706,7 @@ async function receiveOrder(orderId) {
 function renderReceivePagination(page) {
   if (page !== undefined) window._recvOrderPage = page;
   const p = window._recvOrderPage || 1;
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 100;
   const items = window._currentReceiveOrder?.items || [];
   const totalPages = Math.ceil(items.length / PAGE_SIZE) || 1;
   const start = (p - 1) * PAGE_SIZE;
@@ -871,7 +871,7 @@ async function viewOrder(orderId) {
       { label: 'Prix unit.', render: r => UI.formatCurrency(r.unitPrice || 0) },
       { label: 'Total', render: r => UI.formatCurrency((r.unitPrice || 0) * r.quantity) },
       { label: 'Lot reçu', render: r => r.lotNumber ? `<code class="code-tag">${r.lotNumber}</code>` : '—' }
-    ], order.items || [], { emptyMessage: 'Aucun article', pageSize: 50 });
+    ], order.items || [], { emptyMessage: 'Aucun article', pageSize: 100 });
   }
 }
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Catalogue Produits
  */
 
@@ -54,7 +54,7 @@ function renderProductsTable(data) {
   if (!container) return;
 
   // Pagination
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 100;
   window._filteredProducts = data;
   window._prodPage = window._prodPage || 1;
   // Reset page when filter changes

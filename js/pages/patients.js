@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Module Patients
  * Dossiers patients, historique médicaments, allergies
  */
@@ -55,7 +55,7 @@ function filterPatients() {
   if (!container) return;
 
   // Pagination
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 100;
   window._filteredPatients = data;
   window._patientsPage = window._patientsPage || 1;
   if (data !== window._lastFilteredPatients) {

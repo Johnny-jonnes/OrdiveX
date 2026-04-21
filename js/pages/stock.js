@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Gestion des Stocks
  */
 
@@ -108,7 +108,7 @@ function renderStockTable(data) {
   if (!container) return;
 
   // Pagination
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 100;
   window._filteredStock = data;
   window._stockPage = window._stockPage || 1;
   if (data !== window._lastFilteredStock) {
