@@ -1011,12 +1011,24 @@ async function forceSyncAll() {
     'cashRegister', 'auditLog', 'users', 'settings', 'returns'
   ];
 
+  let totalMarked = 0;
+  console.log('[Flash] 🔄 Force sync: marquage de tous les items...');
+
   for (const s of stores) {
     const all = await dbGetAll(s);
-    for (const item of all) {
-      await _dbPutRaw(s, { ...item, _synced: false });
+    if (all.length === 0) continue;
+
+    // Marquer _synced: false par chunks de 10k
+    const marked = all.map(item => ({ ...item, _synced: false, _updatedAt: item._updatedAt || Date.now() }));
+    const chunkSize = 10000;
+    for (let i = 0; i < marked.length; i += chunkSize) {
+      await dbBulkPut(s, marked.slice(i, i + chunkSize));
     }
+    totalMarked += all.length;
+    console.log(`[Flash] ✅ ${s}: ${all.length} items marqués pour sync`);
   }
+
+  console.log(`[Flash] 🚀 ${totalMarked} items au total, lancement du push...`);
   return syncToSupabase();
 }
 
