@@ -679,6 +679,7 @@ async function syncToSupabase() {
           // --- FILTRAGE PROACTIF DES COLONNES LOCALES ---
           // Ces colonnes n'existent pas sur Supabase et causeraient des erreurs 400
           const _localOnlyColumns = {
+            products: ['subUnitsPerBox', 'pricePerSubUnit'],
             prescriptions: ['notes', 'patientName', 'dispensedAt', 'dispensedBy', 'saleId'],
             sales: ['assuranceName', 'assuranceRef', 'assuranceAmount', 'paymentDetails', 'paidAt', 'paidDate', 'paidMethod', 'returnStatus', 'lastReturnId', 'lastReturnDate', 'patientName', 'patientPhone'],
             cashRegister: ['reference', 'saleId'],
@@ -741,7 +742,7 @@ async function syncToSupabase() {
             break;
           }
 
-          const colMatch = (error.message || '').match(/Could not find the '([^']+)' column/);
+          const colMatch = (lastError?.message || '').match(/Could not find the '([^']+)' column/);
           if (colMatch && retries < maxRetries) {
             const badCol = colMatch[1];
             // On ne log que si c'est une nouvelle découverte
@@ -758,7 +759,6 @@ async function syncToSupabase() {
             localStorage.setItem('pharma_bad_columns', JSON.stringify(_colCache));
             retries++;
           } else {
-            lastError = error;
             break;
           }
         }
