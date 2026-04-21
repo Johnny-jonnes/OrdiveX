@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Dashboard Page
  */
 
@@ -35,10 +35,12 @@ async function renderDashboard(container) {
     const monthGrossProfit = monthRevenue - monthCOGS;
     const marginPct = monthRevenue > 0 ? (monthGrossProfit / monthRevenue * 100).toFixed(1) : 0;
 
-    // Stock alerts
+    // Stock alerts — Map indexé pour éviter un O(n²) sur 100k produits
+    const stockMap = new Map();
+    stockAll.forEach(s => stockMap.set(s.productId, s.quantity));
     const lowStockProducts = products.filter(p => {
-      const stock = stockAll.find(s => s.productId === p.id);
-      return stock && stock.quantity <= p.minStock;
+      const qty = stockMap.get(p.id);
+      return qty !== undefined && qty <= p.minStock;
     });
 
     const unreadAlerts = alerts.filter(a => a.status === 'unread');

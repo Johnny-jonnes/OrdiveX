@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Moteur d'Alertes Automatiques
  * Scan périodique : stocks bas, expirations, anomalies
  */
@@ -264,6 +264,13 @@ async function generateReorderSuggestions() {
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const recentSales = movements.filter(m => m.type === 'EXIT' && m.subType === 'SALE' && new Date(m.date).getTime() > thirtyDaysAgo);
 
+  // Indexer les ventes par productId pour éviter O(n²)
+  const salesByProduct = {};
+  recentSales.forEach(m => {
+    if (!salesByProduct[m.productId]) salesByProduct[m.productId] = 0;
+    salesByProduct[m.productId] += Math.abs(m.quantity || 0);
+  });
+
   const suggestions = [];
 
   for (const product of products.filter(p => p.status === 'active')) {
@@ -271,8 +278,7 @@ async function generateReorderSuggestions() {
     if (qty > product.minStock * 1.5) continue;
 
     // Calculate average daily consumption
-    const productSales = recentSales.filter(m => m.productId === product.id);
-    const totalSold = Math.abs(productSales.reduce((a, m) => a + (m.quantity || 0), 0));
+    const totalSold = salesByProduct[product.id] || 0;
     const avgDailyConsumption = totalSold / 30;
 
     // Days of stock remaining
@@ -349,7 +355,7 @@ function renderReorderTable() {
   if (!container) return;
 
   const suggestions = window._reorderSuggestions || [];
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 100;
   const totalPages = Math.max(1, Math.ceil(suggestions.length / PAGE_SIZE));
   if (window._reorderPage > totalPages) window._reorderPage = totalPages;
   const start = (window._reorderPage - 1) * PAGE_SIZE;

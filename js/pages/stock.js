@@ -14,11 +14,20 @@ async function renderStock(container) {
   const stockMap = {};
   stockAll.forEach(s => { stockMap[s.productId] = s; });
 
+  // Indexer les lots par productId pour éviter un O(n²)
+  const lotsMap = {};
+  lots.forEach(l => {
+    if (l.status === 'active') {
+      if (!lotsMap[l.productId]) lotsMap[l.productId] = [];
+      lotsMap[l.productId].push(l);
+    }
+  });
+
   const stockData = products.map(p => ({
     ...p,
     currentStock: stockMap[p.id]?.quantity || 0,
     reservedQty: stockMap[p.id]?.reservedQuantity || 0,
-    lots: lots.filter(l => l.productId === p.id && l.status === 'active'),
+    lots: lotsMap[p.id] || [],
   }));
 
   // Stats
@@ -371,7 +380,7 @@ async function renderStockInventory() {
   window._invSearch = '';
 
   const renderInventoryPage = () => {
-    const PAGE_SIZE = 50;
+    const PAGE_SIZE = 100;
     const search = (window._invSearch || '').toLowerCase();
     let filtered = window._inventoryItems;
     if (search) {
