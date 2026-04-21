@@ -679,7 +679,7 @@ async function syncToSupabase() {
           // --- FILTRAGE PROACTIF DES COLONNES LOCALES ---
           // Ces colonnes n'existent pas sur Supabase et causeraient des erreurs 400
           const _localOnlyColumns = {
-            products: ['subUnitsPerBox', 'pricePerSubUnit'],
+            products: ['subUnitsPerBox', 'pricePerSubUnit', 'controlledClass', 'isControlled', 'manufacturer', 'noticePdfUrl'],
             prescriptions: ['notes', 'patientName', 'dispensedAt', 'dispensedBy', 'saleId'],
             sales: ['assuranceName', 'assuranceRef', 'assuranceAmount', 'paymentDetails', 'paidAt', 'paidDate', 'paidMethod', 'returnStatus', 'lastReturnId', 'lastReturnDate', 'patientName', 'patientPhone'],
             cashRegister: ['reference', 'saleId'],
