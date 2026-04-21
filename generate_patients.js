@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 
 const firstNamesM = ['Mamadou', 'Alpha', 'Oumar', 'Amadou', 'Ibrahima', 'Abdoulaye', 'Ousmane', 'Aliou', 'Boubacar', 'Hassan', 'Sekou', 'Fode'];
 const firstNamesF = ['Fatoumata', 'Aissatou', 'Mariam', 'Aminata', 'Kadiatou', 'Binta', 'Zeynab', 'Hawa', 'Djenabou', 'Mariama'];
@@ -27,7 +27,7 @@ function generateDOB() {
 }
 
 const TOTAL_PATIENTS = 20000;
-const csvFile = 'Patients_20000_PharmaProjet.csv';
+const csvFile = 'Patients_20000_OrdiveX.csv';
 
 const header = '\uFEFFNom,Téléphone,Adresse,Sexe,Allergies,Email,Date de naissance\n';
 fs.writeFileSync(csvFile, header, 'utf8');

@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — metrics.js
+﻿/**
+ * OrdiveX — metrics.js
  * Tableau de Bord Exécutif — Business Intelligence
  */
 

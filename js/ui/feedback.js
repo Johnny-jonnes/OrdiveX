@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Cinematic Feedback (Lottie)
+﻿/**
+ * OrdiveX — Cinematic Feedback (Lottie)
  */
 
 const Feedback = {

@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Module Ordonnances
+﻿/**
+ * OrdiveX — Module Ordonnances
  * Enregistrement, validation, archivage légal 10 ans
  */
 

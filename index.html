@@ -4,12 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="Pharma_Projet — ERP Pharmaceutique pour la Guinée">
+  <meta name="description" content="OrdiveX — ERP Pharmaceutique pour la Guinée">
   <meta name="theme-color" content="#1B4F72">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="PharmaProjet">
-  <title>PharmaProjet — ERP Pharmaceutique Premium</title>
+  <meta name="apple-mobile-web-app-title" content="OrdiveX">
+  <title>OrdiveX — ERP Pharmaceutique Premium</title>
   <link rel="icon" href="data:,">
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,8 +25,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-touch-fullscreen" content="yes">
-  <meta name="apple-mobile-web-app-title" content="PharmaProjet">
-  <link rel="apple-touch-icon" href="https://johnny-jonnes.github.io/pharma_projetX/assets/icon.svg">
+  <meta name="apple-mobile-web-app-title" content="OrdiveX">
+  <link rel="apple-touch-icon" href="https://johnny-jonnes.github.io/ordivex/assets/icon.svg">
   <script src="js/vendor/supabase.min.js"></script>
   <script src="js/vendor/lucide.min.js"></script>
 </head>
@@ -40,7 +40,7 @@
     <div class="sidebar-logo">
       <div class="sidebar-logo-icon" id="sidebar-logo-icon"><i data-lucide="activity"></i></div>
       <div class="sidebar-logo-text">
-        <div class="sidebar-logo-title" id="pharmacy-name-display">Pharma<span style="color:var(--accent)">Projet</span>
+        <div class="sidebar-logo-title" id="pharmacy-name-display">Ordive<span style="color:var(--accent)">X</span>
         </div>
         <div class="sidebar-logo-subtitle" id="pharmacy-slogan-display">Santé & Technologie</div>
       </div>
@@ -104,7 +104,7 @@
   <main id="app-content">
     <div class="loading-state">
       <div class="spinner"></div>
-      <p>Démarrage de Pharma_Projet...</p>
+      <p>Démarrage de OrdiveX...</p>
     </div>
   </main>
 
@@ -371,7 +371,7 @@
       const banner = document.createElement('div');
       banner.id = 'pwa-install-banner';
       banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2001;background:linear-gradient(135deg,#1B6FAE,#2EAF7D);color:white;padding:14px 20px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.25);display:flex;align-items:center;gap:14px;max-width:460px;width:calc(100% - 40px);font-family:Inter,system-ui,sans-serif;animation:slideUp 0.4s ease';
-      banner.innerHTML = '<div style="flex:1"><strong style="font-size:14px;display:block;margin-bottom:2px">📲 Installer PharmaProjet</strong><span style="font-size:12px;opacity:0.9">Installez l\'app pour une expérience native sans barre du navigateur</span></div><button onclick="installPWA()" style="background:white;color:#1B6FAE;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">Installer</button><button onclick="dismissPWABanner()" style="background:none;border:none;color:white;opacity:0.7;cursor:pointer;font-size:18px;padding:4px">✕</button>';
+      banner.innerHTML = '<div style="flex:1"><strong style="font-size:14px;display:block;margin-bottom:2px">📲 Installer OrdiveX</strong><span style="font-size:12px;opacity:0.9">Installez l\'app pour une expérience native sans barre du navigateur</span></div><button onclick="installPWA()" style="background:white;color:#1B6FAE;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">Installer</button><button onclick="dismissPWABanner()" style="background:none;border:none;color:white;opacity:0.7;cursor:pointer;font-size:18px;padding:4px">✕</button>';
       document.body.appendChild(banner);
     }
 
@@ -387,7 +387,7 @@
       _pwaPrompt.prompt();
       const r = await _pwaPrompt.userChoice;
       if (r.outcome === 'accepted') {
-        UI.toast('PharmaProjet installé ! L\'app se lancera sans barre du navigateur.', 'success', 5000);
+        UI.toast('OrdiveX installé ! L\'app se lancera sans barre du navigateur.', 'success', 5000);
         document.getElementById('pwa-install-btn').style.display = 'none';
         dismissPWABanner();
       }

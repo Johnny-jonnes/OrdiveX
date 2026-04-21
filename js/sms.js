@@ -1,5 +1,5 @@
-// ═══════════════════════════════════════════════════════════════
-// SMS MODULE — PharmaProjet
+﻿// ═══════════════════════════════════════════════════════════════
+// SMS MODULE — OrdiveX
 // Notifications & Rappels automatisés
 // Providers supportés : AfricasTalking, Twilio, Orange SMS API
 // ═══════════════════════════════════════════════════════════════
@@ -10,7 +10,7 @@ const SMS = (() => {
     provider: 'africastalking', // africastalking | twilio | orange
     apiKey: '',
     username: '', // AfricasTalking username
-    senderId: 'PharmaProjet',
+    senderId: 'OrdiveX',
     countryCode: '+224', // Guinée
     enabled: false,
   };
@@ -293,7 +293,7 @@ const SMS = (() => {
 
     try {
       // Envoyer un SMS de test au numéro de support
-      const result = await send('627171397', `[TEST] PharmaProjet SMS - ${new Date().toLocaleString()}`);
+      const result = await send('627171397', `[TEST] OrdiveX SMS - ${new Date().toLocaleString()}`);
       return result;
     } catch (err) {
       return { success: false, error: err.message };

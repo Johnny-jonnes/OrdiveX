@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Gestion des Stocks
+﻿/**
+ * OrdiveX — Gestion des Stocks
  */
 
 async function renderStock(container) {

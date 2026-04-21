@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — onboarding.js
+﻿/**
+ * OrdiveX — onboarding.js
  * Comprehensive pharmacy setup wizard
  */
 

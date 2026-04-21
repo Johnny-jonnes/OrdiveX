@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Dashboard Page
+﻿/**
+ * OrdiveX — Dashboard Page
  */
 
 async function renderDashboard(container) {

@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — UI Utilities
+﻿/**
+ * OrdiveX — UI Utilities
  */
 
 const UI = {

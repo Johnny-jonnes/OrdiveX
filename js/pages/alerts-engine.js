@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Moteur d'Alertes Automatiques
+﻿/**
+ * OrdiveX — Moteur d'Alertes Automatiques
  * Scan périodique : stocks bas, expirations, anomalies
  */
 

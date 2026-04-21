@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Service Worker
+﻿/**
+ * OrdiveX — Service Worker
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
@@ -133,7 +133,7 @@ async function syncPendingOperations() {
 self.addEventListener('push', event => {
   const data = event.data?.json() || {};
   event.waitUntil(
-    self.registration.showNotification(data.title || 'PharmaProjet', {
+    self.registration.showNotification(data.title || 'OrdiveX', {
       body: data.body || 'Nouvelle alerte',
       icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext y='68' font-size='60' text-anchor='middle' x='50'%3E💊%3C/text%3E%3C/svg%3E",
       data: { url: data.url || '/' },

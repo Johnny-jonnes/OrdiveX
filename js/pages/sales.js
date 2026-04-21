@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Ventes & Rapports Financiers
+﻿/**
+ * OrdiveX — Ventes & Rapports Financiers
  */
 
 async function renderSales(container) {

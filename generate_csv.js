@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const prefix = ['A', 'B', 'C', 'D', 'E', 'F'];
 const suffix = ['500mg', '250mg', '100mg', '1g', 'Sir', 'Inj'];
 const forms = ['Comprime', 'Sirop', 'Gelule', 'Injection', 'Pommade'];
@@ -21,5 +21,5 @@ for(let i=1; i<=50000; i++) {
   
   csv += `${name},${code},${barcode},${c},${f},${pp},${sp},10,0,false,active\n`;
 }
-fs.writeFileSync('C:\\Users\\LUXE\\Desktop\\pharma_projet_v4\\Pharmacie_50000_Produits_Supabase.csv', csv);
-console.log('CSV de 50 000 produits créé sur le Bureau\\pharma_projet_v4 !');
+fs.writeFileSync('C:\\Users\\LUXE\\Desktop\\OrdiveX_v4\\Pharmacie_50000_Produits_Supabase.csv', csv);
+console.log('CSV de 50 000 produits créé sur le Bureau\\OrdiveX_v4 !');

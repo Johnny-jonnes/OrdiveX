@@ -1,5 +1,5 @@
-/**
- * Support Widget Component — PharmaProjet
+﻿/**
+ * Support Widget Component — OrdiveX
  * Chatbot d'assistance intégré, intelligent et personnalisé
  * Ne s'affiche qu'APRÈS la connexion de l'utilisateur
  */
@@ -325,7 +325,7 @@ function initSupportWidget() {
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
                         </div>
                         <div>
-                            <div class="support-title">Naomie — Assistante PharmaProjet</div>
+                            <div class="support-title">Naomie — Assistante OrdiveX</div>
                             <div class="support-subtitle"><div class="support-status-dot"></div> Toujours disponible</div>
                         </div>
                     </div>
@@ -335,7 +335,7 @@ function initSupportWidget() {
                 </div>
                 <div class="support-body" id="support-chat-body">
                     <div class="chat-bubble chat-bot">
-                        Bonjour <strong>${firstName}</strong> ! 👋 Je suis <strong>Naomie</strong>, votre assistante PharmaProjet. Comment puis-je vous aider aujourd'hui ?
+                        Bonjour <strong>${firstName}</strong> ! 👋 Je suis <strong>Naomie</strong>, votre assistante OrdiveX. Comment puis-je vous aider aujourd'hui ?
                     </div>
                 </div>
                 <div class="support-footer">
@@ -345,7 +345,7 @@ function initSupportWidget() {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                         </button>
                     </div>
-                    <a href="https://wa.me/224627171397?text=Bonjour%20TrillionX%2C%20j%27ai%20besoin%20d%27assistance%20avec%20PharmaProjet." target="_blank" class="whatsapp-btn">
+                    <a href="https://wa.me/224627171397?text=Bonjour%20TrillionX%2C%20j%27ai%20besoin%20d%27assistance%20avec%20OrdiveX." target="_blank" class="whatsapp-btn">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                         Parler à un Humain (WhatsApp)
                     </a>
@@ -392,7 +392,7 @@ window.toggleSupportWindow = function() {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// BASE DE CONNAISSANCES FAQ — 20+ topics couvrant TOUT PharmaProjet
+// BASE DE CONNAISSANCES FAQ — 20+ topics couvrant TOUT OrdiveX
 // ═══════════════════════════════════════════════════════════════════
 const FAQ_DATABASE = [
     {
@@ -413,7 +413,7 @@ const FAQ_DATABASE = [
     {
         keywords: ['péremption', 'expiration', 'périmé', 'fefo', 'lot', 'date'],
         question: 'Comment gérer les dates de péremption ?',
-        answer: "PharmaProjet utilise la méthode **FEFO** (First Expired, First Out) automatiquement ! Lors d'une vente, le lot avec la date d'expiration la plus proche est déstocké en priorité.\n\nLes alertes de péremption apparaissent dans le **Centre d'Alertes** quand un lot arrive à moins de 3 mois de sa date limite. ⏰"
+        answer: "OrdiveX utilise la méthode **FEFO** (First Expired, First Out) automatiquement ! Lors d'une vente, le lot avec la date d'expiration la plus proche est déstocké en priorité.\n\nLes alertes de péremption apparaissent dans le **Centre d'Alertes** quand un lot arrive à moins de 3 mois de sa date limite. ⏰"
     },
     {
         keywords: ['imprimante', 'bluetooth', 'ticket', 'impression', 'xprinter'],
@@ -458,7 +458,7 @@ const FAQ_DATABASE = [
     {
         keywords: ['synchronisation', 'sync', 'cloud', 'supabase', 'pull', 'push', 'appareil', 'mobile'],
         question: 'Comment synchroniser entre plusieurs appareils ?',
-        answer: "PharmaProjet fonctionne en mode **offline-first** :\n\n1. Configurez Supabase dans **Paramètres > Appareil & Cloud**\n2. Les données se **PUSH** (envoient) automatiquement\n3. Faites un **PULL** (dans Paramètres) pour récupérer les données d'un autre appareil\n\n⚠️ Pensez à faire un PULL chaque semaine si vous travaillez hors-ligne depuis longtemps ! 🔄"
+        answer: "OrdiveX fonctionne en mode **offline-first** :\n\n1. Configurez Supabase dans **Paramètres > Appareil & Cloud**\n2. Les données se **PUSH** (envoient) automatiquement\n3. Faites un **PULL** (dans Paramètres) pour récupérer les données d'un autre appareil\n\n⚠️ Pensez à faire un PULL chaque semaine si vous travaillez hors-ligne depuis longtemps ! 🔄"
     },
     {
         keywords: ['caisse', 'clôture', 'journée', 'encaissement', 'espèce', 'orange money'],
@@ -473,7 +473,7 @@ const FAQ_DATABASE = [
     {
         keywords: ['interaction', 'médicament', 'contre-indication', 'allergie', 'combinaison'],
         question: 'Comment sont gérées les interactions médicamenteuses ?',
-        answer: "PharmaProjet vérifie automatiquement les **30 interactions critiques** les plus courantes à chaque ajout au panier !\n\n🚨 **Grave** : Alerte rouge (ex: Warfarine + Aspirine = Hémorragie)\n⚠️ **Modéré** : Alerte orange (ex: Fer + Ciprofloxacine = Absorption réduite)\n\nDe plus, si le patient a des **allergies** renseignées, le POS vous alertera immédiatement. 💊"
+        answer: "OrdiveX vérifie automatiquement les **30 interactions critiques** les plus courantes à chaque ajout au panier !\n\n🚨 **Grave** : Alerte rouge (ex: Warfarine + Aspirine = Hémorragie)\n⚠️ **Modéré** : Alerte orange (ex: Fer + Ciprofloxacine = Absorption réduite)\n\nDe plus, si le patient a des **allergies** renseignées, le POS vous alertera immédiatement. 💊"
     },
     {
         keywords: ['sms', 'message', 'envoi', 'africastalking', 'rappel'],
@@ -488,7 +488,7 @@ const FAQ_DATABASE = [
     {
         keywords: ['menu', 'navigation', 'accès', 'section', 'module', 'page', 'aller', 'trouver', 'ouvrir'],
         question: 'Comment naviguer dans le menu ?',
-        answer: "Le menu principal contient toutes les sections de PharmaProjet :\n\n🛒 **Point de Vente (POS)** — Faire une vente\n📦 **Gestion des Stocks** — Consulter et ajuster les stocks\n💊 **Catalogue Produits** — Gérer le catalogue médicaments\n👤 **Dossiers Patients** — Fiches et historiques patients\n📋 **Historique des Ventes** — Toutes les ventes effectuées\n🚚 **Fournisseurs & Achats** — Commandes et réceptions\n💰 **Caisse** — Encaissements du jour\n📊 **Tableau de Bord** — KPIs en temps réel\n📈 **Pilotage** — Analyses avancées\n🔔 **Alertes** — Ruptures et péremptions\n⚙️ **Paramètres** — Configuration complète"
+        answer: "Le menu principal contient toutes les sections de OrdiveX :\n\n🛒 **Point de Vente (POS)** — Faire une vente\n📦 **Gestion des Stocks** — Consulter et ajuster les stocks\n💊 **Catalogue Produits** — Gérer le catalogue médicaments\n👤 **Dossiers Patients** — Fiches et historiques patients\n📋 **Historique des Ventes** — Toutes les ventes effectuées\n🚚 **Fournisseurs & Achats** — Commandes et réceptions\n💰 **Caisse** — Encaissements du jour\n📊 **Tableau de Bord** — KPIs en temps réel\n📈 **Pilotage** — Analyses avancées\n🔔 **Alertes** — Ruptures et péremptions\n⚙️ **Paramètres** — Configuration complète"
     },
     {
         keywords: ['retour', 'remboursement', 'échange', 'renvoyer', 'rendre', 'retourné'],
@@ -630,19 +630,19 @@ const CONVERSATIONS = [
     {
         triggers: ['qui es tu', 'c est quoi', 'tu es qui', 'ton nom', 'tu fais quoi', 'tu sers a quoi', 'quel est ton role'],
         responses: [
-            "Je suis <strong>Naomie</strong>, votre assistante virtuelle PharmaProjet ! 🤖💙<br><br>Je suis conçue par l'entreprise technologique <strong>TrillionX</strong> pour vous guider dans l'utilisation complète de l'application : ventes, stocks, patients, fournisseurs, analyses financières...<br><br>Je connais <strong>plus de 25 sujets</strong> à fond ! Posez-moi n'importe quelle question, et si je ne sais pas répondre, je vous oriente vers le support humain via WhatsApp. 😊",
+            "Je suis <strong>Naomie</strong>, votre assistante virtuelle OrdiveX ! 🤖💙<br><br>Je suis conçue par l'entreprise technologique <strong>TrillionX</strong> pour vous guider dans l'utilisation complète de l'application : ventes, stocks, patients, fournisseurs, analyses financières...<br><br>Je connais <strong>plus de 25 sujets</strong> à fond ! Posez-moi n'importe quelle question, et si je ne sais pas répondre, je vous oriente vers le support humain via WhatsApp. 😊",
         ]
     },
     {
         triggers: ['createur', 'trillionx', 'qui t a cree', 'qui t as cree', 'developpeur', 'entreprise', 'societe', 'qui a developpe'],
         responses: [
-            "J'ai été conçue et développée par <strong>TrillionX</strong> ! 🚀<br><br>TrillionX est une entreprise technologique innovante spécialisée dans le développement de solutions logicielles de pointe, comme le puissant ERP <strong>PharmaProjet</strong>.<br><br>Leur mission : moderniser et sécuriser la gestion des pharmacies en Afrique avec des outils hors-ligne, rapides et ultra-sécurisés ! 🛡️💻"
+            "J'ai été conçue et développée par <strong>TrillionX</strong> ! 🚀<br><br>TrillionX est une entreprise technologique innovante spécialisée dans le développement de solutions logicielles de pointe, comme le puissant ERP <strong>OrdiveX</strong>.<br><br>Leur mission : moderniser et sécuriser la gestion des pharmacies en Afrique avec des outils hors-ligne, rapides et ultra-sécurisés ! 🛡️💻"
         ]
     },
     {
-        triggers: ['fonctionnalite', 'ce que tu peux faire', 'tes capacites', 'ce que l appli peut faire', 'avantage', 'pourquoi pharmaprojet', 'pourquoi choisir', 'que faire'],
+        triggers: ['fonctionnalite', 'ce que tu peux faire', 'tes capacites', 'ce que l appli peut faire', 'avantage', 'pourquoi OrdiveX', 'pourquoi choisir', 'que faire'],
         responses: [
-            "<strong>PharmaProjet</strong> est le logiciel de gestion de pharmacie le plus complet et adapté à notre marché ! 🏆<br><br>Voici ses super-pouvoirs :<br><i data-lucide='shopping-cart' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Point de Vente (POS)</strong> ultra-rapide avec scan code-barres<br><i data-lucide='box' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Stock intelligent (FEFO)</strong> qui gère automatiquement les péremptions<br><i data-lucide='smartphone' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Paiements locaux</strong> : Support natif de Orange Money & MTN MoMo<br><i data-lucide='wifi-off' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>100% Hors-ligne</strong> : Fonctionne parfaitement même sans connexion internet !<br><i data-lucide='cloud-lightning' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Cloud Sync</strong> : Synchronisation des données entre plusieurs appareils<br><i data-lucide='pills' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Vente au détail</strong> : Gestion fluide des boîtes, plaquettes et unités<br><i data-lucide='shield-alert' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#e74c3c'></i> <strong>Sécurité Patient</strong> : Alertes sur 30+ interactions médicamenteuses et allergies !<br><br>Et moi, Naomie, je suis là pour vous former sur tout ça ! 😎"
+            "<strong>OrdiveX</strong> est le logiciel de gestion de pharmacie le plus complet et adapté à notre marché ! 🏆<br><br>Voici ses super-pouvoirs :<br><i data-lucide='shopping-cart' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Point de Vente (POS)</strong> ultra-rapide avec scan code-barres<br><i data-lucide='box' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Stock intelligent (FEFO)</strong> qui gère automatiquement les péremptions<br><i data-lucide='smartphone' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Paiements locaux</strong> : Support natif de Orange Money & MTN MoMo<br><i data-lucide='wifi-off' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>100% Hors-ligne</strong> : Fonctionne parfaitement même sans connexion internet !<br><i data-lucide='cloud-lightning' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Cloud Sync</strong> : Synchronisation des données entre plusieurs appareils<br><i data-lucide='pills' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#1B6FAE'></i> <strong>Vente au détail</strong> : Gestion fluide des boîtes, plaquettes et unités<br><i data-lucide='shield-alert' style='width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:6px;color:#e74c3c'></i> <strong>Sécurité Patient</strong> : Alertes sur 30+ interactions médicamenteuses et allergies !<br><br>Et moi, Naomie, je suis là pour vous former sur tout ça ! 😎"
         ]
     },
     {
@@ -676,7 +676,7 @@ const CONVERSATIONS = [
     {
         triggers: ['prix', 'combien coute', 'tarif', 'cout', 'abonnement', 'gratuit', 'licence', 'payer'],
         responses: [
-            "PharmaProjet fonctionne sur modèle <strong>SaaS</strong> (Software as a Service). 💼<br><br>Pour les détails de tarification et les plans disponibles, contactez directement l'équipe <strong>TrillionX</strong> via WhatsApp ci-dessous. Ils vous feront une offre adaptée à votre pharmacie ! 📞",
+            "OrdiveX fonctionne sur modèle <strong>SaaS</strong> (Software as a Service). 💼<br><br>Pour les détails de tarification et les plans disponibles, contactez directement l'équipe <strong>TrillionX</strong> via WhatsApp ci-dessous. Ils vous feront une offre adaptée à votre pharmacie ! 📞",
         ]
     },
     {
@@ -702,7 +702,7 @@ const CONVERSATIONS = [
         triggers: ['motivation', 'courage', 'fatigue', 'stress', 'dur', 'difficile', 'epuise'],
         responses: [
             "Courage {name} ! 💪🌟<br><br>Rappelez-vous : chaque ordonnance que vous servez, chaque patient que vous conseillez, <strong>vous changez des vies</strong>. Le métier de pharmacien est noble et essentiel.<br><br>Prenez une pause si nécessaire, et je serai là quand vous reviendrez ! ☕",
-            "Hey {name}, chaque grande pharmacie a été construite jour après jour ! 🏗️<br><br>Vous faites un travail remarquable. Et avec PharmaProjet, tout est automatisé pour vous libérer du temps. Utilisez-le pour vous reposer ! 😊💙",
+            "Hey {name}, chaque grande pharmacie a été construite jour après jour ! 🏗️<br><br>Vous faites un travail remarquable. Et avec OrdiveX, tout est automatisé pour vous libérer du temps. Utilisez-le pour vous reposer ! 😊💙",
         ]
     },
     {
@@ -714,7 +714,7 @@ const CONVERSATIONS = [
     {
         triggers: ['concurrent', 'meditect', 'comparaison', 'autre logiciel', 'alternative', 'mieux'],
         responses: [
-            "PharmaProjet se distingue sur plusieurs points clés, {name} ! 🏆<br><br>✅ <strong>Offline-first</strong> — Fonctionne sans internet (essentiel en Afrique)<br>✅ <strong>FEFO automatique</strong> — Gestion des lots et péremptions en temps réel<br>✅ <strong>Multi-appareils</strong> — Synchronisation cloud entre PC et mobile<br>✅ <strong>Interactions médicamenteuses</strong> — 30+ alertes critiques intégrées<br>✅ <strong>Mobile Money</strong> — Orange Money, MTN MoMo natifs<br><br>Peu de solutions offrent tout ça sur le marché africain ! 💎",
+            "OrdiveX se distingue sur plusieurs points clés, {name} ! 🏆<br><br>✅ <strong>Offline-first</strong> — Fonctionne sans internet (essentiel en Afrique)<br>✅ <strong>FEFO automatique</strong> — Gestion des lots et péremptions en temps réel<br>✅ <strong>Multi-appareils</strong> — Synchronisation cloud entre PC et mobile<br>✅ <strong>Interactions médicamenteuses</strong> — 30+ alertes critiques intégrées<br>✅ <strong>Mobile Money</strong> — Orange Money, MTN MoMo natifs<br><br>Peu de solutions offrent tout ça sur le marché africain ! 💎",
         ]
     },
     {
@@ -767,7 +767,7 @@ const CONVERSATIONS = [
     {
         triggers: ['version', 'mise a jour', 'update', 'changelog', 'nouveaute'],
         responses: [
-            "Vous utilisez <strong>PharmaProjet v4.4</strong>, {name} ! 🆕<br><br>Dernières améliorations :<br>✅ Import massif CSV (50k+ produits)<br>✅ Console propre en production<br>✅ Cartes produit POS compactes<br>✅ Formes pharma (sirop, tube, flacon...)<br>✅ Recherche autocomplete dans les commandes<br>✅ Moi-même : Naomie v2 ! 🤖💙<br><br>Les mises à jour sont automatiques via GitHub Pages !",
+            "Vous utilisez <strong>OrdiveX v4.4</strong>, {name} ! 🆕<br><br>Dernières améliorations :<br>✅ Import massif CSV (50k+ produits)<br>✅ Console propre en production<br>✅ Cartes produit POS compactes<br>✅ Formes pharma (sirop, tube, flacon...)<br>✅ Recherche autocomplete dans les commandes<br>✅ Moi-même : Naomie v2 ! 🤖💙<br><br>Les mises à jour sont automatiques via GitHub Pages !",
         ]
     },
 ];

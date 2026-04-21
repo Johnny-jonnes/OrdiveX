@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Gestion Moderne des Alertes
+﻿/**
+ * OrdiveX — Gestion Moderne des Alertes
  * Filtres par mois, type, priorité, statut + Stats + Actions groupées
  */
 
@@ -481,7 +481,7 @@ const AlertsPage = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `alertes_pharmaprojet_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `alertes_OrdiveX_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     UI.toast('Export CSV téléchargé', 'success');

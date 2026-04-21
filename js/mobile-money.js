@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET v3 — Mobile Money Gateway & SMS
+﻿/**
+ * OrdiveX v3 — Mobile Money Gateway & SMS
  * Orange Money Guinée · MTN MoMo Guinée · SMS AfricasTalking · ANSS
  * Chargé après db.js, auth.js, ui.js
  */

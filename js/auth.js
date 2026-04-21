@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Auth & Router
+﻿/**
+ * OrdiveX — Auth & Router
  */
 
 const Auth = {

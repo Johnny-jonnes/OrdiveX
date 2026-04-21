@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Module Traçabilité & Pharmacovigilance
+﻿/**
+ * OrdiveX — Module Traçabilité & Pharmacovigilance
  * Tracking complet lot <i data-lucide="arrow-right"></i> patient, rappels, ANSS
  */
 
@@ -1300,7 +1300,7 @@ async function generateAuditReport() {
   // Charger infos pharmacie
   const settings = await DB.dbGetAll('settings');
   const gs = k => settings.find(s => s.key === k)?.value;
-  const pharmacyName = gs('pharmacy_name') || 'PharmaProjet';
+  const pharmacyName = gs('pharmacy_name') || 'OrdiveX';
   const pharmacyAddress = gs('pharmacy_address') || '';
   const pharmacyPhone = gs('pharmacy_phone') || '';
 
@@ -1381,7 +1381,7 @@ async function generateAuditReport() {
       </div>
 
       <div class="audit-report-footer">
-        <p>Ce rapport est généré automatiquement par ${pharmacyName} — PharmaProjet. Il constitue un document de traçabilité au sens des Bonnes Pratiques de Dispensation (BPD) et de la réglementation DNPM.</p>
+        <p>Ce rapport est généré automatiquement par ${pharmacyName} — OrdiveX. Il constitue un document de traçabilité au sens des Bonnes Pratiques de Dispensation (BPD) et de la réglementation DNPM.</p>
         <p><strong>Pharmacien responsable :</strong> ${DB.AppState.currentUser?.name || '—'} · <strong>Ref :</strong> RPT-${Date.now()}</p>
       </div>
     </div>
@@ -1411,7 +1411,7 @@ function printAuditReport() {
     <html lang="fr">
     <head>
       <meta charset="UTF-8">
-      <title>Rapport d'Audit — PharmaProjet</title>
+      <title>Rapport d'Audit — OrdiveX</title>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
       <style>
         * { margin:0; padding:0; box-sizing:border-box; }

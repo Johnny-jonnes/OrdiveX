@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Module Impressions & Documents
+﻿/**
+ * OrdiveX — Module Impressions & Documents
  * Tickets, factures, PV destruction, rapports officiels DNPM
  */
 
@@ -54,7 +54,7 @@ const PrintEngine = {
           </div>
         </div>
         <div class="print-footer-center">
-          <p class="print-legal">Document généré par Pharma_Projet v1.0</p>
+          <p class="print-legal">Document généré par OrdiveX v1.0</p>
           <p class="print-legal">Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
         </div>
         <div class="print-footer-right">

@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET v3 — Gestion des Retours de Médicaments
+﻿/**
+ * OrdiveX v3 — Gestion des Retours de Médicaments
  * Permet le retour partiel ou total dans un délai configurable (défaut : 72h)
  * Remet le stock, enregistre le mouvement, génère un reçu.
  */

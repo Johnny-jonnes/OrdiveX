@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Module Caisse Journalière
+﻿/**
+ * OrdiveX — Module Caisse Journalière
  * Journal caisse, clôture, réconciliation, Mobile Money
  */
 

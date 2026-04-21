@@ -1,10 +1,10 @@
-/**
- * PHARMA_PROJET — Database Engine
+﻿/**
+ * OrdiveX — Database Engine
  * IndexedDB offline-first storage layer
  * Handles all local data persistence with sync queue
  */
 
-const DB_NAME = 'PharmaProjetDB';
+const DB_NAME = 'OrdiveXDB';
 const DB_VERSION = 2;
 
 const STORES = {
@@ -1028,7 +1028,7 @@ async function autoBackupToStorage() {
 
     // Récupérer le nom de la pharmacie pour le backup
     const settings = backup.data.settings || [];
-    backup.pharmacy = settings.find(s => s.key === 'pharmacy_name')?.value || 'PharmaProjet';
+    backup.pharmacy = settings.find(s => s.key === 'pharmacy_name')?.value || 'OrdiveX';
 
     // Stocker dans localStorage (backup silencieux)
     const key = `pharma_auto_backup_${new Date().toISOString().split('T')[0]}`;
@@ -1065,7 +1065,7 @@ async function doBackup() {
     const a = document.createElement('a');
     const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     a.href = url;
-    a.download = `pharmaprojet_backup_${dateStr}.json`;
+    a.download = `OrdiveX_backup_${dateStr}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1149,7 +1149,7 @@ async function restoreFromBackup(backupData) {
 
     // Support des deux formats (ancien _exportDate et nouveau exportedAt)
     const isPharmaBackup = backupData.data || backupData.products;
-    if (!isPharmaBackup) throw new Error('Ce fichier ne semble pas être une sauvegarde PharmaProjet valide.');
+    if (!isPharmaBackup) throw new Error('Ce fichier ne semble pas être une sauvegarde OrdiveX valide.');
 
     // 4. PHASE DE NETTOYAGE (Wipe)
     console.log('[Restore] 🛡️ Phase 4 : Nettoyage de la base de données locale...');

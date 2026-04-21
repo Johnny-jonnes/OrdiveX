@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Module Patients
+﻿/**
+ * OrdiveX — Module Patients
  * Dossiers patients, historique médicaments, allergies
  */
 

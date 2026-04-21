@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Module Achats & Fournisseurs
+﻿/**
+ * OrdiveX — Module Achats & Fournisseurs
  * Commandes, réceptions, litiges, évaluation fournisseurs
  */
 

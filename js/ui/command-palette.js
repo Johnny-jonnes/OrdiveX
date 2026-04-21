@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Intelligent Command Palette (Cmd+K)
+﻿/**
+ * OrdiveX — Intelligent Command Palette (Cmd+K)
  */
 
 const CommandPalette = {

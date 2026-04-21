@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET v3 — Point de Vente Professionnel
+﻿/**
+ * OrdiveX v3 — Point de Vente Professionnel
  * Panier · Client · Ordonnance · Mobile Money · Reçu officiel
  * FEFO · Interactions · Substitution Générique
  */

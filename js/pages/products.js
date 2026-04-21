@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Catalogue Produits
+﻿/**
+ * OrdiveX — Catalogue Produits
  */
 
 async function renderProducts(container) {

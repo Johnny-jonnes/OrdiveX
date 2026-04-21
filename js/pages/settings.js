@@ -1,5 +1,5 @@
-/**
- * PHARMA_PROJET — Settings, Users, Login
+﻿/**
+ * OrdiveX — Settings, Users, Login
  */
 
 function renderLogin(container) {
@@ -17,7 +17,7 @@ function renderLogin(container) {
             <div class="login-logo-elite">
               <i data-lucide="activity"></i>
             </div>
-            <h1 class="login-title-elite">Pharma<span>Projet</span></h1>
+            <h1 class="login-title-elite">Ordive<span>X</span></h1>
             <p class="login-subtitle-elite">L'excellence opérationnelle pour votre officine.</p>
           </div>
 
@@ -49,7 +49,7 @@ function renderLogin(container) {
         </div>
         
         <div class="login-footer-elite">
-          <span class="version-tag">PharmaProjet v3.0</span>
+          <span class="version-tag">OrdiveX v3.0</span>
           <div class="network-tag ${navigator.onLine ? 'online' : 'offline'}">
             <i data-lucide="${navigator.onLine ? 'wifi' : 'wifi-off'}"></i>
             ${navigator.onLine ? 'Système synchronisé' : 'Mode hors-ligne'}
@@ -140,7 +140,7 @@ async function renderSettings(container) {
   // Load settings into a map
   const gs = k => settingsData.find(s => s.key === k)?.value || '';
   const smsConfigStr = settingsData.find(s => s.key === 'sms_config')?.value;
-  const smsConfig = smsConfigStr ? JSON.parse(smsConfigStr) : { provider: 'africastalking', enabled: false, apiKey: '', username: '', senderId: 'PharmaProjet', countryCode: '+224' };
+  const smsConfig = smsConfigStr ? JSON.parse(smsConfigStr) : { provider: 'africastalking', enabled: false, apiKey: '', username: '', senderId: 'OrdiveX', countryCode: '+224' };
 
   const recentAudit = auditLog.sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
 
@@ -239,7 +239,7 @@ async function renderSettings(container) {
               </div>
               <div class="form-group">
                 <label>Nom de l'Expéditeur (Sender ID)</label>
-                <input type="text" name="senderId" class="form-control" value="${smsConfig.senderId || 'PharmaProjet'}" placeholder="Max 11 caractères">
+                <input type="text" name="senderId" class="form-control" value="${smsConfig.senderId || 'OrdiveX'}" placeholder="Max 11 caractères">
               </div>
             </div>
             <div class="form-group" id="sms-username-group" style="display: ${smsConfig.provider === 'africastalking' ? 'block' : 'none'}">
@@ -603,7 +603,7 @@ async function updatePharmacyDisplay() {
   const settings = await DB.dbGetAll('settings');
   const gs = k => settings.find(s => s.key === k)?.value || '';
 
-  const name = gs('pharmacy_name') || 'PharmaProjet';
+  const name = gs('pharmacy_name') || 'OrdiveX';
   const slogan = gs('pharmacy_slogan') || 'Santé & Technologie';
   const logo = gs('pharmacy_logo');
 
