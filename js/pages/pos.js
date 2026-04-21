@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX v3 — Point de Vente Professionnel
  * Panier · Client · Ordonnance · Mobile Money · Reçu officiel
  * FEFO · Interactions · Substitution Générique
@@ -184,12 +184,12 @@ async function renderPOS(container) {
     DB.dbGetAll('stock'),
     DB.dbGetAll('patients'),
     DB.dbGetAll('prescriptions'),
-    DB.dbGetAll('lots'),
-  ]).then(([products, stockAll, patients, prescriptions, lots]) => {
+  ]).then(([products, stockAll, patients, prescriptions]) => {
     posProducts = products.filter(p => p.status !== 'inactive');
     posStock = {};
     stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
-    posLots = lots.filter(l => l.status === 'active');
+    // Les lots sont chargés à la demande (lazy) lors de la validation de vente
+    posLots = [];
     window._posPatients = patients;
     window._posPrescriptions = prescriptions.filter(rx => ['pending', 'validated'].includes(rx.status));
 
@@ -519,13 +519,16 @@ function filterCat(btn, cat) {
   refreshGrid();
 }
 
+let _posSearchTimer = null;
 function initPosSearch() {
   const input = document.getElementById('pos-search');
   if (!input) return;
   input.addEventListener('input', e => {
     posSearch = e.target.value.toLowerCase();
     document.getElementById('pos-clearsearch').style.display = posSearch ? 'flex' : 'none';
-    refreshGrid();
+    // Debounce: attend 250ms après la dernière frappe avant de filtrer
+    clearTimeout(_posSearchTimer);
+    _posSearchTimer = setTimeout(() => refreshGrid(), 250);
   });
 }
 
@@ -538,7 +541,7 @@ function clearPosSearch() {
 }
 
 let posSortMode = 'default';
-let posGridLimit = 80;
+let posGridLimit = 40;
 
 function applySort(mode) {
   posSortMode = mode;
@@ -550,15 +553,36 @@ function refreshGrid() {
   if (!grid) return;
   const isAdmin = ['admin', 'pharmacien'].includes(DB.AppState.currentUser?.role);
 
+  // Si aucune recherche et aucun filtre catégorie → afficher le message d'invitation
+  if (!posSearch && !posActiveCategory) {
+    const totalCount = posProducts.length;
+    grid.innerHTML = `<div class="grid-empty" style="flex-direction:column;gap:10px;padding:60px 20px">
+      <i data-lucide="search" style="width:48px;height:48px;color:var(--primary);opacity:0.4"></i>
+      <div style="font-size:18px;font-weight:700;color:var(--text)">Recherchez un médicament</div>
+      <div style="font-size:13px;color:var(--text-muted)">Tapez le nom, la DCI ou le code-barres dans la barre de recherche ci-dessus</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">📦 ${totalCount.toLocaleString('fr')} produits disponibles dans le catalogue</div>
+    </div>`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
   let list = posProducts;
   if (posActiveCategory) list = list.filter(p => p.category === posActiveCategory);
-  if (posSearch) list = list.filter(p =>
-    (p.name || '').toLowerCase().includes(posSearch) ||
-    (p.dci || '').toLowerCase().includes(posSearch) ||
-    (p.code || '').toLowerCase().includes(posSearch) ||
-    (p.ean || '').toLowerCase().includes(posSearch) ||
-    (p.cip || '').toLowerCase().includes(posSearch)
-  );
+  if (posSearch) {
+    // Recherche rapide : on compare uniquement si la longueur est >= 2
+    if (posSearch.length < 2) {
+      grid.innerHTML = `<div class="grid-empty"><i data-lucide="type"></i> Tapez au moins 2 caractères...</div>`;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+    list = list.filter(p =>
+      (p.name || '').toLowerCase().includes(posSearch) ||
+      (p.dci || '').toLowerCase().includes(posSearch) ||
+      (p.code || '').toLowerCase().includes(posSearch) ||
+      (p.ean || '').toLowerCase().includes(posSearch) ||
+      (p.cip || '').toLowerCase().includes(posSearch)
+    );
+  }
 
   list = [...list].sort((a, b) => {
     const qa = posStock[a.id] || 0, qb = posStock[b.id] || 0;
@@ -1577,6 +1601,12 @@ async function validerVente() {
   if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Traitement…'; if (window.lucide) lucide.createIcons(); }
 
   try {
+    // Lazy-load lots pour FEFO (chargés à la demande, pas au démarrage)
+    if (!posLots.length) {
+      const allLots = await DB.dbGetAll('lots');
+      posLots = allLots.filter(l => l.status === 'active');
+    }
+
     // Build combined payment details if applicable
     let combinedDetails = null;
     let combinedMmPhone = null;

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Database Engine
  * IndexedDB offline-first storage layer
  * Handles all local data persistence with sync queue
@@ -1176,9 +1176,12 @@ async function restoreFromBackup(backupData) {
 
     for (const storeName of storesToClear) {
       const items = dataToImport[storeName];
-      if (items && Array.isArray(items)) {
-        for (const item of items) {
-          await dbPut(storeName, item);
+      if (items && Array.isArray(items) && items.length > 0) {
+        // Découpage en lots (chunks) de 10 000 pour éviter de bloquer l'interface
+        const chunkSize = 10000;
+        for (let i = 0; i < items.length; i += chunkSize) {
+          const chunk = items.slice(i, i + chunkSize);
+          await dbBulkPut(storeName, chunk);
         }
       }
     }
