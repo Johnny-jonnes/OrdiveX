@@ -358,9 +358,10 @@ async function initDB() {
 // Sync debounce & guard
 let _syncTimer = null;
 let _syncInProgress = false;
+let _restoreInProgress = false;
 
 function _scheduleSyncToSupabase() {
-  if (!navigator.onLine) return; // Ne rien faire si hors-ligne
+  if (!navigator.onLine || _restoreInProgress) return; // Ne rien faire si hors-ligne ou restauration en cours
   if (_syncTimer) clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
     _syncTimer = null;
@@ -1170,6 +1171,7 @@ function startAutoPull() {
  */
 async function restoreFromBackup(backupData) {
   try {
+    _restoreInProgress = true;
     // 1. PHASE DE PRÉSERVATION (Auto-download de l'état actuel)
     console.log('[Restore] 🛡️ Phase 1 : Sauvegarde de secours automatique...');
     await doBackup();
@@ -1237,8 +1239,10 @@ async function restoreFromBackup(backupData) {
       version: backupData.version || 'unknown'
     });
 
+    _restoreInProgress = false;
     return { success: true };
   } catch (e) {
+    _restoreInProgress = false;
     console.error('[Restore] ❌ Erreur critique lors de la restauration:', e);
     throw e;
   }
