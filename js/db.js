@@ -705,19 +705,38 @@ async function syncToSupabase() {
         const maxRetries = 10;
         let lastError = null;
 
-        while (retries <= maxRetries) {
-          const { error } = await sb
-            .from(storeName === 'users' ? 'app_users' : storeName)
-            .upsert(currentPayloads, {
-              onConflict: storeName === 'settings' ? 'key' : 'id',
-              ignoreDuplicates: false
-            });
+        // Découper en lots de 500 pour éviter les timeouts Supabase
+        const PUSH_BATCH = 500;
+        let allSuccess = true;
 
-          if (!error) {
-            for (const item of pending) {
+        while (retries <= maxRetries) {
+          lastError = null;
+          allSuccess = true;
+
+          for (let bi = 0; bi < currentPayloads.length; bi += PUSH_BATCH) {
+            const batch = currentPayloads.slice(bi, bi + PUSH_BATCH);
+            const { error } = await sb
+              .from(storeName === 'users' ? 'app_users' : storeName)
+              .upsert(batch, {
+                onConflict: storeName === 'settings' ? 'key' : 'id',
+                ignoreDuplicates: false
+              });
+
+            if (error) {
+              lastError = error;
+              allSuccess = false;
+              break;
+            }
+
+            // Marquer les items de ce batch comme synchronisés
+            const batchPending = pending.slice(bi, bi + PUSH_BATCH);
+            for (const item of batchPending) {
               item._synced = true;
               await _dbPutRaw(storeName, item);
             }
+          }
+
+          if (allSuccess) {
             lastError = null;
             break;
           }
@@ -1184,10 +1203,16 @@ async function restoreFromBackup(backupData) {
     for (const storeName of storesToClear) {
       const items = dataToImport[storeName];
       if (items && Array.isArray(items) && items.length > 0) {
+        // Marquer chaque item comme non-synchronisé pour le push Supabase
+        const markedItems = items.map(item => ({
+          ...item,
+          _synced: false,
+          _updatedAt: item._updatedAt || Date.now()
+        }));
         // Découpage en lots (chunks) de 10 000 pour éviter de bloquer l'interface
         const chunkSize = 10000;
-        for (let i = 0; i < items.length; i += chunkSize) {
-          const chunk = items.slice(i, i + chunkSize);
+        for (let i = 0; i < markedItems.length; i += chunkSize) {
+          const chunk = markedItems.slice(i, i + chunkSize);
           await dbBulkPut(storeName, chunk);
         }
       }
