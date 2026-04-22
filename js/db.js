@@ -383,7 +383,12 @@ function _dbPutRaw(storeName, data) {
 }
 
 // Generic CRUD operations
+// ── Cache mémoire pour accélérer dbGetAll sur les gros stores ──
+const _dbCache = new Map();
+function _invalidateCache(storeName) { _dbCache.delete(storeName); }
+
 async function dbAdd(storeName, data) {
+  _invalidateCache(storeName);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
@@ -397,6 +402,7 @@ async function dbAdd(storeName, data) {
 }
 
 async function dbPut(storeName, data) {
+  _invalidateCache(storeName);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
@@ -427,6 +433,10 @@ async function dbGet(storeName, id) {
 
 async function dbGetAll(storeName, indexName, query) {
   if (!db) { console.warn('[DB] Base non initialisée, tentative de reconnexion...'); await initDB(); }
+  // Cache mémoire : retourner immédiatement si dispo (seulement pour les requêtes sans filtre)
+  if (!indexName && query === undefined && _dbCache.has(storeName)) {
+    return _dbCache.get(storeName);
+  }
   return new Promise((resolve, reject) => {
     try {
       const tx = db.transaction(storeName, 'readonly');
@@ -438,7 +448,14 @@ async function dbGetAll(storeName, indexName, query) {
       } else {
         req = store.getAll();
       }
-      req.onsuccess = () => resolve(req.result || []);
+      req.onsuccess = () => {
+        const result = req.result || [];
+        // Mettre en cache les requêtes sans filtre
+        if (!indexName && query === undefined) {
+          _dbCache.set(storeName, result);
+        }
+        resolve(result);
+      };
       req.onerror = () => { console.error(`[DB] Erreur lecture ${storeName}:`, req.error); resolve([]); };
       tx.onerror = () => { console.error(`[DB] Transaction erreur ${storeName}`); resolve([]); };
     } catch (e) {
@@ -479,6 +496,7 @@ async function dbGetRecent(storeName, indexName, limit = 200) {
 }
 
 async function dbDelete(storeName, id) {
+  _invalidateCache(storeName);
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
@@ -508,6 +526,7 @@ async function dbCount(storeName) {
 async function dbBulkPut(storeName, dataArray) {
   if (!db) await initDB();
   if (!dataArray || dataArray.length === 0) return 0;
+  _invalidateCache(storeName);
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(storeName, 'readwrite');
