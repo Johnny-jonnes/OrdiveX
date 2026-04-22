@@ -31,22 +31,34 @@ async function renderMetrics(container) {
   }
 
   try {
-    // Chargement défensif : chaque table est chargée individuellement
-    // pour éviter un crash global si une table n'existe pas encore
+    const t0 = performance.now();
     const safeLoad = async (table) => { try { return await DB.dbGetAll(table) || []; } catch(e) { console.warn('[Metrics] Table manquante:', table); return []; } };
     
-    // Charger tout en parallèle : stores légers + comptage products (pas de chargement séquentiel)
-    const [sales, saleItems, stockAll, recentAudit, alerts, returns, cashRegister, productCount] = await Promise.all([
+    // Charger en parallèle
+    const [allSales, allSaleItems, stockAll, recentAudit, alerts, allReturns, cashRegister, productCount] = await Promise.all([
       safeLoad('sales'),
       safeLoad('saleItems'),
       safeLoad('stock'),
-      DB.dbGetRecent('auditLog', 'timestamp', 5000).catch(() => []), // Derniers 5000 seulement
+      DB.dbGetRecent('auditLog', 'timestamp', 2000).catch(() => []),
       safeLoad('alerts'),
       safeLoad('returns'),
       safeLoad('cashRegister'),
       DB.dbCount('products').catch(() => 0),
     ]);
+
+    // Filtrer aux 12 derniers mois pour libérer la RAM (ne pas garder toute l'historique)
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    const cutoff = oneYearAgo.toISOString();
+    const sales = allSales.filter(s => !s.date || s.date >= cutoff);
+    const saleIds = new Set(sales.map(s => s.id));
+    const saleItems = allSaleItems.filter(si => saleIds.has(si.saleId));
+    const returns = allReturns.filter(r => !r.date || r.date >= cutoff);
     const auditLog = recentAudit;
+    console.log(`[Metrics] ${sales.length}/${allSales.length} ventes (12 mois), ${saleItems.length} items — ${Math.round(performance.now() - t0)}ms`);
+
+    // Yield au thread UI pour éviter le freeze
+    await new Promise(r => setTimeout(r, 0));
 
     // Mode léger si catalogue > 50k : pseudo-produits depuis le stock
     let products;
