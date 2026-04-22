@@ -450,8 +450,8 @@ async function dbGetAll(storeName, indexName, query) {
       }
       req.onsuccess = () => {
         const result = req.result || [];
-        // Mettre en cache les requêtes sans filtre
-        if (!indexName && query === undefined) {
+        // Cache uniquement les stores < 50k items pour éviter les crashes RAM mobile
+        if (!indexName && query === undefined && result.length < 50000) {
           _dbCache.set(storeName, result);
         }
         resolve(result);
