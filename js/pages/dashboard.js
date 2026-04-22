@@ -6,8 +6,8 @@ async function renderDashboard(container) {
   UI.loading(container, 'Chargement du tableau de bord...');
 
   try {
-    const [products, stockAll, sales, saleItems, alerts, movements, allReturns] = await Promise.all([
-      DB.dbGetAll('products'),
+    const _isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    const [stockAll, sales, saleItems, alerts, movements, allReturns] = await Promise.all([
       DB.dbGetAll('stock'),
       DB.dbGetAll('sales'),
       DB.dbGetAll('saleItems'),
@@ -15,6 +15,14 @@ async function renderDashboard(container) {
       DB.dbGetAll('movements'),
       DB.dbGetAll('returns'),
     ]);
+
+    // Charger products intelligemment : stock-only sur mobile si trop gros
+    let products;
+    if (_isMobileDevice && (await DB.dbCount('products')) > 50000) {
+      products = stockAll.map(s => ({ id: s.productId, name: 'Produit', minStock: 10 }));
+    } else {
+      products = await DB.dbGetAll('products');
+    }
 
     // Compute KPIs
     const today = new Date();

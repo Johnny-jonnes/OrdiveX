@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — metrics.js
  * Tableau de Bord Exécutif — Business Intelligence
  */
@@ -10,16 +10,27 @@ async function renderMetrics(container) {
     // Chargement défensif : chaque table est chargée individuellement
     // pour éviter un crash global si une table n'existe pas encore
     const safeLoad = async (table) => { try { return await DB.dbGetAll(table) || []; } catch(e) { console.warn('[Metrics] Table manquante:', table); return []; } };
-    const [sales, saleItems, products, stockAll, auditLog, alerts, returns, cashRegister] = await Promise.all([
+    const [sales, saleItems, stockAll, auditLog, alerts, returns, cashRegister] = await Promise.all([
       safeLoad('sales'),
       safeLoad('saleItems'),
-      safeLoad('products'),
       safeLoad('stock'),
       safeLoad('auditLog'),
       safeLoad('alerts'),
       safeLoad('returns'),
       safeLoad('cashRegister'),
     ]);
+
+    // Sur mobile, ne pas charger les 330k products en RAM
+    // Utiliser le stock + un dbCount pour les métriques
+    const _isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    let products;
+    if (_isMobileDevice && (await DB.dbCount('products')) > 50000) {
+      // Mode mobile léger : créer des pseudo-produits depuis le stock uniquement
+      products = stockAll.map(s => ({ id: s.productId, minStock: 10, purchasePrice: 0, salePrice: 0 }));
+      console.log('[Metrics] Mode mobile léger: stock-only (' + products.length + ' refs)');
+    } else {
+      products = await safeLoad('products');
+    }
 
     // Index rapide stock par productId pour éviter des .find() répétés
     const stockMap = {};
