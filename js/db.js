@@ -1195,8 +1195,9 @@ function startAutoPull() {
         await pullFromSupabase();
       } catch (e) { }
     }
-    // En mode hors ligne : vérifier toutes les 60s. En ligne : toutes les 15s.
-    const delay = (!navigator.onLine || AppState.isOnline === false) ? 60000 : 15000;
+    // Pull toutes les 5 min en ligne (330k items = 30-60s de pull, laisser l'app respirer)
+    // Hors ligne : vérifier toutes les 2 min
+    const delay = (!navigator.onLine || AppState.isOnline === false) ? 120000 : 300000;
     _autoPullTimer = setTimeout(loop, delay); 
   };
   
