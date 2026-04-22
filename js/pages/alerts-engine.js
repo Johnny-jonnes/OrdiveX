@@ -21,6 +21,7 @@ const AlertsEngine = {
 
   async run() {
     if (!DB.AppState.currentUser) return;
+    if (DB._isPulling) return; // Ne pas scanner pendant un pull
     this.lastRun = Date.now();
 
 

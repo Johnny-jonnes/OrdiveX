@@ -6,12 +6,14 @@
 async function renderPrescriptions(container) {
   try {
     UI.loading(container, 'Chargement des ordonnances...');
+    if (DB._isPulling) { let w=0; while(DB._isPulling && w<90000){await new Promise(r=>setTimeout(r,500));w+=500;} }
 
     const [prescriptions, patients, products] = await Promise.all([
       DB.dbGetAll('prescriptions'),
       DB.dbGetAll('patients'),
       DB.dbGetAll('products'),
     ]);
+    await new Promise(r => setTimeout(r, 0));
 
     const patientMap = {};
     patients.forEach(p => { patientMap[p.id] = p; });

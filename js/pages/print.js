@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Module Impressions & Documents
  * Tickets, factures, PV destruction, rapports officiels DNPM
  */

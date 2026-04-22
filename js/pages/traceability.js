@@ -5,6 +5,7 @@
 
 async function renderTraceability(container) {
   UI.loading(container, 'Chargement du module traçabilité...');
+  if (DB._isPulling) { let w=0; while(DB._isPulling && w<90000){await new Promise(r=>setTimeout(r,500));w+=500;} }
 
   const [lots, products, movements, prescriptions, patients] = await Promise.all([
     DB.dbGetAll('lots'),
@@ -13,6 +14,7 @@ async function renderTraceability(container) {
     DB.dbGetAll('prescriptions'),
     DB.dbGetAll('patients'),
   ]);
+  await new Promise(r => setTimeout(r, 0));
 
   const productMap = {};
   products.forEach(p => { productMap[p.id] = p; });
