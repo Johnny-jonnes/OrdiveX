@@ -1270,7 +1270,10 @@ function resetSupabaseClient() {
 // GLOBAL ERROR HANDLERS — Protection contre les crashes silencieux
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('error', function(event) {
-  console.error('[GLOBAL ERROR]', event.message, event.filename, event.lineno);
+  // Silencer les erreurs réseau (hors-ligne)
+  const msg = event.message || '';
+  if (msg.includes('ERR_INTERNET_DISCONNECTED') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_')) return;
+  console.error('[GLOBAL ERROR]', msg, event.filename, event.lineno);
   // Ne pas afficher de toast pour les erreurs de scripts externes (CDN)
   if (event.filename && !event.filename.includes(location.hostname) && !event.filename.includes('localhost')) return;
   if (window.UI && UI.toast) {
@@ -1279,8 +1282,13 @@ window.addEventListener('error', function(event) {
 });
 
 window.addEventListener('unhandledrejection', function(event) {
+  const msg = String(event.reason?.message || event.reason || '');
+  // Silencer les erreurs réseau (hors-ligne) — comportement normal en PWA
+  if (msg.includes('ERR_INTERNET_DISCONNECTED') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_') || msg.includes('refresh_token')) {
+    event.preventDefault();
+    return;
+  }
   console.error('[UNHANDLED PROMISE]', event.reason);
-  // Empêcher la propagation pour éviter les crashes
   event.preventDefault();
 });
 
@@ -1302,9 +1310,10 @@ window.addEventListener('online', () => {
 
 window.addEventListener('offline', () => {
   AppState.isOnline = false;
+  console.log('[App] 🔴 Connexion perdue — mode hors-ligne activé');
   // Fermeture des sockets pour éviter les logs systèmes non-catchables du navigateur
-  if (window._supabaseInstance && _realtimeSubscription) {
-    try { window._supabaseInstance.removeChannel(_realtimeSubscription).catch(()=>{}); } catch(e) {}
+  if (_supabaseInstance && _realtimeSubscription) {
+    try { _supabaseInstance.removeChannel(_realtimeSubscription).catch(()=>{}); } catch(e) {}
     _realtimeSubscription = null;
   }
 });
