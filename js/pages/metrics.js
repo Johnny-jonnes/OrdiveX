@@ -4,6 +4,14 @@
  */
 
 async function renderMetrics(container) {
+  // Cache de session : ne pas recalculer si on revient dans les 2 minutes
+  const cacheKey = (window._metricsStartDate || '') + '|' + (window._metricsEndDate || '');
+  if (window._metricsCache && window._metricsCache.key === cacheKey && (Date.now() - window._metricsCache.time < 120000)) {
+    container.innerHTML = window._metricsCache.html;
+    if (window.lucide) lucide.createIcons();
+    requestAnimationFrame(() => { window._metricsCache.renderCharts(); });
+    return;
+  }
   UI.loading(container, 'Analyse des données business...');
 
   try {
@@ -562,29 +570,39 @@ async function renderMetrics(container) {
 
     if (window.lucide) lucide.createIcons();
 
-    // ─── Rendus graphiques ───
-    requestAnimationFrame(() => {
-      Charts.line('metrics-chart-trend', last7DaysLabels, [{
-        data: trendData,
-        color: '#7C3AED',
-        gradient: ['rgba(124,58,237,0.35)', 'rgba(196,167,255,0.08)']
-      }], { title: '' });
+    // ─── Rendus graphiques + cache session ───
+    const renderCharts = () => {
+      try {
+        Charts.line('metrics-chart-trend', last7DaysLabels, [{
+          data: trendData,
+          color: '#7C3AED',
+          gradient: ['rgba(124,58,237,0.35)', 'rgba(196,167,255,0.08)']
+        }], { title: '' });
 
-      // Donut des modes de paiement
-      const payChartLabels = [];
-      const payChartData = [];
-      const payChartColors = [];
-      Object.entries(payBreakdown).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).forEach(([k, v]) => {
-        payChartLabels.push(payLabels[k] || k);
-        payChartData.push(v);
-        payChartColors.push(payColors[k] || defaultPayColor);
-      });
-      if (payChartData.length > 0) {
-        Charts.donut('metrics-chart-payments', payChartLabels, payChartData, payChartColors);
-      }
+        const payChartLabels = [];
+        const payChartData = [];
+        const payChartColors = [];
+        Object.entries(payBreakdown).filter(([,v]) => v > 0).sort((a,b) => b[1]-a[1]).forEach(([k, v]) => {
+          payChartLabels.push(payLabels[k] || k);
+          payChartData.push(v);
+          payChartColors.push(payColors[k] || defaultPayColor);
+        });
+        if (payChartData.length > 0) {
+          Charts.donut('metrics-chart-payments', payChartLabels, payChartData, payChartColors);
+        }
+        if (window.lucide) lucide.createIcons();
+      } catch(e) { console.warn('[Metrics] Erreur graphiques:', e); }
+    };
 
-      if (window.lucide) lucide.createIcons();
-    });
+    // Sauvegarder en cache pour retour instantané (2 min)
+    window._metricsCache = {
+      key: (window._metricsStartDate || '') + '|' + (window._metricsEndDate || ''),
+      time: Date.now(),
+      html: container.innerHTML,
+      renderCharts
+    };
+
+    requestAnimationFrame(renderCharts);
 
   } catch (err) {
     console.error(err);
