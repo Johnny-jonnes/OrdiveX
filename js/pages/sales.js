@@ -337,13 +337,38 @@ function exportSales() {
 async function renderReports(container) {
   UI.loading(container, 'Génération des rapports...');
 
-  const [sales, saleItems, products, stockAll, allReturns] = await Promise.all([
+  // Attendre que le pull finisse
+  if (DB._isPulling) {
+    let waited = 0;
+    while (DB._isPulling && waited < 90000) {
+      await new Promise(r => setTimeout(r, 500));
+      waited += 500;
+    }
+  }
+
+  const productCount = await DB.dbCount('products').catch(() => 0);
+  const [sales, saleItems, stockAll, allReturns] = await Promise.all([
     DB.dbGetAll('sales'),
     DB.dbGetAll('saleItems'),
-    DB.dbGetAll('products'),
     DB.dbGetAll('stock'),
     DB.dbGetAll('returns'),
   ]);
+
+  // Mode léger si catalogue > 50k
+  let products;
+  if (productCount > 50000) {
+    products = stockAll.map(s => ({ id: s.productId, category: 'Catalogue', purchasePrice: 0, salePrice: 0 }));
+  } else {
+    products = await DB.dbGetAll('products');
+  }
+
+  // Index rapide pour éviter les .find() O(n²)
+  const stockMap = {};
+  stockAll.forEach(s => { stockMap[s.productId] = s; });
+  const productMap = {};
+  products.forEach(p => { productMap[p.id] = p; });
+
+  await new Promise(r => setTimeout(r, 10));
 
   const today = new Date();
   // Last 6 months
@@ -359,7 +384,9 @@ async function renderReports(container) {
 
     const rev = ms.reduce((a, s) => a + s.total, 0) - rs.reduce((a, r) => a + (r.refundAmount || 0), 0);
 
-    const mis = saleItems.filter(si => ms.some(s => s.id === si.saleId));
+    // Index saleIds pour O(1) lookup au lieu de .some() O(n)
+    const msIds = new Set(ms.map(s => s.id));
+    const mis = saleItems.filter(si => msIds.has(si.saleId));
     const rawCogs = mis.reduce((a, i) => a + (i.purchasePrice || 0) * i.quantity, 0);
     const returnCogs = rs.reduce((a, r) => {
       return a + (r.items || []).reduce((acc, ri) => {
@@ -379,21 +406,21 @@ async function renderReports(container) {
   saleItems.forEach(si => { prodRevenue[si.productName] = (prodRevenue[si.productName] || 0) + si.total; });
   const topProds = Object.entries(prodRevenue).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
-  // Category breakdown
+  // Category breakdown — utiliser productMap O(1) au lieu de .find() O(n)
   const catRevenue = {};
   saleItems.forEach(si => {
-    const p = products.find(pr => pr.id === si.productId);
+    const p = productMap[si.productId];
     const cat = p?.category || 'Autre';
     catRevenue[cat] = (catRevenue[cat] || 0) + si.total;
   });
 
-  // Stock value
+  // Stock value — utiliser stockMap O(1) au lieu de .find() O(n)
   const stockValue = products.reduce((a, p) => {
-    const s = stockAll.find(st => st.productId === p.id);
+    const s = stockMap[p.id];
     return a + (s ? s.quantity * (p.purchasePrice || 0) : 0);
   }, 0);
   const stockSaleValue = products.reduce((a, p) => {
-    const s = stockAll.find(st => st.productId === p.id);
+    const s = stockMap[p.id];
     return a + (s ? s.quantity * (p.salePrice || 0) : 0);
   }, 0);
 
