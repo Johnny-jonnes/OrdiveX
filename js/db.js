@@ -1314,13 +1314,21 @@ if (typeof indexedDB !== 'undefined') {
 window.addEventListener('online', () => {
   AppState.isOnline = true;
   console.log('[App] 🟢 Connexion internet rétablie.');
-  syncToSupabase().catch(()=>{});
+  // Attendre 3s pour que le réseau se stabilise avant de relancer
+  setTimeout(() => {
+    if (!navigator.onLine) return;
+    // Relancer le auto-refresh du token
+    if (_supabaseInstance?.auth?.startAutoRefresh) {
+      _supabaseInstance.auth.startAutoRefresh();
+    }
+    syncToSupabase().catch(() => {});
+  }, 3000);
 });
 
 window.addEventListener('offline', () => {
   AppState.isOnline = false;
   console.log('[App] 🔴 Connexion perdue — mode hors-ligne activé');
-  // Destruction complète du client Supabase pour stopper les retry internes (refresh_token, WebSocket)
+  // Mettre en pause le client Supabase (sans le détruire pour éviter 'Multiple GoTrueClient')
   if (_supabaseInstance) {
     try {
       // Stopper le rafraîchissement automatique du token
@@ -1335,8 +1343,6 @@ window.addEventListener('offline', () => {
       // Déconnecter le realtime complètement
       _supabaseInstance.realtime?.disconnect();
     } catch (e) {}
-    // Détruire l'instance — sera recréée au retour en ligne
-    _supabaseInstance = null;
   }
 });
 
