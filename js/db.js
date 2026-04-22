@@ -562,6 +562,41 @@ async function dbCount(storeName) {
 }
 
 /**
+ * Calcul de la valeur du stock via curseur — ne charge PAS tous les produits en RAM.
+ * Parcourt les produits un par un et cumule la valeur.
+ * @param {Object} stockMap - Map { productId: { quantity } } du stock
+ * @returns {Promise<{purchaseValue: number, saleValue: number}>}
+ */
+async function dbStockValue(stockMap) {
+  return new Promise((resolve) => {
+    let purchaseValue = 0;
+    let saleValue = 0;
+    try {
+      const tx = db.transaction('products', 'readonly');
+      const store = tx.objectStore('products');
+      const cursor = store.openCursor();
+      cursor.onsuccess = (e) => {
+        const c = e.target.result;
+        if (c) {
+          const p = c.value;
+          const s = stockMap[p.id];
+          if (s && s.quantity > 0) {
+            purchaseValue += s.quantity * (p.purchasePrice || 0);
+            saleValue += s.quantity * (p.salePrice || 0);
+          }
+          c.continue();
+        } else {
+          resolve({ purchaseValue, saleValue });
+        }
+      };
+      cursor.onerror = () => resolve({ purchaseValue: 0, saleValue: 0 });
+    } catch(e) {
+      resolve({ purchaseValue: 0, saleValue: 0 });
+    }
+  });
+}
+
+/**
  * Bulk Put — Insertion/mise à jour de masse via UNE SEULE transaction IndexedDB.
  * Conçu pour supporter des centaines de milliers d'enregistrements sans geler le navigateur.
  * @param {string} storeName - Nom du store IndexedDB
@@ -1407,6 +1442,6 @@ window.addEventListener('offline', () => {
   }
 });
 
-const _DBExports = { initDB, dbAdd, dbPut, dbBulkPut, dbGet, dbGetAll, dbGetRecent, dbDelete, dbCount, writeAudit, seedDemoData, syncToSupabase, pullFromSupabase, resetSupabaseClient, forceSyncAll, trackInstallation, getSupabaseClient, STORES, AppState, doBackup, startAutoBackup, startAutoPull, autoBackupToStorage, restoreFromBackup };
+const _DBExports = { initDB, dbAdd, dbPut, dbBulkPut, dbGet, dbGetAll, dbGetRecent, dbDelete, dbCount, dbStockValue, writeAudit, seedDemoData, syncToSupabase, pullFromSupabase, resetSupabaseClient, forceSyncAll, trackInstallation, getSupabaseClient, STORES, AppState, doBackup, startAutoBackup, startAutoPull, autoBackupToStorage, restoreFromBackup };
 Object.defineProperty(_DBExports, '_isPulling', { get: () => _isPulling });
 window.DB = _DBExports;

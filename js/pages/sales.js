@@ -414,15 +414,10 @@ async function renderReports(container) {
     catRevenue[cat] = (catRevenue[cat] || 0) + si.total;
   });
 
-  // Stock value — utiliser stockMap O(1) au lieu de .find() O(n)
-  const stockValue = products.reduce((a, p) => {
-    const s = stockMap[p.id];
-    return a + (s ? s.quantity * (p.purchasePrice || 0) : 0);
-  }, 0);
-  const stockSaleValue = products.reduce((a, p) => {
-    const s = stockMap[p.id];
-    return a + (s ? s.quantity * (p.salePrice || 0) : 0);
-  }, 0);
+  // Stock value — calcul par curseur (ne charge PAS tous les produits en RAM)
+  const stockMapForValue = {};
+  stockAll.forEach(s => { stockMapForValue[s.productId] = s; });
+  const { purchaseValue: stockValue, saleValue: stockSaleValue } = await DB.dbStockValue(stockMapForValue);
 
   container.innerHTML = `
     <div class="page-header">
@@ -446,9 +441,9 @@ async function renderReports(container) {
       <div class="kpi-card kpi-green">
         <div class="kpi-icon"><i data-lucide="package"></i></div>
         <div class="kpi-content">
-          <div class="kpi-value">${stockValue > 0 ? UI.formatCurrency(stockValue) : (productCount > 50000 ? productCount.toLocaleString() + ' réf.' : '0 FG')}</div>
-          <div class="kpi-label">${stockValue > 0 ? 'Valeur stock (achat)' : 'Produits en catalogue'}</div>
-          <div class="kpi-sub">${stockValue > 0 ? 'Vente: ' + UI.formatCurrency(stockSaleValue) : stockAll.length + ' entrées en stock'}</div>
+          <div class="kpi-value">${UI.formatCurrency(stockValue)}</div>
+          <div class="kpi-label">Valeur stock (achat)</div>
+          <div class="kpi-sub">Vente: ${UI.formatCurrency(stockSaleValue)}</div>
         </div>
       </div>
       <div class="kpi-card kpi-orange">
