@@ -386,6 +386,8 @@ function _dbPutRaw(storeName, data) {
 // ── Cache mémoire pour accélérer dbGetAll sur les gros stores ──
 const _dbCache = new Map();
 function _invalidateCache(storeName) { _dbCache.delete(storeName); }
+const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+const _cacheMaxItems = _isMobile ? 50000 : 500000; // Mobile: 50k, PC: 500k
 
 async function dbAdd(storeName, data) {
   _invalidateCache(storeName);
@@ -450,8 +452,8 @@ async function dbGetAll(storeName, indexName, query) {
       }
       req.onsuccess = () => {
         const result = req.result || [];
-        // Cache uniquement les stores < 50k items pour éviter les crashes RAM mobile
-        if (!indexName && query === undefined && result.length < 50000) {
+        // Cache adaptatif : 50k max sur mobile, 500k max sur PC
+        if (!indexName && query === undefined && result.length < _cacheMaxItems) {
           _dbCache.set(storeName, result);
         }
         resolve(result);
