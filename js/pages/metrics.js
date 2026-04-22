@@ -14,6 +14,22 @@ async function renderMetrics(container) {
   }
   UI.loading(container, 'Analyse des données business...');
 
+  // Attendre que le pull finisse pour éviter les conflits IndexedDB
+  if (DB._isPulling) {
+    container.querySelector('.loading-text, p')?.remove();
+    const msg = container.querySelector('.loading-container') || container;
+    const p = document.createElement('p');
+    p.style.cssText = 'text-align:center;color:var(--text-muted);font-size:13px;margin-top:12px;';
+    p.textContent = 'Synchronisation en cours, veuillez patienter...';
+    msg.appendChild(p);
+    // Attendre la fin du pull (vérifier toutes les 500ms, max 90s)
+    let waited = 0;
+    while (DB._isPulling && waited < 90000) {
+      await new Promise(r => setTimeout(r, 500));
+      waited += 500;
+    }
+  }
+
   try {
     // Chargement défensif : chaque table est chargée individuellement
     // pour éviter un crash global si une table n'existe pas encore
