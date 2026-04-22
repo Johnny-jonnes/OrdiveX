@@ -1195,9 +1195,9 @@ function startAutoPull() {
         await pullFromSupabase();
       } catch (e) { }
     }
-    // Pull toutes les 5 min en ligne (330k items = 30-60s de pull, laisser l'app respirer)
-    // Hors ligne : vérifier toutes les 2 min
-    const delay = (!navigator.onLine || AppState.isOnline === false) ? 120000 : 300000;
+    // Pull toutes les 30 min (le WebSocket gère le temps réel, le pull est un filet de sécurité)
+    // Hors ligne : vérifier toutes les 5 min
+    const delay = (!navigator.onLine || AppState.isOnline === false) ? 300000 : 1800000;
     _autoPullTimer = setTimeout(loop, delay); 
   };
   
