@@ -854,15 +854,26 @@ async function syncToSupabase() {
  * PULL DEPUIS SUPABASE (Cloud → Local)
  * @param {boolean} isManual Indique si c'est un pull déclenché manuellement par l'utilisateur
  */
+let _isPulling = false;
 async function pullFromSupabase(isManual = false) {
+  if (_isPulling) {
+    console.log('[Flash] Pull déjà en cours, ignoré');
+    return;
+  }
+  _isPulling = true;
   let hasChanges = false;
   let totalItemsPulled = 0;
   try {
     const sb = await getSupabaseClient();
-    if (!sb || !navigator.onLine) {
-      // Return early if we definitely don't have networking
+    if (!sb) {
+      console.warn('[Flash] Pull annulé: pas de client Supabase');
       return;
     }
+    if (!navigator.onLine) {
+      console.warn('[Flash] Pull annulé: hors ligne');
+      return;
+    }
+    console.log('[Flash] 🔄 Pull démarré...');
 
     const storesToPull = [
       'users', 'settings',
