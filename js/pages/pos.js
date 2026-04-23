@@ -502,13 +502,19 @@ function renderFullPOSUI(container) {
  * Utile pour les mises à jour en arrière-plan sans recharger toute la page.
  */
 async function refreshPOSData() {
-  const [products, stockAll] = await Promise.all([
-    DB.dbGetAll('products'),
-    DB.dbGetAll('stock')
-  ]);
-  posProducts = products.filter(p => p.status !== 'inactive');
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const stockAll = await DB.dbGetAll('stock');
   posStock = {};
   stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
+  
+  let products;
+  if (isMobile) {
+    products = await DB.dbSearchProducts(posSearch || '', 100);
+  } else {
+    products = await DB.dbGetAll('products');
+  }
+  posProducts = products.filter(p => p.status !== 'inactive');
+  posProducts.forEach(p => posProductsCache.set(p.id, p));
   if (typeof refreshGrid === 'function') refreshGrid();
 }
 
@@ -2381,6 +2387,8 @@ window.showManualBarcodeEntry = showManualBarcodeEntry;
 
 // ─── Exports globaux ──────────────────────────────────────────────
 window.addToCart = addToCart;
+window.handleRuptureClick = handleRuptureClick;
+window.showGenericAlternatives = showGenericAlternatives;
 window.changeQty = changeQty;
 window.setQtyDirect = setQtyDirect;
 window.removeItem = removeItem;
