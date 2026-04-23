@@ -13,6 +13,8 @@ let posCurrentPatient = null;
 let posCurrentRx = null;
 let posActiveCategory = '';
 let posMobilePayState = 'idle'; // idle | en_attente | confirme | echoue
+let _posDataReady = false; // Cache session : données déjà chargées
+let _posDataTime = 0; // Timestamp du dernier chargement
 
 // ═══════════════════════════════════════════════════════════════════
 // INTERACTIONS MÉDICAMENTEUSES — Base statique des 30 combinaisons critiques
@@ -178,33 +180,35 @@ async function renderPOS(container) {
   `;
   if (window.lucide) lucide.createIcons();
 
-  // 2. Attendre la fin du pull si en cours
-  const loadPOS = async () => {
-    if (DB._isPulling) { let w=0; while(DB._isPulling && w<60000){await new Promise(r=>setTimeout(r,500));w+=500;} }
-    
-    // Charger produits + stock en priorité (ce qui s'affiche)
-    const [products, stockAll] = await Promise.all([
-      DB.dbGetAll('products'),
-      DB.dbGetAll('stock'),
-    ]);
-    posProducts = products.filter(p => p.status !== 'inactive');
-    posStock = {};
-    stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
-    posLots = [];
-
-    // Rendu immédiat dès que produits + stock sont prêts
+  // 2. Cache session POS — si on revient dans < 2 min, rendu instantané
+  const cacheAge = Date.now() - _posDataTime;
+  if (_posDataReady && posProducts.length > 0 && cacheAge < 120000) {
     renderFullPOSUI(container);
-
-    // Charger patients/prescriptions en arrière-plan (pas bloquant)
-    Promise.all([
-      DB.dbGetAll('patients'),
-      DB.dbGetAll('prescriptions'),
-    ]).then(([patients, prescriptions]) => {
-      window._posPatients = patients;
-      window._posPrescriptions = prescriptions.filter(rx => ['pending', 'validated'].includes(rx.status));
-    });
-  };
-  loadPOS();
+  } else {
+    const loadPOS = async () => {
+      if (DB._isPulling) { let w=0; while(DB._isPulling && w<60000){await new Promise(r=>setTimeout(r,500));w+=500;} }
+      const [products, stockAll] = await Promise.all([
+        DB.dbGetAll('products'),
+        DB.dbGetAll('stock'),
+      ]);
+      posProducts = products.filter(p => p.status !== 'inactive');
+      posStock = {};
+      stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
+      posLots = [];
+      _posDataReady = true;
+      _posDataTime = Date.now();
+      renderFullPOSUI(container);
+      // Patients/prescriptions en arrière-plan
+      Promise.all([
+        DB.dbGetAll('patients'),
+        DB.dbGetAll('prescriptions'),
+      ]).then(([patients, prescriptions]) => {
+        window._posPatients = patients;
+        window._posPrescriptions = prescriptions.filter(rx => ['pending', 'validated'].includes(rx.status));
+      });
+    };
+    loadPOS();
+  }
 
   // 4. Vérification des conflits (Réseau) - Totalement asynchrone
   checkSyncConflicts().then(hasSyncWarning => {
@@ -684,7 +688,8 @@ function refreshGrid() {
       </div>
     `);
   }
-  if (window.lucide) lucide.createIcons();
+  // Lucide uniquement sur la grille (pas tout le DOM)
+  if (window.lucide) { const g = document.getElementById('pos-grid'); if (g) lucide.createIcons({node: g}); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -889,7 +894,8 @@ function refreshCartUI() {
     </div>`).join('');
 
   refreshTotals();
-  if (window.lucide) lucide.createIcons();
+  // Lucide uniquement sur le panier (pas tout le DOM)
+  if (window.lucide) { const b = document.getElementById('pos-cart-items'); if (b) lucide.createIcons({node: b}); }
 }
 
 function refreshTotals() {
