@@ -178,24 +178,33 @@ async function renderPOS(container) {
   `;
   if (window.lucide) lucide.createIcons();
 
-  // 2. Chargement des données en tâche de fond (Local DB)
-  Promise.all([
-    DB.dbGetAll('products'),
-    DB.dbGetAll('stock'),
-    DB.dbGetAll('patients'),
-    DB.dbGetAll('prescriptions'),
-  ]).then(([products, stockAll, patients, prescriptions]) => {
+  // 2. Attendre la fin du pull si en cours
+  const loadPOS = async () => {
+    if (DB._isPulling) { let w=0; while(DB._isPulling && w<60000){await new Promise(r=>setTimeout(r,500));w+=500;} }
+    
+    // Charger produits + stock en priorité (ce qui s'affiche)
+    const [products, stockAll] = await Promise.all([
+      DB.dbGetAll('products'),
+      DB.dbGetAll('stock'),
+    ]);
     posProducts = products.filter(p => p.status !== 'inactive');
     posStock = {};
     stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
-    // Les lots sont chargés à la demande (lazy) lors de la validation de vente
     posLots = [];
-    window._posPatients = patients;
-    window._posPrescriptions = prescriptions.filter(rx => ['pending', 'validated'].includes(rx.status));
 
-    // 3. Remplacement du squelette par l'UI complète
+    // Rendu immédiat dès que produits + stock sont prêts
     renderFullPOSUI(container);
-  });
+
+    // Charger patients/prescriptions en arrière-plan (pas bloquant)
+    Promise.all([
+      DB.dbGetAll('patients'),
+      DB.dbGetAll('prescriptions'),
+    ]).then(([patients, prescriptions]) => {
+      window._posPatients = patients;
+      window._posPrescriptions = prescriptions.filter(rx => ['pending', 'validated'].includes(rx.status));
+    });
+  };
+  loadPOS();
 
   // 4. Vérification des conflits (Réseau) - Totalement asynchrone
   checkSyncConflicts().then(hasSyncWarning => {
@@ -543,7 +552,7 @@ function clearPosSearch() {
 }
 
 let posSortMode = 'default';
-let posPageSize = 100;
+let posPageSize = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ? 50 : 100;
 let posCurrentPage = 0;
 
 function applySort(mode) {
@@ -630,7 +639,7 @@ function refreshGrid() {
       stockText = (low ? '<i data-lucide="alert-triangle"></i> ' : '') + q + ' ' + unitShort;
     }
 
-    return `<div class="prod-card ${rupt ? 'prod-rupt' : ''} ${inCart ? 'prod-incart' : ''} ${low ? 'prod-low' : ''}"
+    return `<div class="prod-card ${rupt ? 'prod-rupt' : ''} ${inCart ? 'prod-incart' : ''} ${low ? 'prod-low' : ''}" data-pid="${p.id}"
        onclick="${rupt ? (alts.length ? `showGenericAlternatives(${p.id})` : "UI.toast('Rupture de stock — aucune alternative DCI en stock','error')") : `addToCart(${p.id})`}">
       <div class="prod-top">
         ${isRx ? '<span class="tag-rx">Rx</span>' : '<span class="tag-otc">OTC</span>'}
@@ -742,7 +751,7 @@ function addToCart(productId, mode = 'box') {
   }
   // Feedback visuel + sonore
   posAddFeedback(p.name + (mode === 'unit' ? ' (Unité)' : ''));
-  refreshCartUI(); refreshGrid();
+  refreshCartUI(); updateCardUI(productId);
 }
 
 function checkStockCart(productId) {
@@ -775,7 +784,7 @@ function changeQty(productId, mode, delta) {
     }
     item.total = nq * item.unitPrice;
   }
-  refreshCartUI(); refreshGrid();
+  refreshCartUI(); updateCardUI(productId);
 }
 
 function setQtyDirect(productId, mode, val) {
@@ -790,12 +799,43 @@ function setQtyDirect(productId, mode, val) {
     UI.toast('Stock insuffisant', 'warning'); return; 
   }
   item.total = nq * item.unitPrice;
-  refreshCartUI(); refreshGrid();
+  refreshCartUI(); updateCardUI(productId);
 }
 
 function removeItem(productId, mode) {
   posCart = posCart.filter(c => !(c.productId === productId && c.saleMode === mode));
-  refreshCartUI(); refreshGrid();
+  refreshCartUI(); updateCardUI(productId);
+}
+
+/**
+ * Met à jour UNIQUEMENT la carte d'un produit spécifique (class + badge qty)
+ * au lieu de re-générer toute la grille. ~50ms au lieu de ~5s sur mobile.
+ */
+function updateCardUI(productId) {
+  const card = document.querySelector(`.prod-card[data-pid="${productId}"]`);
+  if (!card) return;
+  const inCart = posCart.find(c => c.productId === productId);
+  // Toggle classe visuelle
+  if (inCart) {
+    card.classList.add('prod-incart');
+  } else {
+    card.classList.remove('prod-incart');
+  }
+  // Mettre à jour le badge quantité dans prod-top
+  const topDiv = card.querySelector('.prod-top');
+  if (topDiv) {
+    const existingBadge = topDiv.querySelector('.tag-cart');
+    if (inCart) {
+      const totalQty = posCart.filter(c => c.productId === productId).reduce((s, c) => s + c.qty, 0);
+      if (existingBadge) {
+        existingBadge.textContent = totalQty;
+      } else {
+        topDiv.insertAdjacentHTML('beforeend', `<span class="tag-cart">${totalQty}</span>`);
+      }
+    } else if (existingBadge) {
+      existingBadge.remove();
+    }
+  }
 }
 
 function viderPanier() {
