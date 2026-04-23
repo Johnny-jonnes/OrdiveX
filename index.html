@@ -29,6 +29,22 @@
   <link rel="apple-touch-icon" href="https://johnny-jonnes.github.io/ordivex/assets/icon.svg">
   <script src="js/vendor/supabase.min.js"></script>
   <script src="js/vendor/lucide.min.js"></script>
+  <script>
+    // ── PERFORMANCE: Override lucide.createIcons pour scope automatique ──
+    // Au lieu de scanner tout le DOM (lent sur mobile), scope au conteneur actif.
+    if (window.lucide) {
+      const _originalCreateIcons = lucide.createIcons.bind(lucide);
+      lucide.createIcons = function(opts) {
+        if (opts && opts.node) return _originalCreateIcons(opts);
+        // Scope au #app-content si disponible, sinon document
+        const container = document.getElementById('app-content');
+        if (container) return _originalCreateIcons({ node: container });
+        return _originalCreateIcons();
+      };
+      // Version rapide pour les modales et la sidebar (hors app-content)
+      lucide.createIconsGlobal = _originalCreateIcons;
+    }
+  </script>
 </head>
 
 <body>
@@ -252,7 +268,7 @@
           + '</button>';
       }).join('');
       if (window.lucide) {
-        lucide.createIcons();
+        lucide.createIconsGlobal ? lucide.createIconsGlobal() : lucide.createIcons();
       }
     }
 
@@ -498,7 +514,7 @@
 
     initApp();
     if (window.lucide) {
-      lucide.createIcons();
+      lucide.createIconsGlobal ? lucide.createIconsGlobal() : lucide.createIcons();
     }
   </script>
 </body>
