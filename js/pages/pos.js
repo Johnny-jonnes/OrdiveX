@@ -844,6 +844,7 @@ function updateCardUI(productId) {
 }
 
 function viderPanier() {
+  const pids = [...new Set(posCart.map(c => c.productId))]; // IDs uniques
   posCart = [];
   clearClientUI();
   detachRx();
@@ -853,7 +854,9 @@ function viderPanier() {
   if (disc) disc.value = 0;
   const ci = document.getElementById('cash-in');
   if (ci) ci.value = '';
-  refreshCartUI(); refreshGrid();
+  refreshCartUI();
+  // Mettre à jour uniquement les cartes qui étaient dans le panier
+  pids.forEach(pid => updateCardUI(pid));
 }
 
 function refreshCartUI() {

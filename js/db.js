@@ -429,10 +429,12 @@ function _dbPutRaw(storeName, data) {
 // ── Cache mémoire pour accélérer dbGetAll sur les gros stores ──
 const _dbCache = new Map();
 const _dbCacheTime = new Map(); // Timestamp du dernier cache
+// Sur mobile : ne PAS cacher les gros stores (products, movements, lots) pour éviter l'OOM
+const _mobileNoCacheStores = new Set(['products', 'movements', 'lots', 'auditLog', 'saleItems']);
 function _invalidateCache(storeName) { _dbCache.delete(storeName); _dbCacheTime.delete(storeName); }
 const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-const _cacheMaxItems = _isMobile ? 150000 : 500000; // Mobile: 150k (couvre 100k produits), PC: 500k
-const _cacheTTL = _isMobile ? 300000 : 600000; // Mobile: 5 min, PC: 10 min — auto-expire
+const _cacheMaxItems = _isMobile ? 50000 : 500000; // Mobile: 50k (petits stores), PC: 500k
+const _cacheTTL = _isMobile ? 120000 : 600000; // Mobile: 2 min, PC: 10 min
 
 async function dbAdd(storeName, data) {
   _invalidateCache(storeName);
@@ -502,8 +504,11 @@ async function dbGetAll(storeName, indexName, query) {
       }
       req.onsuccess = () => {
         const result = req.result || [];
-        // Cache adaptatif : 50k max sur mobile, 500k max sur PC
-        if (!indexName && query === undefined && result.length < _cacheMaxItems) {
+        // Cache adaptatif : pas les gros stores sur mobile
+        const canCache = !indexName && query === undefined 
+          && result.length < _cacheMaxItems
+          && !(_isMobile && _mobileNoCacheStores.has(storeName));
+        if (canCache) {
           _dbCache.set(storeName, result);
           _dbCacheTime.set(storeName, Date.now());
         }
