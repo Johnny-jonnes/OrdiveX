@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Support Widget Component — OrdiveX
  * Chatbot d'assistance intégré, intelligent et personnalisé
  * Ne s'affiche qu'APRÈS la connexion de l'utilisateur
@@ -22,7 +22,7 @@ function initSupportWidget() {
             bottom: 24px;
             right: 24px;
             z-index: 9999;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
         }
 
         .support-fab {
@@ -74,20 +74,20 @@ function initSupportWidget() {
             position: absolute;
             bottom: 80px;
             right: 0;
-            width: 360px;
-            height: 500px;
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 380px;
+            height: 550px;
+            background: #fdfdfd;
+            border-radius: 20px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.05);
             display: flex;
             flex-direction: column;
             overflow: hidden;
             transform: scale(0);
             transform-origin: bottom right;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2), opacity 0.3s;
             opacity: 0;
             pointer-events: none;
-            border: 1px solid rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.06);
         }
 
         .support-window.open {
@@ -97,50 +97,69 @@ function initSupportWidget() {
         }
 
         .support-header {
-            background: linear-gradient(135deg, #1B6FAE, #2980b9);
+            background: linear-gradient(135deg, #091a32, #1b3d68);
             color: #fff;
-            padding: 16px;
+            padding: 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         .support-header-info {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
         
         .support-avatar {
-            width: 36px;
-            height: 36px;
-            background: rgba(255,255,255,0.2);
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #12c2e9, #c471ed, #f64f59);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        
+        .support-avatar-inner {
+            width: 40px;
+            height: 40px;
+            background: #091a32;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            letter-spacing: -1px;
+            color: #fff;
         }
 
         .support-title {
             font-weight: 700;
-            font-size: 15px;
+            font-size: 16px;
             margin: 0;
+            letter-spacing: 0.3px;
         }
 
         .support-subtitle {
-            font-size: 11px;
-            opacity: 0.8;
-            margin: 0;
+            font-size: 12px;
+            opacity: 0.85;
+            margin: 2px 0 0 0;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
         }
         
         .support-status-dot {
-            width: 6px;
-            height: 6px;
-            background: #2ecc71;
+            width: 8px;
+            height: 8px;
+            background: #10b981;
             border-radius: 50%;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
         }
 
         .support-close {
@@ -158,116 +177,141 @@ function initSupportWidget() {
 
         .support-body {
             flex: 1;
-            background: #f8f9fa;
-            padding: 16px;
+            background: #f3f6f9;
+            padding: 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
+            scroll-behavior: smooth;
         }
 
         .chat-bubble {
             max-width: 85%;
-            padding: 10px 14px;
-            border-radius: 14px;
-            font-size: 13px;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 13.5px;
             line-height: 1.5;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+            word-wrap: break-word;
         }
         
         @keyframes popIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
+            0% { transform: translateY(10px) scale(0.95); opacity: 0; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
         }
 
         .chat-bot {
-            background: #fff;
-            color: #333;
+            background: #ffffff;
+            color: #1e293b;
             align-self: flex-start;
             border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             border: 1px solid rgba(0,0,0,0.03);
+            position: relative;
+        }
+        
+        .chat-bot strong {
+            color: #091a32;
         }
 
         .chat-user {
-            background: #1B6FAE;
-            color: #fff;
+            background: linear-gradient(135deg, #091a32, #1b3d68);
+            color: #ffffff;
             align-self: flex-end;
             border-bottom-right-radius: 4px;
-            box-shadow: 0 1px 3px rgba(27, 111, 174, 0.2);
+            box-shadow: 0 4px 12px rgba(9, 26, 50, 0.15);
         }
 
         .support-actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 4px;
+            gap: 8px;
+            margin-top: 6px;
         }
 
         .support-btn {
-            background: #fff;
-            border: 1px solid #1B6FAE;
-            color: #1B6FAE;
-            padding: 6px 12px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+            padding: 8px 14px;
             border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .support-btn:hover {
-            background: #1B6FAE;
-            color: #fff;
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
         .support-footer {
-            padding: 10px 12px;
+            padding: 16px;
             background: #fff;
-            border-top: 1px solid rgba(0,0,0,0.05);
+            border-top: 1px solid rgba(0,0,0,0.04);
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
         }
 
         .support-input-row {
             display: flex;
-            gap: 8px;
+            gap: 10px;
             align-items: center;
+            background: #f1f5f9;
+            border-radius: 24px;
+            padding: 4px 4px 4px 16px;
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        
+        .support-input-row:focus-within {
+            border-color: #cbd5e1;
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(9, 26, 50, 0.05);
         }
 
         .support-input-row input {
             flex: 1;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            padding: 8px 14px;
-            font-size: 13px;
+            border: none;
+            background: transparent;
+            padding: 8px 0;
+            font-size: 13.5px;
             outline: none;
-            transition: border-color 0.2s;
+            color: #1e293b;
             font-family: inherit;
         }
-
-        .support-input-row input:focus {
-            border-color: #1B6FAE;
+        
+        .support-input-row input::placeholder {
+            color: #94a3b8;
         }
 
         .support-send-btn {
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
-            background: #1B6FAE;
+            background: #091a32;
             color: #fff;
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
             flex-shrink: 0;
         }
 
         .support-send-btn:hover {
-            background: #155a8a;
+            background: #1b3d68;
+            transform: scale(1.05);
         }
         
         .whatsapp-btn {
@@ -277,18 +321,45 @@ function initSupportWidget() {
             background: #25D366;
             color: #fff;
             text-decoration: none;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-size: 12px;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 13px;
             font-weight: 600;
-            transition: background 0.2s;
+            transition: all 0.2s;
             width: 100%;
             justify-content: center;
             box-sizing: border-box;
+            border: 1px solid rgba(0,0,0,0.05);
         }
         
         .whatsapp-btn:hover {
             background: #128C7E;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 4px 8px;
+            align-items: center;
+            height: 20px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #94a3b8;
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
         }
         
         @media (max-width: 480px) {
@@ -322,20 +393,21 @@ function initSupportWidget() {
                 <div class="support-header">
                     <div class="support-header-info">
                         <div class="support-avatar">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                            <div class="support-avatar-inner">N</div>
                         </div>
                         <div>
-                            <div class="support-title">Naomie — Assistante OrdiveX</div>
-                            <div class="support-subtitle"><div class="support-status-dot"></div> Toujours disponible</div>
+                            <div class="support-title">Naomie AI</div>
+                            <div class="support-subtitle"><div class="support-status-dot"></div> En ligne — Propulsé par OrdiveX</div>
                         </div>
                     </div>
                     <button class="support-close" onclick="toggleSupportWindow()">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     </button>
                 </div>
                 <div class="support-body" id="support-chat-body">
                     <div class="chat-bubble chat-bot">
-                        Bonjour <strong>${firstName}</strong> ! 👋 Je suis <strong>Naomie</strong>, votre assistante OrdiveX. Comment puis-je vous aider aujourd'hui ?
+                        Bonjour <strong>${firstName}</strong>. Je suis <strong>Naomie</strong>, l'intelligence artificielle dédiée d'OrdiveX. 
+                        <br><br>Comment puis-je optimiser la gestion de votre officine aujourd'hui ?
                     </div>
                 </div>
                 <div class="support-footer">
@@ -566,14 +638,14 @@ function showQuickOptions() {
     acts.className = 'support-actions';
     // Afficher les 6 sujets les plus fréquents
     const quickTopics = [
-        { label: '🗺️ Naviguer dans le menu', idx: 18 },
-        { label: '💳 Crédits & Dettes', idx: 0 },
-        { label: '🚚 Commander des produits', idx: 6 },
-        { label: '📦 Gérer le stock', idx: 5 },
-        { label: '🔄 Retours', idx: 19 },
-        { label: '📊 Statistiques', idx: 10 },
-        { label: '🛡️ Assurance', idx: 2 },
-        { label: '🔄 Synchronisation', idx: 12 },
+        { label: '<i data-lucide="compass" style="width:14px;height:14px"></i> Navigation', idx: 18 },
+        { label: '<i data-lucide="credit-card" style="width:14px;height:14px"></i> Crédits', idx: 0 },
+        { label: '<i data-lucide="truck" style="width:14px;height:14px"></i> Commandes', idx: 6 },
+        { label: '<i data-lucide="package" style="width:14px;height:14px"></i> Stocks', idx: 5 },
+        { label: '<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Retours', idx: 19 },
+        { label: '<i data-lucide="bar-chart-2" style="width:14px;height:14px"></i> Statistiques', idx: 10 },
+        { label: '<i data-lucide="shield" style="width:14px;height:14px"></i> Assurance', idx: 2 },
+        { label: '<i data-lucide="cloud-sync" style="width:14px;height:14px"></i> Synchro', idx: 12 },
     ];
     acts.innerHTML = quickTopics.map(t => 
         `<button class="support-btn" onclick="askByIndex(${t.idx})">${t.label}</button>`
@@ -598,9 +670,9 @@ const CONVERSATIONS = [
     {
         triggers: ['bonjour', 'bonsoir', 'salut', 'hello', 'hi', 'hey', 'coucou', 'yo'],
         responses: [
-            "Bonjour {name} ! 😊 Comment puis-je vous aider aujourd'hui ? N'hésitez pas à me poser une question ou cliquez sur un sujet ci-dessous !",
-            "Salut {name} ! 👋 Ravie de vous revoir ! Que puis-je faire pour vous ?",
-            "Bonjour {name} ! 🌟 Je suis Naomie, votre assistante. Dites-moi ce dont vous avez besoin !",
+            "Bonjour {name}. Comment puis-je vous assister dans l'utilisation d'OrdiveX aujourd'hui ?",
+            "Ravi de vous retrouver, {name}. Que puis-je analyser ou expliquer pour vous ?",
+            "Bonjour {name}. Je suis Naomie. Indiquez-moi le module ou l'action pour lequel vous avez besoin d'aide.",
         ]
     },
     {
@@ -814,7 +886,7 @@ window.submitFreeQuestion = function() {
     const typingId = 'typing-' + Date.now();
 
     setTimeout(() => {
-        body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot" style="color:#888;">Naomie réfléchit...</div>`;
+        body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
         body.scrollTop = body.scrollHeight;
         const delay = 600 + Math.random() * 500;
         setTimeout(() => {
@@ -876,7 +948,8 @@ function askQuestion(text, faqEntry) {
 
     const typingId = 'typing-' + Date.now();
     setTimeout(() => {
-        body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot" style="color:#888;">Naomie rédige...</div>`;        body.scrollTop = body.scrollHeight;
+        body.innerHTML += `<div id="${typingId}" class="chat-bubble chat-bot"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+        body.scrollTop = body.scrollHeight;
         
         // Délai réaliste variant entre 800ms et 1500ms
         const delay = 800 + Math.random() * 700;

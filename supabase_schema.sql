@@ -752,4 +752,5 @@ DROP POLICY IF EXISTS "allow_insert_push" ON push_tracking;
 CREATE POLICY "allow_insert_push" ON push_tracking FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "allow_select_admin_push" ON push_tracking;
 CREATE POLICY "allow_select_admin_push" ON push_tracking FOR SELECT USING (true);
-
+-- Sans cette colonne, impossible de savoir si "quantité: 2" signifie 2 boîtes ou 2 comprimés 
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "saleMode" TEXT DEFAULT 'box';
