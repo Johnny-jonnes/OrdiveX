@@ -587,15 +587,45 @@ const FAQ_DATABASE = [
         question: 'Comment voir les mouvements de stock ?',
         answer: "Dans **Gestion des Stocks**, cliquez sur un produit puis sur **« Mouvements »** :\n\nVous verrez toutes les entrées et sorties :\n📥 **Entrée** — Réception fournisseur, ajustement inventaire\n📤 **Sortie** — Vente, perte, destruction\n🔄 **Ajustement** — Correction manuelle après inventaire\n\nChaque mouvement indique la date, l'utilisateur et la raison. C'est votre traçabilité complète pour les contrôles ! 📋"
     },
+    {
+        keywords: ['impression', 'imprimer', 'rapport', 'centre', 'pdf', 'document', 'inventaire'],
+        question: 'Comment utiliser le Centre d\'Impression ?',
+        answer: "Accédez au **Centre d'Impression** depuis le menu. Vous disposez de plusieurs types de documents :\\n\\n▪ **Inventaire de Stock** — Rapport complet paginé avec valeurs d'achat/vente, synthèse des ruptures et stocks bas\\n▪ **Rapport de Caisse** — Récapitulatif des encaissements journaliers par mode de paiement\\n▪ **Facture / Ticket** — Accessible depuis l'Historique des Ventes pour chaque transaction\\n▪ **PV de Destruction** — Procès-verbal réglementaire DNPM depuis le module Traçabilité\\n▪ **Ordonnance** — Impression officielle avec posologie et prescripteur\\n\\nLes rapports de stock sont **paginés automatiquement** (500 produits par page) pour garantir la fluidité même avec 100 000+ références."
+    },
+    {
+        keywords: ['traçabilité', 'pharmacovigilance', 'audit', 'journal', 'destruction', 'dnpm', 'contrôle'],
+        question: 'Comment fonctionne la traçabilité ?',
+        answer: "Le module **Traçabilité & Pharmacovigilance** assure la conformité réglementaire :\\n\\n▪ **Journal d'Audit** — Chaque action (vente, modification, suppression) est horodatée avec l'utilisateur responsable\\n▪ **Destruction de lots** — Procédure officielle avec PV imprimable : motif, méthode, témoins, date\\n▪ **Déclarations de pharmacovigilance** — Signalement d'effets indésirables avec rapport DNPM\\n▪ **Suivi des lots** — Traçabilité complète lot par lot depuis la réception jusqu'à la dispensation\\n\\nTous les PV sont imprimables et conformes aux exigences de l'Inspection Pharmaceutique."
+    },
+    {
+        keywords: ['kpi', 'pilotage', 'business', 'intelligence', 'bénéfice', 'chiffre', 'affaires', 'ca net', 'rotation'],
+        question: 'Comment analyser mes KPIs Business Intelligence ?',
+        answer: "Le module **Business Intelligence** offre une consolidation financière complète :\\n\\n▪ **Bénéfice Brut Total** — Vue instantanée de votre rentabilité\\n▪ **CA Net Cumulé** — Chiffre d'affaires après retours\\n▪ **Marge Globale** — Pourcentage de marge sur coût d'achat\\n▪ **Panier Moyen** — Dépense moyenne par transaction\\n▪ **Rotation Stock** — Vitesse d'écoulement de vos produits\\n▪ **Santé Stock** — Pourcentage de références disponibles\\n▪ **Taux de Recouvrement** — Suivi des créances\\n\\nAccessible via le menu **Pilotage** ou **Métriques Business**. Export CSV disponible pour la comptabilité."
+    },
+    {
+        keywords: ['mobile', 'téléphone', 'smartphone', 'tablette', 'responsive', 'tactile'],
+        question: 'Comment utiliser OrdiveX sur mobile ?',
+        answer: "OrdiveX est une **Progressive Web App** (PWA) installable :\\n\\n▪ **Installation** — Ouvrez l'app dans Chrome, puis touchez « Ajouter à l'écran d'accueil »\\n▪ **Interface tactile** — Tous les boutons font 44px minimum, optimisés pour le tactile\\n▪ **Menu mobile** — Accessible via l'icône ☰ en haut à gauche\\n▪ **POS mobile** — Scan code-barres via la caméra du téléphone\\n▪ **Mode hors-ligne** — Fonctionne à 100% sans internet\\n\\nLa synchronisation avec le PC se fait automatiquement via le cloud quand internet est disponible."
+    },
+    {
+        keywords: ['thème', 'sombre', 'dark', 'clair', 'mode', 'nuit', 'couleur', 'apparence'],
+        question: 'Comment activer le thème sombre ?',
+        answer: "Cliquez sur l'icône **lune** dans la barre supérieure de l'application.\\n\\n▪ **Mode clair** — Fond blanc, texte sombre (idéal en journée)\\n▪ **Mode sombre** — Fond bleu nuit, texte clair (confort visuel la nuit)\\n\\nLe choix est sauvegardé automatiquement. La prochaine fois que vous ouvrez l'application, votre préférence sera conservée."
+    },
+    {
+        keywords: ['fefo', 'fifo', 'premier', 'périmé', 'sort', 'lot', 'priorité', 'expiration', 'protocole'],
+        question: 'Comment fonctionne le protocole FEFO ?',
+        answer: "Le protocole **FEFO** (First Expired, First Out) est appliqué **automatiquement** par OrdiveX :\\n\\n▪ À chaque vente, le système sélectionne le lot dont la **date d'expiration est la plus proche**\\n▪ Cela réduit le gaspillage et les pertes liées aux péremptions\\n▪ Différent du FIFO (First In, First Out) qui se base sur la date d'entrée\\n\\nVous n'avez rien à configurer : le FEFO est activé par défaut sur tous les produits avec gestion de lots."
+    },
 ];
 
 const GREETINGS = [
-    "Bien sûr ! Voici ce que je peux vous dire :",
-    "Excellente question ! 😊",
-    "Avec plaisir, voici la réponse :",
-    "Je vais vous expliquer ça tout de suite 👇",
-    "Bonne question ! Voici comment faire :",
-    "Je suis là pour ça ! Voici l'info :",
+    "Bien sûr, voici les informations demandées :",
+    "Voici la procédure à suivre :",
+    "Je vous accompagne sur ce point :",
+    "Voici la réponse à votre question :",
+    "Permettez-moi de vous expliquer :",
+    "Voici ce que je peux vous indiquer :",
 ];
 
 function getGreeting() {
@@ -642,10 +672,10 @@ function showQuickOptions() {
         { label: '<i data-lucide="credit-card" style="width:14px;height:14px"></i> Crédits', idx: 0 },
         { label: '<i data-lucide="truck" style="width:14px;height:14px"></i> Commandes', idx: 6 },
         { label: '<i data-lucide="package" style="width:14px;height:14px"></i> Stocks', idx: 5 },
-        { label: '<i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Retours', idx: 19 },
-        { label: '<i data-lucide="bar-chart-2" style="width:14px;height:14px"></i> Statistiques', idx: 10 },
+        { label: '<i data-lucide="printer" style="width:14px;height:14px"></i> Impression', idx: 22 },
+        { label: '<i data-lucide="bar-chart-2" style="width:14px;height:14px"></i> KPIs', idx: 24 },
         { label: '<i data-lucide="shield" style="width:14px;height:14px"></i> Assurance', idx: 2 },
-        { label: '<i data-lucide="cloud-sync" style="width:14px;height:14px"></i> Synchro', idx: 12 },
+        { label: '<i data-lucide="cloud" style="width:14px;height:14px"></i> Synchro', idx: 12 },
     ];
     acts.innerHTML = quickTopics.map(t => 
         `<button class="support-btn" onclick="askByIndex(${t.idx})">${t.label}</button>`
@@ -864,25 +894,28 @@ function matchConversation(input) {
 window.submitFreeQuestion = function() {
     const input = document.getElementById('support-free-input');
     if (!input || !input.value.trim()) return;
-    const text = input.value.trim();
+    const rawText = input.value.trim();
     input.value = '';
+
+    // Sanitize user input to prevent XSS (security rule: never innerHTML with user content)
+    const safeText = rawText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     const body = document.getElementById('support-chat-body');
     if (!body) return;
     const oldActs = body.querySelectorAll('.support-actions');
     oldActs.forEach(e => e.remove());
-    body.innerHTML += `<div class="chat-bubble chat-user">${text}</div>`;
+    body.innerHTML += `<div class="chat-bubble chat-user">${safeText}</div>`;
     body.scrollTop = body.scrollHeight;
 
-    // 1. Chercher dans la FAQ
-    const match = matchFAQ(text);
+    // 1. Chercher dans la FAQ (use raw text for matching, safe text for display)
+    const match = matchFAQ(rawText);
     if (match) {
-        askQuestion(text, match);
+        askQuestion(safeText, match);
         return;
     }
 
     // 2. Chercher dans la conversation naturelle
-    const convReply = matchConversation(text);
+    const convReply = matchConversation(rawText);
     const typingId = 'typing-' + Date.now();
 
     setTimeout(() => {
@@ -928,7 +961,7 @@ window.submitFreeQuestion = function() {
                     'sales': 'Vous êtes dans l\'<strong>Historique des Ventes</strong>. Besoin d\'aide pour encaisser une dette ou faire un retour ?',
                 };
                 const hint = pageHints[page] || 'Dites-moi ce que vous cherchez à faire, et je vous guiderai !';
-                body.innerHTML += `<div class="chat-bubble chat-bot">Hmm, je n'ai pas trouvé de réponse exacte à "<strong>${text}</strong>", ${name}. 🤔<br><br>${hint}<br><br>Vous pouvez aussi :<br>• Reformuler avec un mot-clé (<strong>stock</strong>, <strong>crédit</strong>, <strong>commande</strong>...)<br>• Cliquer un sujet ci-dessous<br>• Contacter le support humain via WhatsApp 👇</div>`;
+                body.innerHTML += `<div class="chat-bubble chat-bot">Hmm, je n'ai pas trouvé de réponse exacte à "<strong>${safeText}</strong>", ${name}. 🤔<br><br>${hint}<br><br>Vous pouvez aussi :<br>• Reformuler avec un mot-clé (<strong>stock</strong>, <strong>crédit</strong>, <strong>commande</strong>...)<br>• Cliquer un sujet ci-dessous<br>• Contacter le support humain via WhatsApp 👇</div>`;
                 setTimeout(() => showQuickOptions(), 400);
             }
             body.scrollTop = body.scrollHeight;

@@ -118,3 +118,7 @@ if (!apiUrl) throw new Error('NEXT_PUBLIC_API_URL manquante')
 | 2026-04-21 | Lazy-loading des lots dans le POS | Les lots FEFO ne sont plus chargés au démarrage mais uniquement lors de la validation d'une vente |
 | 2026-04-21 | Debounce 250ms sur la recherche POS | Évite de filtrer 100k produits à chaque frappe de touche |
 | 2026-04-21 | `restoreFromBackup` via `dbBulkPut` par chunks de 10k | Remplace l'ancien import unitaire qui crashait à 9303 éléments |
+| 2026-04-25 | Connection Resilience Engine (debounce 5s + backoff exponentiel) | Empêche les boucles online/offline et les reconnexions WebSocket en rafale |
+| 2026-04-25 | Cooldown 30s sur le WebSocket realtime | Évite les tentatives de reconnexion en boucle qui saturent les logs |
+| 2026-04-25 | Pagination impression stock (500 items/page) | L'ancien rapport chargeait 100k lignes HTML d'un coup, crash navigateur |
+| 2026-04-25 | Sanitisation XSS dans le chatbot Naomie | `innerHTML` avec contenu utilisateur → échappement HTML systématique |

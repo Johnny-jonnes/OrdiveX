@@ -113,6 +113,10 @@ WHERE schemaname = 'public' AND rowsecurity = false;
 | 2026-04-17 | Erreur SQL `syntax error near TABLE` dans supabase_schema.sql | Fragment de code `CREATE TABLE pull_tracking` coupé en deux par erreur d'insertion |
 | 2026-04-21 | POS freeze avec 100k produits (crash navigateur) | Pagination à 100 + debounce recherche 250ms + lazy-load des lots |
 | 2026-04-21 | Restauration backup bloquée à 9303 éléments | `restoreFromBackup` réécrit avec `dbBulkPut` par chunks de 10 000 |
+| 2026-04-25 | Boucle infinie online/offline (logs répétés ×20) | Debounce 5s + backoff exponentiel + déduplication des logs |
+| 2026-04-25 | WebSocket reconnexion en rafale après coupure | Cooldown 30s sur `_setupRealtime` + retrait du reconnect dans `getSupabaseClient` |
+| 2026-04-25 | Impression stock crash avec 100k produits | Pagination à 500 items/page avec CSS `page-break-after` |
+| 2026-04-25 | XSS potentiel dans le chatbot Naomie | Sanitisation HTML (`&<>"`) sur l'input utilisateur avant `innerHTML` |
 
 ---
 
@@ -130,3 +134,7 @@ WHERE schemaname = 'public' AND rowsecurity = false;
 | 2026-04-21 | Pagination universelle à 100 (POS, Produits, Stock, Patients, Ventes, Rx, Fournisseurs) | `✅ Done` |
 | 2026-04-21 | Guide utilisateur téléchargeable en PDF + smooth scroll | `✅ Done` |
 | 2026-04-21 | Générateur de données massives (100k produits + 30k patients + stocks) | `✅ Done` |
+| 2026-04-25 | Connection Resilience Engine (debounce + backoff + cooldown) | `✅ Done` |
+| 2026-04-25 | Pagination impression stock (500/page + page résumé) | `✅ Done` |
+| 2026-04-25 | Naomie FAQ : +6 sujets (impression, traçabilité, BI, mobile, thème, FEFO) | `✅ Done` |
+| 2026-04-25 | Sécurité XSS chatbot Naomie (sanitisation input) | `✅ Done` |

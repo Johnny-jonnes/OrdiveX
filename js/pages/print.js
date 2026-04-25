@@ -164,48 +164,97 @@ const PrintEngine = {
     const stockMap = {};
     stockAll.forEach(s => { stockMap[s.productId] = s.quantity; });
 
+    // ── Pagination : 500 produits par page pour éviter le crash navigateur ──
+    const PAGE_SIZE = 500;
+    const totalPages = Math.ceil(products.length / PAGE_SIZE);
+    const totalValAchat = products.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.purchasePrice || 0), 0);
+    const totalValVente = products.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.salePrice || 0), 0);
+    const totalRuptures = products.filter(p => (stockMap[p.id] || 0) === 0).length;
+    const totalStockBas = products.filter(p => { const q = stockMap[p.id] || 0; return q > 0 && q <= (p.minStock || 0); }).length;
+
     const win = this._openPrintWindow('Inventaire de Stock');
+    win.document.write(this._printStyles());
+
+    // ── Page de résumé ──
     win.document.write(`
-      ${this._printStyles()}
-      <div class="report-container">
+      <div class="report-container" style="page-break-after:always;">
         ${this.header('RAPPORT D\'INVENTAIRE')}
-        <h3>Inventaire des Stocks au ${new Date().toLocaleDateString('fr-FR')}</h3>
-        <table class="report-table">
-          <thead>
-            <tr><th>Code</th><th>Désignation</th><th>Catégorie</th><th>Stock</th><th>Valeur achat</th><th>Valeur vente</th><th>Prochaine exp.</th></tr>
-          </thead>
+        <h3>Synthèse au ${new Date().toLocaleDateString('fr-FR')}</h3>
+        <table class="report-table" style="max-width:500px;">
           <tbody>
-            ${products.map(p => {
-      const qty = stockMap[p.id] || 0;
-      const prodLots = lots.filter(l => l.productId === p.id && l.status === 'active').sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-      const nearestExpiry = prodLots[0]?.expiryDate;
-      return `<tr ${qty === 0 ? 'class="row-zero"' : qty <= p.minStock ? 'class="row-low"' : ''}>
-                <td>${p.code}</td>
-                <td><strong>${p.name}</strong><br><small>${p.dci || ''}</small></td>
-                <td>${p.category}</td>
-                <td class="text-center ${qty === 0 ? 'text-danger' : qty <= p.minStock ? 'text-warning' : ''}">${qty}</td>
-                <td>${UI.formatCurrency(qty * (p.purchasePrice || 0))}</td>
-                <td>${UI.formatCurrency(qty * (p.salePrice || 0))}</td>
-                <td>${nearestExpiry ? UI.formatDate(nearestExpiry) : '—'}</td>
-              </tr>`;
-    }).join('')}
+            <tr><td><strong>Nombre total de références</strong></td><td><strong>${products.length.toLocaleString()}</strong></td></tr>
+            <tr><td><strong>Ruptures de stock</strong></td><td class="text-danger"><strong>${totalRuptures.toLocaleString()}</strong></td></tr>
+            <tr><td><strong>Stock bas</strong></td><td class="text-warning"><strong>${totalStockBas.toLocaleString()}</strong></td></tr>
+            <tr><td><strong>Valeur totale d'achat</strong></td><td><strong>${UI.formatCurrency(totalValAchat)}</strong></td></tr>
+            <tr><td><strong>Valeur totale de vente</strong></td><td><strong>${UI.formatCurrency(totalValVente)}</strong></td></tr>
+            <tr><td><strong>Gain potentiel</strong></td><td style="color:#27ae60"><strong>${UI.formatCurrency(totalValVente - totalValAchat)}</strong></td></tr>
           </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="4"><strong>TOTAUX</strong></td>
-              <td><strong>${UI.formatCurrency(products.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.purchasePrice || 0), 0))}</strong></td>
-              <td><strong>${UI.formatCurrency(products.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.salePrice || 0), 0))}</strong></td>
-              <td></td>
-            </tr>
-          </tfoot>
         </table>
-        <div class="report-legend">
+        <div class="report-legend" style="margin-top:20px;">
           <span class="legend-item"><span class="legend-box row-low"></span> Stock bas</span>
           <span class="legend-item"><span class="legend-box row-zero"></span> Rupture de stock</span>
         </div>
+        <p style="margin-top:20px;font-size:11px;color:#666;">Ce rapport contient ${totalPages} page(s) de détail (${PAGE_SIZE} produits par page).</p>
+      </div>
+    `);
+
+    // ── Pages de détail paginées ──
+    for (let page = 0; page < totalPages; page++) {
+      const start = page * PAGE_SIZE;
+      const end = Math.min(start + PAGE_SIZE, products.length);
+      const pageProducts = products.slice(start, end);
+      const isLastPage = page === totalPages - 1;
+
+      win.document.write(`
+        <div class="report-container" ${!isLastPage ? 'style="page-break-after:always;"' : ''}>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #1B4F72;padding-bottom:8px;">
+            <span style="font-size:13px;font-weight:bold;color:#1B4F72;">${this.pharmacyInfo.name} — Inventaire</span>
+            <span style="font-size:11px;color:#666;">Page ${page + 2} / ${totalPages + 1} — Produits ${(start + 1).toLocaleString()} à ${end.toLocaleString()}</span>
+          </div>
+          <table class="report-table">
+            <thead>
+              <tr><th>#</th><th>Désignation</th><th>Catégorie</th><th>Stock</th><th>Val. achat</th><th>Val. vente</th><th>Exp.</th></tr>
+            </thead>
+            <tbody>
+              ${pageProducts.map((p, i) => {
+                const qty = stockMap[p.id] || 0;
+                const prodLots = lots.filter(l => l.productId === p.id && l.status === 'active').sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+                const nearestExpiry = prodLots[0]?.expiryDate;
+                return `<tr ${qty === 0 ? 'class="row-zero"' : qty <= p.minStock ? 'class="row-low"' : ''}>
+                  <td>${start + i + 1}</td>
+                  <td><strong>${p.name}</strong>${p.dci ? '<br><small>' + p.dci + '</small>' : ''}</td>
+                  <td>${p.category || '—'}</td>
+                  <td class="text-center ${qty === 0 ? 'text-danger' : qty <= p.minStock ? 'text-warning' : ''}">${qty}</td>
+                  <td>${UI.formatCurrency(qty * (p.purchasePrice || 0))}</td>
+                  <td>${UI.formatCurrency(qty * (p.salePrice || 0))}</td>
+                  <td>${nearestExpiry ? UI.formatDate(nearestExpiry) : '—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `);
+    }
+
+    // ── Page finale avec totaux et signature ──
+    win.document.write(`
+      <div class="report-container">
+        <table class="report-table" style="max-width:400px;margin-top:20px;">
+          <tfoot>
+            <tr>
+              <td><strong>TOTAL Valeur Achat</strong></td>
+              <td><strong>${UI.formatCurrency(totalValAchat)}</strong></td>
+            </tr>
+            <tr>
+              <td><strong>TOTAL Valeur Vente</strong></td>
+              <td><strong>${UI.formatCurrency(totalValVente)}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
         ${this.footer()}
       </div>
     `);
+
     win.document.close();
     win.onload = () => win.print();
   },
