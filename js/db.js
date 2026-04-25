@@ -110,31 +110,48 @@ async function getSupabaseClient() {
     // Ne PAS relancer le realtime ici à chaque appel — c'est géré par le reconnect handler
     return _supabaseInstance;
   }
+
+  // Guard : ne pas créer le client si hors-ligne (évite 300+ erreurs de retry token)
+  if (!navigator.onLine) return null;
+
   try {
     const settings = await dbGetAll('settings');
     const url = settings.find(s => s.key === 'supabase_url')?.value;
     const key = settings.find(s => s.key === 'supabase_key')?.value;
     
     if (url && key && window.supabase) {
-      _supabaseInstance = window.supabase.createClient(url.trim(), key.trim());
+      _supabaseInstance = window.supabase.createClient(url.trim(), key.trim(), {
+        auth: {
+          autoRefreshToken: navigator.onLine,
+          detectSessionInUrl: false,
+          persistSession: true,
+        }
+      });
+      
+      // Stopper immédiatement l'auto-refresh si hors-ligne
+      if (!navigator.onLine && _supabaseInstance.auth?.stopAutoRefresh) {
+        _supabaseInstance.auth.stopAutoRefresh();
+      }
       
       // Auto-Login Anonyme pour satisfaire la politique stricte de RLS (auth.uid() IS NOT NULL)
-      try {
-        const { data: { session } } = await _supabaseInstance.auth.getSession();
-        if (!session && _supabaseInstance.auth.signInAnonymously) {
-           await _supabaseInstance.auth.signInAnonymously();
+      if (navigator.onLine) {
+        try {
+          const { data: { session } } = await _supabaseInstance.auth.getSession();
+          if (!session && _supabaseInstance.auth.signInAnonymously) {
+             await _supabaseInstance.auth.signInAnonymously();
+          }
+        } catch(e) {
+          // Silencieux en mode offline
         }
-      } catch(e) {
-        console.warn('[Flash] Sécurité: Échec du login anonyme', e);
       }
 
-      if (AppState.isOnline) _setupRealtime(_supabaseInstance);
+      if (navigator.onLine) _setupRealtime(_supabaseInstance);
       return _supabaseInstance;
     } else {
-      console.warn('[Flash] Clés Supabase manquantes. Veuillez utiliser un Magic Link pour configurer l\'accès.');
+      _logOnce('warn', '[Flash] Clés Supabase manquantes.');
     }
   } catch (e) {
-    console.error('[Flash] Error initializing Supabase client:', e);
+    // Silencieux si réseau indisponible
   }
   return null;
 }
@@ -1052,24 +1069,17 @@ async function syncToSupabase() {
  */
 let _isPulling = false;
 async function pullFromSupabase(isManual = false) {
-  if (_isPulling) {
-    console.log('[Flash] Pull déjà en cours, ignoré');
-    return;
-  }
+  // Guard strict : ne rien tenter si hors-ligne
+  if (!navigator.onLine) return;
+  if (_isPulling) return;
   _isPulling = true;
   let hasChanges = false;
   let totalItemsPulled = 0;
   try {
     const sb = await getSupabaseClient();
-    if (!sb) {
-      console.warn('[Flash] Pull annulé: pas de client Supabase');
-      return;
-    }
-    if (!navigator.onLine) {
-      console.warn('[Flash] Pull annulé: hors ligne');
-      return;
-    }
-    console.log('[Flash] 🔄 Pull démarré...');
+    if (!sb) return;
+    if (!navigator.onLine) return;
+    _logOnce('log', '[Flash] Pull démarré...');
 
     const storesToPull = [
       'users', 'settings',
@@ -1465,32 +1475,61 @@ async function restoreFromBackup(backupData) {
 }
 
 function resetSupabaseClient() {
+  if (_supabaseInstance) {
+    try { _supabaseInstance.auth?.stopAutoRefresh(); } catch(e) {}
+    try { if (_realtimeSubscription) { _supabaseInstance.removeChannel(_realtimeSubscription).catch(()=>{}); _realtimeSubscription = null; } } catch(e) {}
+  }
   _supabaseInstance = null;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// GLOBAL ERROR HANDLERS — Protection contre les crashes silencieux
+// PRODUCTION ERROR SILENCER — Console propre pour le déploiement
+// Filtre les erreurs réseau de supabase.min.js qui polluent la console
 // ═══════════════════════════════════════════════════════════════════
+(function() {
+  const _origError = console.error;
+  const _origWarn = console.warn;
+  const _networkPatterns = [
+    'ERR_INTERNET_DISCONNECTED', 'Failed to fetch', 'NetworkError',
+    'net::ERR_', 'refresh_token', 'WebSocket connection',
+    'AuthRetryableFetchError', 'was not released within',
+    'Lock "lock:sb-', 'Forcefully acquiring'
+  ];
+  function _isNetworkNoise() {
+    var args = Array.prototype.slice.call(arguments);
+    var str = args.join(' ');
+    for (var i = 0; i < _networkPatterns.length; i++) {
+      if (str.indexOf(_networkPatterns[i]) !== -1) return true;
+    }
+    return false;
+  }
+  console.error = function() {
+    if (_isNetworkNoise.apply(null, arguments)) return;
+    _origError.apply(console, arguments);
+  };
+  console.warn = function() {
+    if (_isNetworkNoise.apply(null, arguments)) return;
+    _origWarn.apply(console, arguments);
+  };
+})();
+
 window.addEventListener('error', function(event) {
-  // Silencer les erreurs réseau (hors-ligne)
-  const msg = event.message || '';
-  if (msg.includes('ERR_INTERNET_DISCONNECTED') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_')) return;
-  console.error('[GLOBAL ERROR]', msg, event.filename, event.lineno);
-  // Ne pas afficher de toast pour les erreurs de scripts externes (CDN)
-  if (event.filename && !event.filename.includes(location.hostname) && !event.filename.includes('localhost')) return;
+  var msg = event.message || '';
+  if (msg.indexOf('ERR_INTERNET') !== -1 || msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('NetworkError') !== -1 || msg.indexOf('net::ERR_') !== -1) return;
+  // Ne pas afficher de toast pour les erreurs de scripts externes (CDN/Supabase)
+  if (event.filename && (event.filename.indexOf('supabase') !== -1 || (!event.filename.includes(location.hostname) && !event.filename.includes('localhost')))) return;
   if (window.UI && UI.toast) {
     UI.toast('Erreur système détectée — L\'application continue de fonctionner', 'warning', 3000);
   }
 });
 
 window.addEventListener('unhandledrejection', function(event) {
-  const msg = String(event.reason?.message || event.reason || '');
-  // Silencer les erreurs réseau et ServiceWorker (hors-ligne) — comportement normal en PWA
-  if (msg.includes('ERR_INTERNET_DISCONNECTED') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_') || msg.includes('refresh_token') || msg.includes('ServiceWorker') || msg.includes('service worker') || msg.includes('An unknown error occurred')) {
+  var msg = String(event.reason?.message || event.reason || '');
+  // Silencer TOUTES les erreurs réseau, auth, et ServiceWorker — comportement normal en PWA offline
+  if (msg.indexOf('ERR_INTERNET') !== -1 || msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('NetworkError') !== -1 || msg.indexOf('net::ERR_') !== -1 || msg.indexOf('refresh_token') !== -1 || msg.indexOf('ServiceWorker') !== -1 || msg.indexOf('service worker') !== -1 || msg.indexOf('An unknown error') !== -1 || msg.indexOf('AuthRetryable') !== -1 || msg.indexOf('Lock') !== -1) {
     event.preventDefault();
     return;
   }
-  console.error('[UNHANDLED PROMISE]', event.reason);
   event.preventDefault();
 });
 
