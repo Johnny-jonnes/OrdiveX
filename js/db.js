@@ -4,6 +4,30 @@
  * Handles all local data persistence with sync queue
  */
 
+// ═══════════════════════════════════════════════════════════════════
+// PRODUCTION ERROR SILENCER — DOIT ÊTRE TOUT EN HAUT pour intercepter
+// les erreurs dès le chargement des scripts (avant supabase.min.js)
+// ═══════════════════════════════════════════════════════════════════
+(function() {
+  var _origError = console.error;
+  var _origWarn = console.warn;
+  var _patterns = [
+    'ERR_INTERNET', 'Failed to fetch', 'NetworkError', 'net::ERR_',
+    'refresh_token', 'WebSocket connection', 'AuthRetryable',
+    'was not released within', 'Lock "lock:sb-', 'Forcefully acquiring',
+    'Failed to load resource', 'FetchEvent', 'Failed to convert'
+  ];
+  function _isNoise(args) {
+    var s = Array.prototype.join.call(args, ' ');
+    for (var i = 0; i < _patterns.length; i++) {
+      if (s.indexOf(_patterns[i]) !== -1) return true;
+    }
+    return false;
+  }
+  console.error = function() { if (!_isNoise(arguments)) _origError.apply(console, arguments); };
+  console.warn = function() { if (!_isNoise(arguments)) _origWarn.apply(console, arguments); };
+})();
+
 const DB_NAME = 'OrdiveXDB';
 const DB_VERSION = 2;
 
@@ -114,18 +138,20 @@ function _getBackoffDelay() {
 }
 
 async function getSupabaseClient() {
-  // Guard absolu : ne RIEN retourner si hors-ligne
-  // Empêche Supabase de lancer des requêtes réseau (token refresh, etc.)
+  // Guard 1 : navigator.onLine
   if (!navigator.onLine) {
-    // Stopper l'auto-refresh si l'instance existe déjà
-    if (_supabaseInstance?.auth?.stopAutoRefresh) {
-      try { _supabaseInstance.auth.stopAutoRefresh(); } catch(e) {}
-    }
+    if (_supabaseInstance) { try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch(e) {} _supabaseInstance = null; }
     return null;
   }
 
-  if (_supabaseInstance) {
-    return _supabaseInstance;
+  if (_supabaseInstance) return _supabaseInstance;
+
+  // Guard 2 : probe réseau réel (navigator.onLine peut mentir)
+  try {
+    var probe = await fetch(location.href, { method: 'HEAD', cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined });
+    if (!probe.ok) throw new Error('offline');
+  } catch(e) {
+    return null; // Internet pas réellement disponible
   }
 
   try {
@@ -136,37 +162,24 @@ async function getSupabaseClient() {
     if (url && key && window.supabase) {
       _supabaseInstance = window.supabase.createClient(url.trim(), key.trim(), {
         auth: {
-          autoRefreshToken: navigator.onLine,
+          autoRefreshToken: true,
           detectSessionInUrl: false,
           persistSession: true,
         }
       });
       
-      // Stopper immédiatement l'auto-refresh si hors-ligne
-      if (!navigator.onLine && _supabaseInstance.auth?.stopAutoRefresh) {
-        _supabaseInstance.auth.stopAutoRefresh();
-      }
-      
-      // Auto-Login Anonyme pour satisfaire la politique stricte de RLS (auth.uid() IS NOT NULL)
-      if (navigator.onLine) {
-        try {
-          const { data: { session } } = await _supabaseInstance.auth.getSession();
-          if (!session && _supabaseInstance.auth.signInAnonymously) {
-             await _supabaseInstance.auth.signInAnonymously();
-          }
-        } catch(e) {
-          // Silencieux en mode offline
+      // Auto-Login Anonyme pour satisfaire RLS
+      try {
+        const { data: { session } } = await _supabaseInstance.auth.getSession();
+        if (!session && _supabaseInstance.auth.signInAnonymously) {
+           await _supabaseInstance.auth.signInAnonymously();
         }
-      }
+      } catch(e) { /* silencieux */ }
 
-      if (navigator.onLine) _setupRealtime(_supabaseInstance);
+      _setupRealtime(_supabaseInstance);
       return _supabaseInstance;
-    } else {
-      _logOnce('warn', '[Flash] Clés Supabase manquantes.');
     }
-  } catch (e) {
-    // Silencieux si réseau indisponible
-  }
+  } catch (e) { /* silencieux */ }
   return null;
 }
 
@@ -1496,36 +1509,7 @@ function resetSupabaseClient() {
   _supabaseInstance = null;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// PRODUCTION ERROR SILENCER — Console propre pour le déploiement
-// Filtre les erreurs réseau de supabase.min.js qui polluent la console
-// ═══════════════════════════════════════════════════════════════════
-(function() {
-  const _origError = console.error;
-  const _origWarn = console.warn;
-  const _networkPatterns = [
-    'ERR_INTERNET_DISCONNECTED', 'Failed to fetch', 'NetworkError',
-    'net::ERR_', 'refresh_token', 'WebSocket connection',
-    'AuthRetryableFetchError', 'was not released within',
-    'Lock "lock:sb-', 'Forcefully acquiring'
-  ];
-  function _isNetworkNoise() {
-    var args = Array.prototype.slice.call(arguments);
-    var str = args.join(' ');
-    for (var i = 0; i < _networkPatterns.length; i++) {
-      if (str.indexOf(_networkPatterns[i]) !== -1) return true;
-    }
-    return false;
-  }
-  console.error = function() {
-    if (_isNetworkNoise.apply(null, arguments)) return;
-    _origError.apply(console, arguments);
-  };
-  console.warn = function() {
-    if (_isNetworkNoise.apply(null, arguments)) return;
-    _origWarn.apply(console, arguments);
-  };
-})();
+// (Error silencer déplacé en haut du fichier pour intercepter dès le chargement)
 
 window.addEventListener('error', function(event) {
   var msg = event.message || '';

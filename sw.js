@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v8.8.5';
+const CACHE_NAME = 'pharma-cache-v8.8.6';
 const ASSETS = [
   './',
   './index.html',
@@ -108,10 +108,12 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
       }).catch(() => {
-        // Offline and not cached — return offline fallback
+        // Offline and not cached — return proper fallback
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
+          return caches.match('/index.html') || new Response('Offline', { status: 503 });
         }
+        // Pour les fonts, images et autres ressources non-cachées : retourner une réponse vide
+        return new Response('', { status: 503, statusText: 'Offline' });
       });
     })
   );
