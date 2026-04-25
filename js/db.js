@@ -1399,9 +1399,9 @@ function startAutoPull() {
         await pullFromSupabase();
       } catch (e) { }
     }
-    // Pull toutes les 30 min (le WebSocket gère le temps réel, le pull est un filet de sécurité)
-    // Hors ligne : vérifier toutes les 5 min
-    const delay = (!navigator.onLine || AppState.isOnline === false) ? 300000 : 1800000;
+    // Pull toutes les 30 min en ligne (le WebSocket gère le temps réel)
+    // Hors ligne : vérifier toutes les 15 min (économie de ressources sur le long terme)
+    const delay = (!navigator.onLine || AppState.isOnline === false) ? 900000 : 1800000;
     _autoPullTimer = setTimeout(loop, delay); 
   };
   
