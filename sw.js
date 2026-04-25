@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v8.8.6';
+const CACHE_NAME = 'pharma-cache-v8.8.7';
 const ASSETS = [
   './',
   './index.html',
@@ -74,46 +74,53 @@ self.addEventListener('activate', event => {
 
 // Fetch: cache-first strategy
 self.addEventListener('fetch', event => {
-  // 🛡️ ABSORPTION D'ERREUR NATIVE:
-  // Si on est hors ligne, on intercepte TOUTES les requêtes vers Supabase (GET, POST, etc.)
-  // Cela empêche le navigateur d'afficher l'erreur rouge intrafable "net::ERR_INTERNET_DISCONNECTED".
-  if (event.request.url.includes('supabase.co')) {
-    if (!navigator.onLine) {
-      return event.respondWith(
-        new Response(JSON.stringify({ error: "Offline mode", message: "Network disconnected" }), {
-          status: 503,
-          statusText: "Service Unavailable",
-          headers: { 'Content-Type': 'application/json' }
-        })
-      );
-    }
-    // S'il est en ligne, on laisse passer vers le backend natif
+  const url = event.request.url;
+
+  // 🛡️ REQUÊTES EXTERNES (Supabase, fonts, CDN)
+  // On ESSAIE le réseau et on rattrape silencieusement si ça échoue
+  // Cela élimine les erreurs rouges même quand navigator.onLine ment
+  if (!url.startsWith(self.location.origin)) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          // Cacher les fonts pour la prochaine fois
+          if (response.ok && (url.includes('fonts.g') || url.endsWith('.woff2'))) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          }
+          return response;
+        }).catch(() => {
+          // Réseau indisponible → réponse silencieuse selon le type
+          if (url.includes('fonts.g') || url.endsWith('.woff2') || url.endsWith('.woff')) {
+            return new Response('', { status: 200, headers: { 'Content-Type': 'font/woff2' } });
+          }
+          return new Response(JSON.stringify({ data: null, error: 'offline' }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+          });
+        });
+      })
+    );
     return;
   }
 
   // Skip non-GET and chrome-extension for normal caching
   if (event.request.method !== 'GET') return;
-  if (event.request.url.startsWith('chrome-extension')) return;
+  if (url.startsWith('chrome-extension')) return;
 
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
-
-      // Not in cache — try network
       return fetch(event.request).then(response => {
         if (!response || response.status !== 200 || response.type === 'opaque') return response;
-
-        // Cache the new resource
         const clone = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         return response;
       }).catch(() => {
-        // Offline and not cached — return proper fallback
         if (event.request.mode === 'navigate') {
           return caches.match('/index.html') || new Response('Offline', { status: 503 });
         }
-        // Pour les fonts, images et autres ressources non-cachées : retourner une réponse vide
-        return new Response('', { status: 503, statusText: 'Offline' });
+        return new Response('', { status: 200 });
       });
     })
   );

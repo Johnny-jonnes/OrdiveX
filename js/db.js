@@ -138,21 +138,13 @@ function _getBackoffDelay() {
 }
 
 async function getSupabaseClient() {
-  // Guard 1 : navigator.onLine
+  // Guard strict : ne rien faire si hors-ligne
   if (!navigator.onLine) {
     if (_supabaseInstance) { try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch(e) {} _supabaseInstance = null; }
     return null;
   }
 
   if (_supabaseInstance) return _supabaseInstance;
-
-  // Guard 2 : probe réseau réel (navigator.onLine peut mentir)
-  try {
-    var probe = await fetch(location.href, { method: 'HEAD', cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined });
-    if (!probe.ok) throw new Error('offline');
-  } catch(e) {
-    return null; // Internet pas réellement disponible
-  }
 
   try {
     const settings = await dbGetAll('settings');
