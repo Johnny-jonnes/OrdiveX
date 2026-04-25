@@ -31,6 +31,14 @@ const STORES = {
 let db = null;
 let _supabaseInstance = null;
 
+// Utilitaire : log unique par session (évite le spam de logs identiques)
+const _loggedMessages = new Set();
+function _logOnce(level, msg) {
+  if (_loggedMessages.has(msg)) return;
+  _loggedMessages.add(msg);
+  console[level](msg);
+}
+
 // App state manager
 // Device Identity — ID unique déterministe basé sur l'empreinte du navigateur
 // L'ID reste le MÊME pour le même appareil/navigateur, même si localStorage est vidé
@@ -106,13 +114,19 @@ function _getBackoffDelay() {
 }
 
 async function getSupabaseClient() {
-  if (_supabaseInstance) {
-    // Ne PAS relancer le realtime ici à chaque appel — c'est géré par le reconnect handler
-    return _supabaseInstance;
+  // Guard absolu : ne RIEN retourner si hors-ligne
+  // Empêche Supabase de lancer des requêtes réseau (token refresh, etc.)
+  if (!navigator.onLine) {
+    // Stopper l'auto-refresh si l'instance existe déjà
+    if (_supabaseInstance?.auth?.stopAutoRefresh) {
+      try { _supabaseInstance.auth.stopAutoRefresh(); } catch(e) {}
+    }
+    return null;
   }
 
-  // Guard : ne pas créer le client si hors-ligne (évite 300+ erreurs de retry token)
-  if (!navigator.onLine) return null;
+  if (_supabaseInstance) {
+    return _supabaseInstance;
+  }
 
   try {
     const settings = await dbGetAll('settings');
@@ -1601,14 +1615,12 @@ function _handleConnectivityChange(isOnline) {
       // Mettre en pause Supabase proprement
       if (_supabaseInstance) {
         try {
-          if (_supabaseInstance.auth?.stopAutoRefresh) {
-            _supabaseInstance.auth.stopAutoRefresh();
-          }
+          _supabaseInstance.auth?.stopAutoRefresh?.();
           if (_realtimeSubscription) {
             _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => {});
             _realtimeSubscription = null;
           }
-          _supabaseInstance.realtime?.disconnect();
+          _supabaseInstance.realtime?.disconnect?.();
         } catch (e) {}
       }
     }
