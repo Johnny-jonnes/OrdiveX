@@ -153,8 +153,11 @@ const PrintEngine = {
     win.onload = () => win.print();
   },
 
-  async printStockReport() {
+  async printStockReport(mode) {
+    mode = mode || 'full';
     await this.loadSettings();
+    UI.toast('Préparation du rapport...', 'info');
+
     const [products, stockAll, lots] = await Promise.all([
       DB.dbGetAll('products'),
       DB.dbGetAll('stock'),
@@ -164,99 +167,126 @@ const PrintEngine = {
     const stockMap = {};
     stockAll.forEach(s => { stockMap[s.productId] = s.quantity; });
 
-    // ── Pagination : 500 produits par page pour éviter le crash navigateur ──
-    const PAGE_SIZE = 500;
-    const totalPages = Math.ceil(products.length / PAGE_SIZE);
+    // Pré-calculer la date d'expiration la plus proche par produit
+    const expiryMap = {};
+    const now = new Date();
+    const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    lots.filter(l => l.status === 'active').forEach(l => {
+      if (!expiryMap[l.productId] || new Date(l.expiryDate) < new Date(expiryMap[l.productId])) {
+        expiryMap[l.productId] = l.expiryDate;
+      }
+    });
+
+    // Totaux globaux
     const totalValAchat = products.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.purchasePrice || 0), 0);
     const totalValVente = products.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.salePrice || 0), 0);
-    const totalRuptures = products.filter(p => (stockMap[p.id] || 0) === 0).length;
-    const totalStockBas = products.filter(p => { const q = stockMap[p.id] || 0; return q > 0 && q <= (p.minStock || 0); }).length;
 
-    const win = this._openPrintWindow('Inventaire de Stock');
+    // Filtrer selon le mode
+    let filtered = [];
+    let reportTitle = '';
+    let reportSubtitle = '';
+    const LIMIT = 2000;
+
+    if (mode === 'ruptures') {
+      filtered = products.filter(p => (stockMap[p.id] || 0) === 0);
+      reportTitle = 'RAPPORT DES RUPTURES DE STOCK';
+      reportSubtitle = filtered.length + ' produit(s) en rupture totale';
+    } else if (mode === 'low') {
+      filtered = products.filter(p => { const q = stockMap[p.id] || 0; return q > 0 && q <= (p.minStock || 0); });
+      reportTitle = 'RAPPORT DES STOCKS BAS';
+      reportSubtitle = filtered.length + ' produit(s) sous le seuil minimum';
+    } else if (mode === 'expiring') {
+      filtered = products.filter(p => { const e = expiryMap[p.id]; return e && new Date(e) <= in90Days; })
+        .sort((a, b) => new Date(expiryMap[a.id]) - new Date(expiryMap[b.id]));
+      reportTitle = 'RAPPORT DES EXPIRATIONS PROCHES (90 JOURS)';
+      reportSubtitle = filtered.length + ' produit(s) expirant bientôt';
+    } else {
+      filtered = products;
+      reportTitle = 'RAPPORT D\'INVENTAIRE COMPLET';
+      if (filtered.length > LIMIT) {
+        reportSubtitle = 'Limité aux ' + LIMIT.toLocaleString() + ' premiers produits sur ' + filtered.length.toLocaleString() + '. Utilisez les rapports ciblés.';
+        filtered = filtered.slice(0, LIMIT);
+      } else {
+        reportSubtitle = filtered.length.toLocaleString() + ' produit(s)';
+      }
+    }
+
+    if (filtered.length === 0) {
+      UI.toast('Aucun produit ne correspond à ce filtre.', 'info');
+      return;
+    }
+
+    // Pagination : 200 lignes par page
+    const PAGE_SIZE = 200;
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    const filteredValAchat = filtered.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.purchasePrice || 0), 0);
+    const filteredValVente = filtered.reduce((a, p) => a + (stockMap[p.id] || 0) * (p.salePrice || 0), 0);
+
+    const win = this._openPrintWindow(reportTitle);
     win.document.write(this._printStyles());
+    win.document.write('<style>.row-expiring{background:#fff3e0;}</style>');
 
-    // ── Page de résumé ──
+    // Page de synthèse
     win.document.write(`
       <div class="report-container" style="page-break-after:always;">
-        ${this.header('RAPPORT D\'INVENTAIRE')}
-        <h3>Synthèse au ${new Date().toLocaleDateString('fr-FR')}</h3>
+        ${this.header(reportTitle)}
+        <h3>${reportSubtitle}</h3>
+        <p style="font-size:11px;color:#666;margin-bottom:16px;">${new Date().toLocaleDateString('fr-FR', {weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</p>
         <table class="report-table" style="max-width:500px;">
           <tbody>
-            <tr><td><strong>Nombre total de références</strong></td><td><strong>${products.length.toLocaleString()}</strong></td></tr>
-            <tr><td><strong>Ruptures de stock</strong></td><td class="text-danger"><strong>${totalRuptures.toLocaleString()}</strong></td></tr>
-            <tr><td><strong>Stock bas</strong></td><td class="text-warning"><strong>${totalStockBas.toLocaleString()}</strong></td></tr>
-            <tr><td><strong>Valeur totale d'achat</strong></td><td><strong>${UI.formatCurrency(totalValAchat)}</strong></td></tr>
-            <tr><td><strong>Valeur totale de vente</strong></td><td><strong>${UI.formatCurrency(totalValVente)}</strong></td></tr>
-            <tr><td><strong>Gain potentiel</strong></td><td style="color:#27ae60"><strong>${UI.formatCurrency(totalValVente - totalValAchat)}</strong></td></tr>
+            <tr><td><strong>Produits dans ce rapport</strong></td><td><strong>${filtered.length.toLocaleString()}</strong></td></tr>
+            <tr><td>Total en base</td><td>${products.length.toLocaleString()}</td></tr>
+            <tr><td><strong>Valeur achat (rapport)</strong></td><td><strong>${UI.formatCurrency(filteredValAchat)}</strong></td></tr>
+            <tr><td><strong>Valeur vente (rapport)</strong></td><td><strong>${UI.formatCurrency(filteredValVente)}</strong></td></tr>
+            <tr><td>Valeur achat globale</td><td>${UI.formatCurrency(totalValAchat)}</td></tr>
+            <tr><td>Valeur vente globale</td><td>${UI.formatCurrency(totalValVente)}</td></tr>
           </tbody>
         </table>
         <div class="report-legend" style="margin-top:20px;">
+          <span class="legend-item"><span class="legend-box row-zero"></span> Rupture</span>
           <span class="legend-item"><span class="legend-box row-low"></span> Stock bas</span>
-          <span class="legend-item"><span class="legend-box row-zero"></span> Rupture de stock</span>
+          <span class="legend-item"><span class="legend-box row-expiring"></span> Expiration proche</span>
         </div>
-        <p style="margin-top:20px;font-size:11px;color:#666;">Ce rapport contient ${totalPages} page(s) de détail (${PAGE_SIZE} produits par page).</p>
       </div>
     `);
 
-    // ── Pages de détail paginées ──
-    for (let page = 0; page < totalPages; page++) {
-      const start = page * PAGE_SIZE;
-      const end = Math.min(start + PAGE_SIZE, products.length);
-      const pageProducts = products.slice(start, end);
-      const isLastPage = page === totalPages - 1;
-
-      win.document.write(`
-        <div class="report-container" ${!isLastPage ? 'style="page-break-after:always;"' : ''}>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #1B4F72;padding-bottom:8px;">
-            <span style="font-size:13px;font-weight:bold;color:#1B4F72;">${this.pharmacyInfo.name} — Inventaire</span>
-            <span style="font-size:11px;color:#666;">Page ${page + 2} / ${totalPages + 1} — Produits ${(start + 1).toLocaleString()} à ${end.toLocaleString()}</span>
-          </div>
-          <table class="report-table">
-            <thead>
-              <tr><th>#</th><th>Désignation</th><th>Catégorie</th><th>Stock</th><th>Val. achat</th><th>Val. vente</th><th>Exp.</th></tr>
-            </thead>
-            <tbody>
-              ${pageProducts.map((p, i) => {
-                const qty = stockMap[p.id] || 0;
-                const prodLots = lots.filter(l => l.productId === p.id && l.status === 'active').sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-                const nearestExpiry = prodLots[0]?.expiryDate;
-                return `<tr ${qty === 0 ? 'class="row-zero"' : qty <= p.minStock ? 'class="row-low"' : ''}>
-                  <td>${start + i + 1}</td>
-                  <td><strong>${p.name}</strong>${p.dci ? '<br><small>' + p.dci + '</small>' : ''}</td>
-                  <td>${p.category || '—'}</td>
-                  <td class="text-center ${qty === 0 ? 'text-danger' : qty <= p.minStock ? 'text-warning' : ''}">${qty}</td>
-                  <td>${UI.formatCurrency(qty * (p.purchasePrice || 0))}</td>
-                  <td>${UI.formatCurrency(qty * (p.salePrice || 0))}</td>
-                  <td>${nearestExpiry ? UI.formatDate(nearestExpiry) : '—'}</td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      `);
+    // Pages détaillées
+    for (let pg = 0; pg < totalPages; pg++) {
+      const s = pg * PAGE_SIZE;
+      const e = Math.min(s + PAGE_SIZE, filtered.length);
+      const slice = filtered.slice(s, e);
+      let rows = '';
+      for (let i = 0; i < slice.length; i++) {
+        const p = slice[i];
+        const qty = stockMap[p.id] || 0;
+        const exp = expiryMap[p.id];
+        const isExp = exp && new Date(exp) <= in90Days;
+        let cls = '';
+        if (qty === 0) cls = 'row-zero';
+        else if (qty <= (p.minStock || 0)) cls = 'row-low';
+        else if (isExp) cls = 'row-expiring';
+        rows += '<tr' + (cls ? ' class="' + cls + '"' : '') + '>'
+          + '<td>' + (s + i + 1) + '</td>'
+          + '<td><strong>' + p.name + '</strong>' + (p.dci ? '<br><small>' + p.dci + '</small>' : '') + '</td>'
+          + '<td>' + (p.category || '') + '</td>'
+          + '<td class="text-center">' + qty + '</td>'
+          + '<td>' + UI.formatCurrency(qty * (p.purchasePrice || 0)) + '</td>'
+          + '<td>' + UI.formatCurrency(qty * (p.salePrice || 0)) + '</td>'
+          + '<td>' + (exp ? UI.formatDate(exp) : '') + '</td></tr>';
+      }
+      win.document.write(
+        '<div class="report-container"' + (pg < totalPages - 1 ? ' style="page-break-after:always;"' : '') + '>'
+        + '<div style="display:flex;justify-content:space-between;border-bottom:2px solid #1B4F72;padding-bottom:6px;margin-bottom:8px;">'
+        + '<span style="font-size:11px;font-weight:bold;color:#1B4F72;">' + this.pharmacyInfo.name + '</span>'
+        + '<span style="font-size:10px;color:#666;">Page ' + (pg + 2) + '/' + (totalPages + 1) + '</span></div>'
+        + '<table class="report-table"><thead><tr><th>#</th><th>Désignation</th><th>Cat.</th><th>Qté</th><th>Achat</th><th>Vente</th><th>Exp.</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody></table></div>'
+      );
     }
 
-    // ── Page finale avec totaux et signature ──
-    win.document.write(`
-      <div class="report-container">
-        <table class="report-table" style="max-width:400px;margin-top:20px;">
-          <tfoot>
-            <tr>
-              <td><strong>TOTAL Valeur Achat</strong></td>
-              <td><strong>${UI.formatCurrency(totalValAchat)}</strong></td>
-            </tr>
-            <tr>
-              <td><strong>TOTAL Valeur Vente</strong></td>
-              <td><strong>${UI.formatCurrency(totalValVente)}</strong></td>
-            </tr>
-          </tfoot>
-        </table>
-        ${this.footer()}
-      </div>
-    `);
-
+    win.document.write('<div class="report-container">' + this.footer() + '</div>');
     win.document.close();
-    win.onload = () => win.print();
+    win.onload = function() { UI.toast('Rapport prêt', 'success'); win.print(); };
   },
 
   async printDestructionPV(lotId) {
@@ -503,7 +533,7 @@ window.PrintEngine = PrintEngine;
 // Quick-access print functions
 window.printReceipt = (id) => PrintEngine.printSaleReceipt(id);
 window.printInvoice = (id) => PrintEngine.printInvoice(id);
-window.printStockReport = () => PrintEngine.printStockReport();
+window.printStockReport = (mode) => PrintEngine.printStockReport(mode);
 window.printCaisseReport = (date) => PrintEngine.printCaisseReport(date);
 window.printDestructionPV = (id) => PrintEngine.printDestructionPV(id);
 window.printPrescription = (id) => PrintEngine.printPrescription(id);
@@ -513,13 +543,37 @@ Router.register('print', (container) => {
     <div class="page-header">
       <h1 class="page-title">Centre d'Impression</h1>
     </div>
+
+    <h3 style="margin:0 0 12px;color:var(--text-primary);">Rapports de Stock</h3>
     <div class="print-center-grid">
-      <div class="print-card" onclick="printStockReport()">
-        <div class="print-card-icon"><i data-lucide="package"></i></div>
-        <h3>Inventaire de Stock</h3>
-        <p>Rapport complet de tous les produits avec valeurs</p>
+      <div class="print-card" onclick="printStockReport('ruptures')">
+        <div class="print-card-icon" style="color:#e74c3c;"><i data-lucide="alert-circle"></i></div>
+        <h3>Ruptures de Stock</h3>
+        <p>Produits avec 0 unité en stock</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
+      <div class="print-card" onclick="printStockReport('low')">
+        <div class="print-card-icon" style="color:#f39c12;"><i data-lucide="alert-triangle"></i></div>
+        <h3>Stocks Bas</h3>
+        <p>Produits sous le seuil minimum configuré</p>
+        <button class="btn btn-primary">Imprimer</button>
+      </div>
+      <div class="print-card" onclick="printStockReport('expiring')">
+        <div class="print-card-icon" style="color:#e67e22;"><i data-lucide="clock"></i></div>
+        <h3>Expirations Proches</h3>
+        <p>Lots expirant dans les 90 prochains jours</p>
+        <button class="btn btn-primary">Imprimer</button>
+      </div>
+      <div class="print-card" onclick="printStockReport('full')">
+        <div class="print-card-icon"><i data-lucide="package"></i></div>
+        <h3>Inventaire Complet</h3>
+        <p>Rapport global (limité à 2 000 produits)</p>
+        <button class="btn btn-primary">Imprimer</button>
+      </div>
+    </div>
+
+    <h3 style="margin:24px 0 12px;color:var(--text-primary);">Autres Documents</h3>
+    <div class="print-center-grid">
       <div class="print-card" onclick="printCaisseReport()">
         <div class="print-card-icon"><i data-lucide="banknote"></i></div>
         <h3>Rapport de Caisse du Jour</h3>
