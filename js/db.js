@@ -809,11 +809,17 @@ async function syncToSupabase() {
     }
 
     // --- PROBE METIER (Sonde) ---
+    // Guard : ne pas tenter si le navigateur est hors-ligne
+    if (!navigator.onLine) {
+      AppState.isOnline = false;
+      return;
+    }
     try {
       const probeRes = await fetch(`${sb.supabaseUrl}/rest/v1/settings?select=key&limit=1`, {
         method: 'GET',
         headers: { 'apikey': sb.supabaseKey, 'Authorization': `Bearer ${sb.supabaseKey}` },
-        cache: 'no-store'
+        cache: 'no-store',
+        signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined
       });
       if (!probeRes.ok) throw new Error('Probe Fail');
       AppState.isOnline = true;
@@ -1479,8 +1485,8 @@ window.addEventListener('error', function(event) {
 
 window.addEventListener('unhandledrejection', function(event) {
   const msg = String(event.reason?.message || event.reason || '');
-  // Silencer les erreurs réseau (hors-ligne) — comportement normal en PWA
-  if (msg.includes('ERR_INTERNET_DISCONNECTED') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_') || msg.includes('refresh_token')) {
+  // Silencer les erreurs réseau et ServiceWorker (hors-ligne) — comportement normal en PWA
+  if (msg.includes('ERR_INTERNET_DISCONNECTED') || msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::ERR_') || msg.includes('refresh_token') || msg.includes('ServiceWorker') || msg.includes('service worker') || msg.includes('An unknown error occurred')) {
     event.preventDefault();
     return;
   }
@@ -1523,8 +1529,18 @@ function _handleConnectivityChange(isOnline) {
       const delay = _getBackoffDelay();
       _reconnectAttempts++;
 
-      setTimeout(() => {
+      setTimeout(async () => {
         if (!navigator.onLine) return; // Re-vérifier avant d'agir
+
+        // Vérification réelle de la connectivité avec un fetch léger
+        try {
+          const probe = await fetch(location.href, { method: 'HEAD', cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined });
+          if (!probe.ok) throw new Error('probe failed');
+        } catch(e) {
+          // Internet pas réellement disponible, on annule
+          _logOnce('warn', '[App] Connexion signalée mais internet non disponible, report du sync');
+          return;
+        }
 
         // Relancer le auto-refresh du token
         if (_supabaseInstance?.auth?.startAutoRefresh) {
