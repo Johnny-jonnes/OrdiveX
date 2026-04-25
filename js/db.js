@@ -8,7 +8,7 @@
 // PRODUCTION ERROR SILENCER — DOIT ÊTRE TOUT EN HAUT pour intercepter
 // les erreurs dès le chargement des scripts (avant supabase.min.js)
 // ═══════════════════════════════════════════════════════════════════
-(function() {
+(function () {
   var _origError = console.error;
   var _origWarn = console.warn;
   var _patterns = [
@@ -24,8 +24,8 @@
     }
     return false;
   }
-  console.error = function() { if (!_isNoise(arguments)) _origError.apply(console, arguments); };
-  console.warn = function() { if (!_isNoise(arguments)) _origWarn.apply(console, arguments); };
+  console.error = function () { if (!_isNoise(arguments)) _origError.apply(console, arguments); };
+  console.warn = function () { if (!_isNoise(arguments)) _origWarn.apply(console, arguments); };
 })();
 
 const DB_NAME = 'OrdiveXDB';
@@ -140,7 +140,7 @@ function _getBackoffDelay() {
 async function getSupabaseClient() {
   // Guard strict : ne rien faire si hors-ligne
   if (!navigator.onLine) {
-    if (_supabaseInstance) { try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch(e) {} _supabaseInstance = null; }
+    if (_supabaseInstance) { try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch (e) { } _supabaseInstance = null; }
     return null;
   }
 
@@ -150,7 +150,7 @@ async function getSupabaseClient() {
     const settings = await dbGetAll('settings');
     const url = settings.find(s => s.key === 'supabase_url')?.value;
     const key = settings.find(s => s.key === 'supabase_key')?.value;
-    
+
     if (url && key && window.supabase) {
       _supabaseInstance = window.supabase.createClient(url.trim(), key.trim(), {
         auth: {
@@ -159,14 +159,14 @@ async function getSupabaseClient() {
           persistSession: true,
         }
       });
-      
+
       // Auto-Login Anonyme pour satisfaire RLS
       try {
         const { data: { session } } = await _supabaseInstance.auth.getSession();
         if (!session && _supabaseInstance.auth.signInAnonymously) {
-           await _supabaseInstance.auth.signInAnonymously();
+          await _supabaseInstance.auth.signInAnonymously();
         }
-      } catch(e) { /* silencieux */ }
+      } catch (e) { /* silencieux */ }
 
       _setupRealtime(_supabaseInstance);
       return _supabaseInstance;
@@ -205,8 +205,8 @@ function _setupRealtime(sbClient) {
         } else if ((eventType === 'INSERT' || eventType === 'UPDATE') && payload.new) {
           const item = { ...payload.new, _synced: true, _updatedAt: Date.now() };
 
-          const mustBeString = ['username','password','code','lotNumber','phone','dnpm',
-            'pharmacy_phone','pharmacy_dnpm','pharmacy_name','key','value'];
+          const mustBeString = ['username', 'password', 'code', 'lotNumber', 'phone', 'dnpm',
+            'pharmacy_phone', 'pharmacy_dnpm', 'pharmacy_name', 'key', 'value'];
           for (const key of Object.keys(item)) {
             if (mustBeString.includes(key) || (storeName === 'settings' && key === 'value')) {
               if (item[key] !== undefined && item[key] !== null) {
@@ -227,14 +227,14 @@ function _setupRealtime(sbClient) {
       }
     })
     .subscribe((status, err) => {
-       if (status === 'SUBSCRIBED') {
-         _logOnce('log', '[Flash] Connecté au temps réel Supabase');
-         _reconnectAttempts = 0; // Reset le backoff sur succès
-       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-         try { sbClient.removeChannel(_realtimeSubscription).catch(()=>{}); } catch(e){}
-         _realtimeSubscription = null;
-         // Ne PAS retenter immédiatement — le backoff gère ça
-       }
+      if (status === 'SUBSCRIBED') {
+        _logOnce('log', '[Flash] Connecté au temps réel Supabase');
+        _reconnectAttempts = 0; // Reset le backoff sur succès
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        try { sbClient.removeChannel(_realtimeSubscription).catch(() => { }); } catch (e) { }
+        _realtimeSubscription = null;
+        // Ne PAS retenter immédiatement — le backoff gère ça
+      }
     });
 }
 
@@ -563,7 +563,7 @@ async function dbGetAll(storeName, indexName, query) {
       req.onsuccess = () => {
         const result = req.result || [];
         // Cache adaptatif : pas les gros stores sur mobile
-        const canCache = !indexName && query === undefined 
+        const canCache = !indexName && query === undefined
           && result.length < _cacheMaxItems
           && !(_isMobile && _mobileNoCacheStores.has(storeName));
         if (canCache) {
@@ -661,7 +661,7 @@ async function dbCountProducts() {
       const req = store.count();
       req.onsuccess = () => resolve(req.result || 0);
       req.onerror = () => resolve(0);
-    } catch(e) { resolve(0); }
+    } catch (e) { resolve(0); }
   });
 }
 
@@ -715,7 +715,7 @@ async function dbStockValue(stockMap) {
         }
       };
       cursor.onerror = () => resolve({ purchaseValue: 0, saleValue: 0 });
-    } catch(e) {
+    } catch (e) {
       resolve({ purchaseValue: 0, saleValue: 0 });
     }
   });
@@ -835,7 +835,7 @@ async function syncToSupabase() {
       sales: ['paymentDetails']
     };
     var _colCache = {};
-    try { _colCache = JSON.parse(localStorage.getItem('pharma_bad_columns') || '{}'); } catch(e) {}
+    try { _colCache = JSON.parse(localStorage.getItem('pharma_bad_columns') || '{}'); } catch (e) { }
     // Fusionner le hardcodé avec le cache dynamique
     for (var tbl in _knownBadCols) {
       if (!_colCache[tbl]) _colCache[tbl] = [];
@@ -859,9 +859,9 @@ async function syncToSupabase() {
       });
       if (!probeRes.ok) throw new Error('Probe Fail');
       AppState.isOnline = true;
-    } catch(err) {
+    } catch (err) {
       AppState.isOnline = false;
-      return; 
+      return;
     }
 
     // ⚡ FLASH SEND — Envoi parallèle de toutes les tables simultanément
@@ -1029,7 +1029,7 @@ async function syncToSupabase() {
       };
       // Pré-filtrer les colonnes invalides connues pour settings
       var settingsBadCols = _colCache['settings'] || [];
-      settingsBadCols.forEach(function(c) { delete hbPayload[c]; });
+      settingsBadCols.forEach(function (c) { delete hbPayload[c]; });
       // Retry avec suppression de colonnes inconnues (comme le sync principal)
       for (var hbRetry = 0; hbRetry < 3; hbRetry++) {
         var hbRes = await sb.from('settings').upsert(hbPayload, { onConflict: 'key' });
@@ -1053,7 +1053,7 @@ async function syncToSupabase() {
         localStorage.removeItem('pharma_old_device_key');
         console.log('[Flash] 🧹 Ancien appareil nettoyé : ' + oldKey);
       }
-    } catch(e) {}
+    } catch (e) { }
 
     if (totalPendingCount > 0) console.log(`[Flash] ⚡ Sync terminée — ${totalPendingCount} éléments envoyés`);
 
@@ -1110,9 +1110,9 @@ async function pullFromSupabase(isManual = false) {
       const probeReq = await sb.from('settings').select('key').limit(1);
       if (probeReq.error) throw probeReq.error;
       AppState.isOnline = true;
-    } catch(err) {
+    } catch (err) {
       AppState.isOnline = false;
-      return; 
+      return;
     }
 
     // ── PULL INCRÉMENTAL (Delta Sync) ──
@@ -1174,7 +1174,7 @@ async function pullFromSupabase(isManual = false) {
             .gte('updatedAt', pullSince)
             .order('updatedAt', { ascending: true })
             .limit(5000);
-          
+
           if (error) throw error;
           if (data && data.length > 0) {
             const count = await writeBatchToIDB(storeName, data);
@@ -1261,12 +1261,12 @@ async function pullFromSupabase(isManual = false) {
     if (window.updatePharmacyDisplay) {
       await window.updatePharmacyDisplay();
     }
-    
+
     // Si le Point de Vente (POS) est ouvert, on rafraîchit les données localement
     if (window.location.hash === '#pos' && typeof refreshPOSData === 'function') {
-        await refreshPOSData();
+      await refreshPOSData();
     }
-    
+
   } catch (e) {
     const msg = e.message || '';
     if (!msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('network error')) {
@@ -1423,7 +1423,7 @@ let _autoPullTimer = null;
  */
 function startAutoPull() {
   if (_autoPullTimer) clearTimeout(_autoPullTimer);
-  
+
   const loop = async () => {
     if (navigator.onLine && AppState.isOnline !== false) {
       try {
@@ -1433,9 +1433,9 @@ function startAutoPull() {
     // Pull toutes les 30 min en ligne (le WebSocket gère le temps réel)
     // Hors ligne : vérifier toutes les 15 min (économie de ressources sur le long terme)
     const delay = (!navigator.onLine || AppState.isOnline === false) ? 900000 : 1800000;
-    _autoPullTimer = setTimeout(loop, delay); 
+    _autoPullTimer = setTimeout(loop, delay);
   };
-  
+
   // On attend 5 secondes au démarrage de l'app avant de lancer la première boucle
   // pour laisser l'interface (POS) se charger sans concurrence
   _autoPullTimer = setTimeout(loop, 5000);
@@ -1526,15 +1526,15 @@ async function restoreFromBackup(backupData) {
 
 function resetSupabaseClient() {
   if (_supabaseInstance) {
-    try { _supabaseInstance.auth?.stopAutoRefresh(); } catch(e) {}
-    try { if (_realtimeSubscription) { _supabaseInstance.removeChannel(_realtimeSubscription).catch(()=>{}); _realtimeSubscription = null; } } catch(e) {}
+    try { _supabaseInstance.auth?.stopAutoRefresh(); } catch (e) { }
+    try { if (_realtimeSubscription) { _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { }); _realtimeSubscription = null; } } catch (e) { }
   }
   _supabaseInstance = null;
 }
 
 // (Error silencer déplacé en haut du fichier pour intercepter dès le chargement)
 
-window.addEventListener('error', function(event) {
+window.addEventListener('error', function (event) {
   var msg = event.message || '';
   if (msg.indexOf('ERR_INTERNET') !== -1 || msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('NetworkError') !== -1 || msg.indexOf('net::ERR_') !== -1) return;
   // Ne pas afficher de toast pour les erreurs de scripts externes (CDN/Supabase)
@@ -1544,7 +1544,7 @@ window.addEventListener('error', function(event) {
   }
 });
 
-window.addEventListener('unhandledrejection', function(event) {
+window.addEventListener('unhandledrejection', function (event) {
   var msg = String(event.reason?.message || event.reason || '');
   // Silencer TOUTES les erreurs réseau, auth, et ServiceWorker — comportement normal en PWA offline
   if (msg.indexOf('ERR_INTERNET') !== -1 || msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('NetworkError') !== -1 || msg.indexOf('net::ERR_') !== -1 || msg.indexOf('refresh_token') !== -1 || msg.indexOf('ServiceWorker') !== -1 || msg.indexOf('service worker') !== -1 || msg.indexOf('An unknown error') !== -1 || msg.indexOf('AuthRetryable') !== -1 || msg.indexOf('Lock') !== -1) {
@@ -1559,7 +1559,7 @@ if (typeof indexedDB !== 'undefined') {
   const _origTransaction = IDBDatabase.prototype.transaction;
   // On ne surcharge pas pour garder la stabilité, mais on surveille
   window.addEventListener('beforeunload', () => {
-    if (db) { try { db.close(); } catch(e) {} }
+    if (db) { try { db.close(); } catch (e) { } }
   });
 }
 
@@ -1596,7 +1596,7 @@ function _handleConnectivityChange(isOnline) {
         try {
           const probe = await fetch(location.href, { method: 'HEAD', cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined });
           if (!probe.ok) throw new Error('probe failed');
-        } catch(e) {
+        } catch (e) {
           // Internet pas réellement disponible, on annule
           _logOnce('warn', '[App] Connexion signalée mais internet non disponible, report du sync');
           return;
@@ -1615,7 +1615,7 @@ function _handleConnectivityChange(isOnline) {
         // Tenter un sync
         syncToSupabase().then(() => {
           _reconnectAttempts = 0; // Reset sur succès
-        }).catch(() => {});
+        }).catch(() => { });
       }, delay);
 
     } else {
@@ -1630,12 +1630,12 @@ function _handleConnectivityChange(isOnline) {
         try {
           _supabaseInstance.auth?.stopAutoRefresh?.();
           if (_realtimeSubscription) {
-            _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => {});
+            _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { });
             _realtimeSubscription = null;
           }
           _supabaseInstance.realtime?.disconnect?.();
           _realtimeCooldown = false;
-        } catch (e) {}
+        } catch (e) { }
         _supabaseInstance = null; // Tuer l'instance → plus aucun timer
       }
     }
