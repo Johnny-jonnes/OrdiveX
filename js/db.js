@@ -1120,7 +1120,8 @@ async function pullFromSupabase(isManual = false) {
     // Pull manuel : récupérer TOUT (pour setup initial ou récupération)
     const lastPullKey = 'pharma_last_pull_ts';
     const lastPullTs = isManual ? null : localStorage.getItem(lastPullKey);
-    const pullSince = lastPullTs ? new Date(parseInt(lastPullTs)).toISOString() : null;
+    // updatedAt dans Supabase est un BIGINT (millisecondes), PAS une date ISO
+    const pullSince = lastPullTs ? parseInt(lastPullTs) : null;
 
     if (pullSince) {
       _logOnce('log', '[Flash] Pull incrémental (delta depuis ' + new Date(parseInt(lastPullTs)).toLocaleTimeString('fr-FR') + ')...');
