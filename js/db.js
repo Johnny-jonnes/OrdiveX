@@ -1595,12 +1595,16 @@ function _handleConnectivityChange(isOnline) {
           return;
         }
 
+        // Recréer l'instance Supabase (détruite lors du passage offline)
+        const sb = await getSupabaseClient();
+        if (!sb) return; // Pas de config ou toujours offline
+
         // Relancer le auto-refresh du token
-        if (_supabaseInstance?.auth?.startAutoRefresh) {
-          _supabaseInstance.auth.startAutoRefresh();
+        if (sb.auth?.startAutoRefresh) {
+          sb.auth.startAutoRefresh();
         }
         // Relancer le realtime (avec cooldown intégré)
-        if (_supabaseInstance) _setupRealtime(_supabaseInstance);
+        _setupRealtime(sb);
         // Tenter un sync
         syncToSupabase().then(() => {
           _reconnectAttempts = 0; // Reset sur succès
@@ -1612,7 +1616,9 @@ function _handleConnectivityChange(isOnline) {
       AppState.isOnline = false;
       _logOnce('log', '[App] Mode hors-ligne activé');
 
-      // Mettre en pause Supabase proprement
+      // DESTRUCTION TOTALE de l'instance Supabase pour tuer TOUS ses timers internes
+      // (token refresh retry, realtime reconnect, etc.)
+      // L'instance sera recréée automatiquement au retour en ligne
       if (_supabaseInstance) {
         try {
           _supabaseInstance.auth?.stopAutoRefresh?.();
@@ -1621,7 +1627,9 @@ function _handleConnectivityChange(isOnline) {
             _realtimeSubscription = null;
           }
           _supabaseInstance.realtime?.disconnect?.();
+          _realtimeCooldown = false;
         } catch (e) {}
+        _supabaseInstance = null; // Tuer l'instance → plus aucun timer
       }
     }
   }, 5000); // 5 secondes de debounce
