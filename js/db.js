@@ -1084,11 +1084,10 @@ async function syncToSupabase() {
 
 /**
  * PULL DEPUIS SUPABASE (Cloud → Local)
- * @param {boolean} isManual Indique si c'est un pull déclenché manuellement par l'utilisateur
+ * @param {boolean} isManual - Pull complet si true, incrémental si false
  */
 let _isPulling = false;
 async function pullFromSupabase(isManual = false) {
-  // Guard strict : ne rien tenter si hors-ligne
   if (!navigator.onLine) return;
   if (_isPulling) return;
   _isPulling = true;
@@ -1098,7 +1097,6 @@ async function pullFromSupabase(isManual = false) {
     const sb = await getSupabaseClient();
     if (!sb) return;
     if (!navigator.onLine) return;
-    _logOnce('log', '[Flash] Pull démarré...');
 
     const storesToPull = [
       'users', 'settings',
@@ -1107,8 +1105,7 @@ async function pullFromSupabase(isManual = false) {
       'cashRegister', 'auditLog', 'returns'
     ];
 
-    // --- PROBE METIER (Sonde) ---
-    // Pour ne pas inonder la console si hors ligne
+    // --- PROBE MÉTIER ---
     try {
       const probeReq = await sb.from('settings').select('key').limit(1);
       if (probeReq.error) throw probeReq.error;
@@ -1118,78 +1115,109 @@ async function pullFromSupabase(isManual = false) {
       return; 
     }
 
-    // Traitement séquentiel pour les grosses tables (products) afin d'éviter de surcharger la mémoire
+    // ── PULL INCRÉMENTAL (Delta Sync) ──
+    // Auto-pull : ne récupérer que les données modifiées depuis le dernier pull
+    // Pull manuel : récupérer TOUT (pour setup initial ou récupération)
+    const lastPullKey = 'pharma_last_pull_ts';
+    const lastPullTs = isManual ? null : localStorage.getItem(lastPullKey);
+    const pullSince = lastPullTs ? new Date(parseInt(lastPullTs)).toISOString() : null;
+
+    if (pullSince) {
+      _logOnce('log', '[Flash] Pull incrémental (delta depuis ' + new Date(parseInt(lastPullTs)).toLocaleTimeString('fr-FR') + ')...');
+    } else {
+      _logOnce('log', '[Flash] Pull démarré...');
+    }
+
+    const mustBeString = [
+      'username', 'password', 'code', 'lotNumber', 'phone', 'dnpm',
+      'pharmacy_phone', 'pharmacy_dnpm', 'pharmacy_name', 'key', 'value'
+    ];
+
+    // Fonction d'écriture IDB
+    const writeBatchToIDB = async (storeName, items) => {
+      const prepared = items.map(item => {
+        let localItem = { ...item, _synced: true, _updatedAt: item.updatedAt || Date.now() };
+        for (const key of Object.keys(localItem)) {
+          if (mustBeString.includes(key) || (storeName === 'settings' && key === 'value')) {
+            if (localItem[key] !== undefined && localItem[key] !== null) {
+              localItem[key] = String(localItem[key]);
+            }
+          }
+        }
+        return localItem;
+      }).filter(item => !(storeName === 'settings' && item.status === 'DELETED'));
+      if (prepared.length === 0) return 0;
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const txStore = tx.objectStore(storeName);
+        for (const item of prepared) { txStore.put(item); }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+      return prepared.length;
+    };
+
     for (const storeName of storesToPull) {
-      // Arrêter immédiatement si la connexion est coupée
       if (!navigator.onLine) {
         console.log('[Flash] ⚠️ Pull interrompu: connexion perdue');
         break;
       }
       try {
-        // 1. Obtenir le nombre total d'items
-        const countRes = await sb.from(storeName === 'users' ? 'app_users' : storeName).select('*', { count: 'exact', head: true });
-        const totalCount = countRes.count || 0;
+        const tableName = storeName === 'users' ? 'app_users' : storeName;
 
-        if (totalCount > 0) {
-          const fetchLimit = 1000;
-          const tableName = storeName === 'users' ? 'app_users' : storeName;
-          let storeItemCount = 0;
+        if (pullSince) {
+          // ── INCRÉMENTAL : seulement les données modifiées ──
+          // Requête légère : filtre sur updatedAt > dernier pull
+          const { data, error } = await sb.from(tableName)
+            .select('*')
+            .gte('updatedAt', pullSince)
+            .order('updatedAt', { ascending: true })
+            .limit(5000);
+          
+          if (error) throw error;
+          if (data && data.length > 0) {
+            const count = await writeBatchToIDB(storeName, data);
+            if (count > 0) {
+              hasChanges = true;
+              totalItemsPulled += count;
+              _invalidateCache(storeName);
+            }
+          }
+          // Pause minimale pour ne PAS bloquer le POS
+          await new Promise(r => setTimeout(r, 2));
 
-          const mustBeString = [
-            'username', 'password', 'code', 'lotNumber', 'phone', 'dnpm',
-            'pharmacy_phone', 'pharmacy_dnpm', 'pharmacy_name', 'key', 'value'
-          ];
+        } else {
+          // ── PULL COMPLET (manuel ou premier pull) ──
+          const countRes = await sb.from(tableName).select('*', { count: 'exact', head: true });
+          const totalCount = countRes.count || 0;
 
-          // Fonction d'écriture immédiate dans IndexedDB (pas d'accumulation en RAM)
-          const writeBatchToIDB = async (items) => {
-            const prepared = items.map(item => {
-              let localItem = { ...item, _synced: true, _updatedAt: item.updatedAt || Date.now() };
-              for (const key of Object.keys(localItem)) {
-                if (mustBeString.includes(key) || (storeName === 'settings' && key === 'value')) {
-                  if (localItem[key] !== undefined && localItem[key] !== null) {
-                    localItem[key] = String(localItem[key]);
-                  }
+          if (totalCount > 0) {
+            const fetchLimit = 1000;
+            let storeItemCount = 0;
+
+            for (let offset = 0; offset < totalCount; offset += fetchLimit * 5) {
+              if (!navigator.onLine) break;
+              const batch = [];
+              for (let j = 0; j < 5 && (offset + j * fetchLimit) < totalCount; j++) {
+                const o = offset + j * fetchLimit;
+                batch.push(sb.from(tableName).select('*').range(o, o + fetchLimit - 1));
+              }
+              const results = await Promise.all(batch);
+              for (const res of results) {
+                if (res.error) throw res.error;
+                if (res.data && res.data.length > 0) {
+                  storeItemCount += await writeBatchToIDB(storeName, res.data);
                 }
               }
-              return localItem;
-            }).filter(item => !(storeName === 'settings' && item.status === 'DELETED'));
-
-            if (prepared.length === 0) return;
-            await new Promise((resolve, reject) => {
-              const tx = db.transaction(storeName, 'readwrite');
-              const txStore = tx.objectStore(storeName);
-              for (const item of prepared) { txStore.put(item); }
-              tx.oncomplete = () => resolve();
-              tx.onerror = () => reject(tx.error);
-              tx.onabort = () => reject(tx.error);
-            });
-            storeItemCount += prepared.length;
-          };
-
-          // Fetch par lots de 5 et écriture immédiate (RAM ~5MB max au lieu de ~200MB)
-          for (let offset = 0; offset < totalCount; offset += fetchLimit * 5) {
-            if (!navigator.onLine) break;
-            const batch = [];
-            for (let j = 0; j < 5 && (offset + j * fetchLimit) < totalCount; j++) {
-              const o = offset + j * fetchLimit;
-              batch.push(sb.from(tableName).select('*').range(o, o + fetchLimit - 1));
+              await new Promise(r => setTimeout(r, 5));
             }
-            const results = await Promise.all(batch);
-            for (const res of results) {
-              if (res.error) throw res.error;
-              if (res.data && res.data.length > 0) {
-                await writeBatchToIDB(res.data);
-                // Libérer la RAM après écriture
-              }
-            }
-            // Pause courte pour libérer le thread UI
-            await new Promise(r => setTimeout(r, 5));
-          }
 
-          if (storeItemCount > 0) {
-            hasChanges = true;
-            totalItemsPulled += storeItemCount;
-            _invalidateCache(storeName);
+            if (storeItemCount > 0) {
+              hasChanges = true;
+              totalItemsPulled += storeItemCount;
+              _invalidateCache(storeName);
+            }
           }
         }
       } catch (storeErr) {
@@ -1198,13 +1226,16 @@ async function pullFromSupabase(isManual = false) {
         if (isNetworkError) {
           AppState.isOnline = false;
           console.log('[Flash] ⚠️ Pull interrompu: erreur réseau détectée');
-          break; // Stop le pull immédiatement
+          break;
         }
         if (errMsg && !errMsg.includes('null')) {
           console.warn(`[Flash] Store error ${storeName}:`, errMsg);
         }
       }
     }
+
+    // Sauvegarder le timestamp du pull réussi
+    localStorage.setItem(lastPullKey, String(Date.now()));
 
     if (hasChanges) console.log(`[Flash] ⚡ Pull terminé — ${totalItemsPulled} éléments mis à jour`);
 
