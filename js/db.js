@@ -20,7 +20,8 @@
     'Auth session missing', 'signInAnonymously', 'Unauthorized',
     '401 (Unauthorized)', '400 (Bad Request)', 'Bad Request',
     'CORS', 'AbortError', 'TypeError: Load failed',
-    'The user aborted a request', 'CHANNEL_ERROR'
+    'The user aborted a request', 'CHANNEL_ERROR',
+    'AudioContext'
   ];
   function _isNoise(args) {
     var s = Array.prototype.join.call(args, ' ');
@@ -187,7 +188,9 @@ async function getSupabaseClient() {
         }
       } catch (e) { /* silencieux */ }
 
-      _setupRealtime(_supabaseInstance);
+      // Lancer le realtime APRÈS 10s pour laisser l'auth se stabiliser
+      // Évite le warning WebSocket au démarrage
+      setTimeout(() => _setupRealtime(_supabaseInstance), 10000);
       return _supabaseInstance;
     }
   } catch (e) { /* silencieux */ }
@@ -1204,8 +1207,8 @@ async function pullFromSupabase(isManual = false) {
               _invalidateCache(storeName);
             }
           }
-          // Yield au thread UI — laisse le POS traiter les clics/ventes entre chaque store
-          await new Promise(r => setTimeout(r, 100));
+          // Yield généreux au thread UI — le POS ne doit RIEN sentir
+          await new Promise(r => setTimeout(r, 200));
 
         } else {
           // ── PULL COMPLET (manuel ou premier pull) ──
