@@ -15,7 +15,8 @@
     'ERR_INTERNET', 'Failed to fetch', 'NetworkError', 'net::ERR_',
     'refresh_token', 'WebSocket connection', 'AuthRetryable',
     'was not released within', 'Lock "lock:sb-', 'Forcefully acquiring',
-    'Failed to load resource', 'FetchEvent', 'Failed to convert'
+    'Failed to load resource', 'FetchEvent', 'Failed to convert',
+    'Failed to decode downloaded font'
   ];
   function _isNoise(args) {
     var s = Array.prototype.join.call(args, ' ');
