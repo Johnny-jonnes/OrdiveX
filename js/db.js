@@ -1109,6 +1109,7 @@ async function syncToSupabase() {
  * @param {boolean} isManual - Pull complet si true, incrémental si false
  */
 let _isPulling = false;
+let _pullBatch = null;
 async function pullFromSupabase(isManual = false) {
   if (!navigator.onLine) return;
   if (_isPulling) return;
@@ -1190,25 +1191,40 @@ async function pullFromSupabase(isManual = false) {
         const tableName = storeName === 'users' ? 'app_users' : storeName;
 
         if (pullSince) {
-          // ── INCRÉMENTAL : seulement les données modifiées ──
-          // Requête légère : filtre sur updatedAt > dernier pull
-          const { data, error } = await sb.from(tableName)
-            .select('*')
-            .gte('updatedAt', pullSince)
-            .order('updatedAt', { ascending: true })
-            .limit(5000);
+          // ── INCRÉMENTAL PARALLÈLE : groupes de 4 stores ──
+          // Accumule 4 requêtes puis les lance en parallèle
+          if (!_pullBatch) _pullBatch = [];
+          _pullBatch.push({ storeName, tableName });
 
-          if (error) throw error;
-          if (data && data.length > 0) {
-            const count = await writeBatchToIDB(storeName, data);
-            if (count > 0) {
-              hasChanges = true;
-              totalItemsPulled += count;
-              _invalidateCache(storeName);
+          if (_pullBatch.length >= 4 || storeName === storesToPull[storesToPull.length - 1]) {
+            const batch = _pullBatch;
+            _pullBatch = [];
+
+            const results = await Promise.all(batch.map(async ({ storeName: sn, tableName: tn }) => {
+              try {
+                const { data, error } = await sb.from(tn)
+                  .select('*')
+                  .gte('updatedAt', pullSince)
+                  .order('updatedAt', { ascending: true })
+                  .limit(5000);
+                if (error) return { sn, data: null, error };
+                return { sn, data, error: null };
+              } catch (e) { return { sn, data: null, error: e }; }
+            }));
+
+            for (const r of results) {
+              if (r.data && r.data.length > 0) {
+                const count = await writeBatchToIDB(r.sn, r.data);
+                if (count > 0) {
+                  hasChanges = true;
+                  totalItemsPulled += count;
+                  _invalidateCache(r.sn);
+                }
+              }
             }
+            // Yield entre chaque batch — POS reste 100% réactif
+            await new Promise(r => setTimeout(r, 50));
           }
-          // Yield généreux au thread UI — le POS ne doit RIEN sentir
-          await new Promise(r => setTimeout(r, 200));
 
         } else {
           // ── PULL COMPLET (manuel ou premier pull) ──
