@@ -1185,8 +1185,8 @@ async function pullFromSupabase(isManual = false) {
               _invalidateCache(storeName);
             }
           }
-          // Pause minimale pour ne PAS bloquer le POS
-          await new Promise(r => setTimeout(r, 2));
+          // Yield au thread UI — laisse le POS traiter les clics/ventes entre chaque store
+          await new Promise(r => setTimeout(r, 100));
 
         } else {
           // ── PULL COMPLET (manuel ou premier pull) ──
