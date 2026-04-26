@@ -16,7 +16,8 @@
     'refresh_token', 'WebSocket connection', 'AuthRetryable',
     'was not released within', 'Lock "lock:sb-', 'Forcefully acquiring',
     'Failed to load resource', 'FetchEvent', 'Failed to convert',
-    'Failed to decode downloaded font'
+    'Failed to decode downloaded font', 'AuthSessionMissing',
+    'Unauthorized', '401 (Unauthorized)'
   ];
   function _isNoise(args) {
     var s = Array.prototype.join.call(args, ' ');
@@ -145,7 +146,16 @@ async function getSupabaseClient() {
     return null;
   }
 
-  if (_supabaseInstance) return _supabaseInstance;
+  if (_supabaseInstance) {
+    // Vérifier que la session auth est toujours valide (renouveler si expirée)
+    try {
+      const { data: { session } } = await _supabaseInstance.auth.getSession();
+      if (!session && _supabaseInstance.auth.signInAnonymously) {
+        await _supabaseInstance.auth.signInAnonymously();
+      }
+    } catch (e) { /* silencieux */ }
+    return _supabaseInstance;
+  }
 
   try {
     const settings = await dbGetAll('settings');
