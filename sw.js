@@ -3,10 +3,11 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.0.2';
+const CACHE_NAME = 'pharma-cache-v9.1.0';
 const ASSETS = [
   './',
   './index.html',
+  './manifest.json',
   './css/main.css',
   './js/db.js',
   './js/auth.js',
@@ -32,7 +33,6 @@ const ASSETS = [
   './js/ui/feedback.js',
   './js/vendor/lucide.min.js',
   './js/vendor/supabase.min.js',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
 ];
 
 // Install: cache all assets individually to avoid global failure
@@ -78,24 +78,11 @@ self.addEventListener('fetch', event => {
 
   // 🛡️ REQUÊTES EXTERNES (Supabase, fonts, CDN)
   if (!url.startsWith(self.location.origin)) {
-    // FONTS : cache-first, avec catch silencieux
+    // FONTS : NE PAS intercepter — laisser le navigateur gérer nativement
+    // Le HTTP cache du navigateur les sert en offline, font-display:swap utilise les polices système sinon
+    // Cela évite les 14x "Failed to decode downloaded font" warnings (browser-level, non-filtrable par JS)
     if (url.includes('fonts.g') || url.endsWith('.woff2') || url.endsWith('.woff') || url.endsWith('.ttf')) {
-      event.respondWith(
-        caches.match(event.request).then(cached => {
-          if (cached) return cached;
-          return fetch(event.request).then(response => {
-            if (response.ok) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
-            }
-            return response;
-          }).catch(() => {
-            // Offline + font pas cachée → réponse vide (PAS font/woff2 pour éviter "Failed to decode")
-            return new Response('', { status: 200 });
-          });
-        })
-      );
-      return;
+      return; // Ne PAS appeler respondWith — le navigateur gère seul
     }
 
     // APIS (Supabase, etc.) : try-catch silencieux
