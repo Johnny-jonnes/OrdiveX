@@ -241,7 +241,7 @@ function _setupRealtime(sbClient) {
             await dbDelete(storeName, item.id);
           } else {
             await _dbPutRaw(storeName, item);
-            _invalidateCache(storeName);
+            _updateCacheInPlace(storeName, [item]);
           }
         }
       } catch (err) {
@@ -512,6 +512,28 @@ const _dbCacheTime = new Map(); // Timestamp du dernier cache
 // Sur mobile : ne PAS cacher les gros stores (products, movements, lots) pour éviter l'OOM
 const _mobileNoCacheStores = new Set(['products', 'movements', 'lots', 'auditLog', 'saleItems']);
 function _invalidateCache(storeName) { _dbCache.delete(storeName); _dbCacheTime.delete(storeName); }
+
+// ── Mise à jour chirurgicale du cache mémoire (sans le vider) ──
+// Utilisé par le pull incrémental pour fusionner les nouvelles données
+// Le dashboard/POS reste instantané car le cache n'est JAMAIS vidé
+function _updateCacheInPlace(storeName, newItems) {
+  if (!_dbCache.has(storeName) || !newItems || newItems.length === 0) return;
+  const cached = _dbCache.get(storeName);
+  const keyField = storeName === 'settings' ? 'key' : 'id';
+  // Index pour lookup rapide O(1)
+  const idxMap = new Map();
+  cached.forEach((item, i) => { if (item[keyField] != null) idxMap.set(item[keyField], i); });
+  for (const item of newItems) {
+    const k = item[keyField];
+    if (k != null && idxMap.has(k)) {
+      cached[idxMap.get(k)] = item; // Mise à jour en place
+    } else {
+      cached.push(item); // Nouvel élément
+    }
+  }
+  _dbCacheTime.set(storeName, Date.now()); // Rafraîchir le TTL
+}
+
 const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 const _cacheMaxItems = _isMobile ? 50000 : 500000; // Mobile: 50k (petits stores), PC: 500k
 const _cacheTTL = _isMobile ? 120000 : 600000; // Mobile: 2 min, PC: 10 min
@@ -1218,7 +1240,7 @@ async function pullFromSupabase(isManual = false) {
                 if (count > 0) {
                   hasChanges = true;
                   totalItemsPulled += count;
-                  _invalidateCache(r.sn);
+                  _updateCacheInPlace(r.sn, r.data);
                 }
               }
             }
@@ -1255,7 +1277,7 @@ async function pullFromSupabase(isManual = false) {
             if (storeItemCount > 0) {
               hasChanges = true;
               totalItemsPulled += storeItemCount;
-              _invalidateCache(storeName);
+              _invalidateCache(storeName); // Full pull : vider le cache pour re-read complet
             }
           }
         }
