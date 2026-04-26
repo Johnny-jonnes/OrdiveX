@@ -3,15 +3,18 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.1.1';
+const CACHE_NAME = 'pharma-cache-v9.1.2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './css/main.css',
+  './css/mobile.css',
   './js/db.js',
   './js/auth.js',
   './js/ui.js',
+  './js/sms.js',
+  './js/mobile-money.js',
   './js/pages/dashboard.js',
   './js/pages/onboarding.js',
   './js/pages/metrics.js',
@@ -27,10 +30,11 @@ const ASSETS = [
   './js/pages/caisse.js',
   './js/pages/traceability.js',
   './js/pages/alerts-engine.js',
+  './js/pages/alerts.js',
   './js/pages/print.js',
-  './js/mobile-money.js',
   './js/ui/command-palette.js',
   './js/ui/feedback.js',
+  './js/components/supportWidget.js',
   './js/vendor/lucide.min.js',
   './js/vendor/supabase.min.js',
 ];
