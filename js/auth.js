@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Auth & Router
  */
 
@@ -33,7 +33,13 @@ const Auth = {
     await DB.dbPut('sessions', session);
     DB.AppState.currentUser = { ...user, sessionId: session.id };
     await DB.writeAudit('LOGIN', 'session', session.id, { username }, user.id);
-    setTimeout(() => { if (typeof AlertsEngine !== 'undefined') AlertsEngine.start(); if (typeof updateAlertBadge !== 'undefined') updateAlertBadge(); }, 1500);
+    // Forcer la mise à jour immédiate du sidebar et topbar avec le BON utilisateur
+    setTimeout(() => {
+      if (typeof initSidebar === 'function') initSidebar();
+      if (typeof updateTopbar === 'function') updateTopbar();
+      if (typeof AlertsEngine !== 'undefined') AlertsEngine.start();
+      if (typeof updateAlertBadge !== 'undefined') updateAlertBadge();
+    }, 500);
     return DB.AppState.currentUser;
   },
 

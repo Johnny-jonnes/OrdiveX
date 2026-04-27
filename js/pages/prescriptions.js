@@ -200,12 +200,11 @@ function showNewPrescription() {
       <div class="rx-section">
         <h4 class="rx-section-title"><i data-lucide="user"></i> Patient</h4>
         <div class="form-row">
-          <div class="form-group">
-            <label>Patient existant</label>
-            <select id="rx-patient-select" class="form-control" onchange="fillPatientData()">
-              <option value="">— Nouveau patient —</option>
-              ${patients.map(p => `<option value="${p.id}">${p.name} (${p.phone || '—'})</option>`).join('')}
-            </select>
+          <div class="form-group" style="position:relative">
+            <label>Rechercher un patient</label>
+            <input type="text" id="rx-patient-search" class="form-control" placeholder="Tapez un nom ou téléphone..." autocomplete="off" oninput="searchPatientForRx(this.value)">
+            <input type="hidden" id="rx-patient-select" value="">
+            <div id="rx-patient-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.15)"></div>
           </div>
           <div class="form-group">
             <label>Nom complet *</label>
@@ -457,20 +456,59 @@ function removeRxItem(idx) {
   if (el) el.remove();
 }
 
-function fillPatientData() {
-  const sel = document.getElementById('rx-patient-select');
-  const patientId = parseInt(sel?.value);
-  if (!patientId) return;
+function searchPatientForRx(query) {
+  const dropdown = document.getElementById('rx-patient-dropdown');
+  if (!dropdown) return;
+  const q = (query || '').trim().toLowerCase();
+  if (q.length < 1) { dropdown.style.display = 'none'; return; }
+
+  const patients = Object.values(window._rxPatientMap || {});
+  const matches = patients.filter(p =>
+    (p.name || '').toLowerCase().includes(q) || (p.phone || '').includes(q)
+  ).slice(0, 20); // Pagination : max 20 résultats
+
+  if (matches.length === 0) {
+    dropdown.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px">Aucun patient trouvé — les champs ci-dessous créeront un nouveau patient</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(p => `
+    <div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background 0.15s"
+         onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"
+         onclick="selectPatientForRx(${p.id})">
+      <strong>${p.name}</strong> <span style="color:var(--text-muted);margin-left:8px">${p.phone || ''}</span>
+    </div>
+  `).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectPatientForRx(patientId) {
   const patient = window._rxPatientMap?.[patientId];
   if (!patient) return;
+  document.getElementById('rx-patient-select').value = patientId;
+  document.getElementById('rx-patient-search').value = patient.name + (patient.phone ? ' (' + patient.phone + ')' : '');
+  document.getElementById('rx-patient-dropdown').style.display = 'none';
+  // Remplir les champs
   document.getElementById('rx-patient-name').value = patient.name || '';
   document.getElementById('rx-patient-phone').value = patient.phone || '';
   document.getElementById('rx-patient-dob').value = patient.dob || '';
   document.getElementById('rx-patient-allergies').value = patient.allergies || '';
+  if (patient.allergies) UI.toast('Allergie connue : ' + patient.allergies, 'warning', 5000);
+}
 
-  if (patient.allergies) {
-    UI.toast(`Allergie connue : ${patient.allergies}`, 'warning', 5000);
+// Fermer le dropdown quand on clique ailleurs
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('rx-patient-dropdown');
+  if (dd && !e.target.closest('#rx-patient-search') && !e.target.closest('#rx-patient-dropdown')) {
+    dd.style.display = 'none';
   }
+});
+
+function fillPatientData() {
+  const patientId = parseInt(document.getElementById('rx-patient-select')?.value);
+  if (!patientId) return;
+  selectPatientForRx(patientId);
 }
 
 function previewRxPhoto(input) {
@@ -749,6 +787,8 @@ window.addRxItem = addRxItem;
 window.removeRxItem = removeRxItem;
 window.updateRxItemDosage = updateRxItemDosage;
 window.fillPatientData = fillPatientData;
+window.searchPatientForRx = searchPatientForRx;
+window.selectPatientForRx = selectPatientForRx;
 window.previewRxPhoto = previewRxPhoto;
 window.submitPrescription = submitPrescription;
 window.viewPrescription = viewPrescription;
