@@ -960,7 +960,7 @@ async function syncToSupabase() {
             lots: ['productionDate'],
             stock: ['lastUpdate', 'minQuantity'],
             patients: ['createdAt', 'creditLimit'],
-            prescriptions: ['notes', 'patientName', 'dispensedAt', 'dispensedBy', 'saleId'],
+            prescriptions: ['notes', 'patientName', 'dispensedAt', 'dispensedBy', 'saleId', 'archiveDate', 'doctorEstablishment', 'doctorOrderNumber', 'doctorSpecialty', 'note', 'photoData', 'renewCount', 'renewUsed', 'renewable', 'validatedAt', 'validatedBy', 'validityDate'],
             sales: ['assuranceName', 'assuranceRef', 'assuranceAmount', 'paymentDetails', 'paidAt', 'paidDate', 'paidMethod', 'returnStatus', 'lastReturnId', 'lastReturnDate', 'patientName', 'patientPhone'],
             cashRegister: ['reference', 'saleId'],
           };
