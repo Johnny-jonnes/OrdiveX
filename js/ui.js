@@ -463,20 +463,24 @@ const Charts = {
       ctx.fillText(Math.round(maxVal * i / 5).toLocaleString('fr-FR'), pad.left - 8, y + 4);
     }
 
-    // Bars
+    // Bars + store positions for tooltips
+    const barRects = [];
     datasets.forEach((dataset, di) => {
       const color = dataset.color || `hsl(${200 + di * 40}, 70%, 55%)`;
       dataset.data.forEach((val, i) => {
         const barH = maxVal > 0 ? (val / maxVal) * chartH : 0;
         const x = pad.left + gap * i + gap * 0.2 + di * (barW / datasets.length);
         const y = pad.top + chartH - barH;
+        const bw = barW / datasets.length - 2;
+
+        barRects.push({ x, y, w: bw, h: barH, val, label: labels[i] });
 
         const grad = ctx.createLinearGradient(0, y, 0, pad.top + chartH);
         grad.addColorStop(0, color);
         grad.addColorStop(1, color + '88');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.roundRect(x, y, barW / datasets.length - 2, barH, 3);
+        ctx.roundRect(x, y, bw, barH, 3);
         ctx.fill();
       });
     });
@@ -496,6 +500,11 @@ const Charts = {
       ctx.font = 'bold 13px system-ui';
       ctx.textAlign = 'center';
       ctx.fillText(options.title, w / 2, 18);
+    }
+
+    // ── Tooltip hover (desktop only) ──
+    if (!('ontouchstart' in window)) {
+      Charts._addBarTooltip(canvas, barRects);
     }
   },
 
@@ -568,6 +577,12 @@ const Charts = {
       const pct = total > 0 ? ((data[i] / total) * 100).toFixed(1) : 0;
       ctx.fillText(`${label.substring(0, 15)} (${pct}%)`, lx + 15, ly);
     });
+
+    // ── Tooltip hover (desktop only) ──
+    if (!('ontouchstart' in window)) {
+      const slices = labels.map((label, i) => ({ label, val: data[i] }));
+      Charts._addDonutTooltip(canvas, slices, total);
+    }
   },
 
   line(canvasId, labels, datasets, options = {}) {
@@ -600,12 +615,16 @@ const Charts = {
       ctx.fillText(Math.round(maxVal * i / 5).toLocaleString('fr-FR'), pad.left - 6, y + 3);
     }
 
+    // Store point positions for tooltip
+    const allPoints = [];
     datasets.forEach((dataset, di) => {
       const color = dataset.color || `hsl(${180 + di * 60}, 70%, 50%)`;
       const points = dataset.data.map((val, i) => ({
         x: pad.left + (i / (labels.length - 1)) * chartW,
-        y: pad.top + chartH - (val / maxVal) * chartH
+        y: pad.top + chartH - (val / maxVal) * chartH,
+        val, label: labels[i]
       }));
+      allPoints.push(...points);
 
       // Area fill with custom gradient support
       ctx.beginPath();
@@ -664,7 +683,142 @@ const Charts = {
       ctx.textAlign = 'center';
       ctx.fillText(options.title, w / 2, 18);
     }
+
+    // ── Tooltip hover (desktop only) ──
+    if (!('ontouchstart' in window)) {
+      Charts._addLineTooltip(canvas, allPoints);
+    }
   }
+};
+
+// ══════ Tooltip infrastructure (desktop only) ══════
+Charts._tooltip = null;
+Charts._getTooltip = function() {
+  if (!Charts._tooltip) {
+    const t = document.createElement('div');
+    t.id = 'chart-tooltip';
+    t.style.cssText = 'position:fixed;z-index:9999;background:rgba(9,26,50,0.92);color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;pointer-events:none;opacity:0;transition:opacity 0.15s;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-family:Inter,system-ui,sans-serif;';
+    document.body.appendChild(t);
+    Charts._tooltip = t;
+  }
+  return Charts._tooltip;
+};
+
+Charts._addLineTooltip = function(canvas, points) {
+  // Remove old listener
+  if (canvas._chartMouseMove) canvas.removeEventListener('mousemove', canvas._chartMouseMove);
+  if (canvas._chartMouseLeave) canvas.removeEventListener('mouseleave', canvas._chartMouseLeave);
+
+  const scaleX = canvas.width / canvas.offsetWidth;
+  const scaleY = canvas.height / canvas.offsetHeight;
+
+  canvas._chartMouseMove = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    let closest = null, minDist = 20;
+    for (const p of points) {
+      const d = Math.sqrt((p.x - mx) ** 2 + (p.y - my) ** 2);
+      if (d < minDist) { minDist = d; closest = p; }
+    }
+    const tip = Charts._getTooltip();
+    if (closest) {
+      tip.innerHTML = `<span style="color:#94a3b8">${closest.label}</span><br><strong>${UI.formatCurrency(closest.val)}</strong>`;
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY - 40) + 'px';
+      tip.style.opacity = '1';
+      canvas.style.cursor = 'crosshair';
+    } else {
+      tip.style.opacity = '0';
+      canvas.style.cursor = '';
+    }
+  };
+  canvas._chartMouseLeave = function() {
+    const tip = Charts._getTooltip();
+    tip.style.opacity = '0';
+    canvas.style.cursor = '';
+  };
+  canvas.addEventListener('mousemove', canvas._chartMouseMove);
+  canvas.addEventListener('mouseleave', canvas._chartMouseLeave);
+};
+
+Charts._addDonutTooltip = function(canvas, slices, total) {
+  if (canvas._chartMouseMove) canvas.removeEventListener('mousemove', canvas._chartMouseMove);
+  if (canvas._chartMouseLeave) canvas.removeEventListener('mouseleave', canvas._chartMouseLeave);
+
+  const scaleX = canvas.width / canvas.offsetWidth;
+  const scaleY = canvas.height / canvas.offsetHeight;
+  const w = canvas.width, h = canvas.height;
+  const cx = w * 0.38, cy = h * 0.45;
+  const R = Math.min(w, h) * 0.35;
+  const r = R * 0.6;
+
+  canvas._chartMouseMove = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    const dx = mx - cx, dy = my - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const tip = Charts._getTooltip();
+    if (dist >= r && dist <= R && total > 0) {
+      let angle = Math.atan2(dy, dx) + Math.PI / 2;
+      if (angle < 0) angle += 2 * Math.PI;
+      let cumAngle = 0;
+      for (const s of slices) {
+        cumAngle += (s.val / total) * 2 * Math.PI;
+        if (angle <= cumAngle) {
+          const pct = ((s.val / total) * 100).toFixed(1);
+          tip.innerHTML = `<span style="color:#94a3b8">${s.label}</span><br><strong>${UI.formatCurrency(s.val)}</strong> <span style="color:#64748b">(${pct}%)</span>`;
+          tip.style.left = (e.clientX + 14) + 'px';
+          tip.style.top = (e.clientY - 40) + 'px';
+          tip.style.opacity = '1';
+          canvas.style.cursor = 'pointer';
+          return;
+        }
+      }
+    }
+    tip.style.opacity = '0';
+    canvas.style.cursor = '';
+  };
+  canvas._chartMouseLeave = function() {
+    Charts._getTooltip().style.opacity = '0';
+    canvas.style.cursor = '';
+  };
+  canvas.addEventListener('mousemove', canvas._chartMouseMove);
+  canvas.addEventListener('mouseleave', canvas._chartMouseLeave);
+};
+
+Charts._addBarTooltip = function(canvas, rects) {
+  if (canvas._chartMouseMove) canvas.removeEventListener('mousemove', canvas._chartMouseMove);
+  if (canvas._chartMouseLeave) canvas.removeEventListener('mouseleave', canvas._chartMouseLeave);
+
+  const scaleX = canvas.width / canvas.offsetWidth;
+  const scaleY = canvas.height / canvas.offsetHeight;
+
+  canvas._chartMouseMove = function(e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
+    const tip = Charts._getTooltip();
+    for (const r of rects) {
+      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+        tip.innerHTML = `<span style="color:#94a3b8">${r.label}</span><br><strong>${UI.formatCurrency(r.val)}</strong>`;
+        tip.style.left = (e.clientX + 14) + 'px';
+        tip.style.top = (e.clientY - 40) + 'px';
+        tip.style.opacity = '1';
+        canvas.style.cursor = 'pointer';
+        return;
+      }
+    }
+    tip.style.opacity = '0';
+    canvas.style.cursor = '';
+  };
+  canvas._chartMouseLeave = function() {
+    Charts._getTooltip().style.opacity = '0';
+    canvas.style.cursor = '';
+  };
+  canvas.addEventListener('mousemove', canvas._chartMouseMove);
+  canvas.addEventListener('mouseleave', canvas._chartMouseLeave);
 };
 
 window.UI = UI;

@@ -328,7 +328,6 @@ window._rxItemCounter = 0;
 window._rxItemsData = [];
 
 function addRxItem() {
-  const products = (window._rxProducts || []).filter(p => p.requiresPrescription || true);
   const listEl = document.getElementById('rx-items-list');
   if (!listEl) return;
 
@@ -341,11 +340,10 @@ function addRxItem() {
   itemDiv.id = `rx-item-${idx}`;
   itemDiv.innerHTML = `
     <div class="rx-item-fields">
-      <div class="form-group flex-grow">
-        <select class="form-control" id="rx-prod-${idx}" onchange="updateRxItemDosage(${idx})">
-          <option value="">Sélectionner médicament...</option>
-          ${products.map(p => `<option value="${p.id}" data-name="${p.name}" data-dci="${p.dci || ''}">${p.name} — ${p.dci || ''}</option>`).join('')}
-        </select>
+      <div class="form-group flex-grow" style="position:relative">
+        <input type="text" class="form-control" id="rx-prod-search-${idx}" placeholder="Rechercher médicament..." autocomplete="off" oninput="searchMedForRx(${idx}, this.value)">
+        <input type="hidden" id="rx-prod-${idx}" value="" data-name="" data-dci="">
+        <div id="rx-prod-dropdown-${idx}" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.15)"></div>
       </div>
       <div class="form-group" style="width:100px">
         <input type="number" class="form-control" id="rx-qty-${idx}" placeholder="Qté" min="1" value="1">
@@ -366,12 +364,48 @@ function addRxItem() {
   if (window.lucide) lucide.createIcons();
 }
 
+function searchMedForRx(idx, query) {
+  const dropdown = document.getElementById(`rx-prod-dropdown-${idx}`);
+  if (!dropdown) return;
+  const q = (query || '').trim().toLowerCase();
+  if (q.length < 2) { dropdown.style.display = 'none'; return; }
+
+  const products = window._rxProducts || [];
+  const matches = products.filter(p =>
+    (p.name || '').toLowerCase().includes(q) || (p.dci || '').toLowerCase().includes(q)
+  ).slice(0, 20);
+
+  if (matches.length === 0) {
+    dropdown.innerHTML = '<div style="padding:12px;color:var(--text-muted);font-size:13px">Aucun médicament trouvé</div>';
+    dropdown.style.display = 'block';
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(p => `
+    <div style="padding:8px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background 0.15s"
+         onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"
+         onclick="selectMedForRx(${idx}, ${p.id}, '${(p.name||'').replace(/'/g,"\\'")}', '${(p.dci||'').replace(/'/g,"\\'")}')">
+      <strong>${p.name}</strong> <span style="color:var(--text-muted);margin-left:6px;font-size:12px">${p.dci || ''}</span>
+    </div>
+  `).join('');
+  dropdown.style.display = 'block';
+}
+
+function selectMedForRx(idx, prodId, name, dci) {
+  const hidden = document.getElementById(`rx-prod-${idx}`);
+  const search = document.getElementById(`rx-prod-search-${idx}`);
+  const dropdown = document.getElementById(`rx-prod-dropdown-${idx}`);
+  if (hidden) { hidden.value = prodId; hidden.dataset.name = name; hidden.dataset.dci = dci; }
+  if (search) search.value = name + (dci ? ' — ' + dci : '');
+  if (dropdown) dropdown.style.display = 'none';
+  updateRxItemDosage(idx);
+}
+
 function updateRxItemDosage(idx) {
   const sel = document.getElementById(`rx-prod-${idx}`);
   const dciEl = document.getElementById(`rx-dci-${idx}`);
   if (sel && dciEl) {
-    const opt = sel.options[sel.selectedIndex];
-    const dci = opt?.dataset?.dci || '';
+    const dci = sel.dataset?.dci || '';
     dciEl.innerHTML = dci ? `DCI: <strong>${dci}</strong>` : '';
     dciEl.style.color = '#64748b';
     dciEl.style.fontSize = '11px';
@@ -388,10 +422,10 @@ function checkPrescriptionInteractions() {
     const idx = row.id.replace('rx-item-', '');
     const prodSel = document.getElementById(`rx-prod-${idx}`);
     if (prodSel?.value) {
-      const opt = prodSel.options[prodSel.selectedIndex];
-      if (opt?.dataset?.dci) {
-        selectedDCIs.push(opt.dataset.dci.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
-        selectedNames.push(opt.dataset.name);
+      const dci = prodSel.dataset?.dci || '';
+      if (dci) {
+        selectedDCIs.push(dci.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+        selectedNames.push(prodSel.dataset?.name || '');
       }
     }
   });
@@ -541,11 +575,10 @@ async function submitPrescription(status) {
     const dosage = document.getElementById(`rx-dosage-${idx}`)?.value || '';
     const unit = document.getElementById(`rx-unit-${idx}`)?.value || 'boîte';
     if (prodSel?.value) {
-      const opt = prodSel.options[prodSel.selectedIndex];
       items.push({
         productId: parseInt(prodSel.value),
-        productName: opt?.dataset?.name || '',
-        dci: opt?.dataset?.dci || '',
+        productName: prodSel.dataset?.name || '',
+        dci: prodSel.dataset?.dci || '',
         quantity: qty,
         dosage,
         unit,
@@ -786,6 +819,8 @@ window.showNewPrescription = showNewPrescription;
 window.addRxItem = addRxItem;
 window.removeRxItem = removeRxItem;
 window.updateRxItemDosage = updateRxItemDosage;
+window.searchMedForRx = searchMedForRx;
+window.selectMedForRx = selectMedForRx;
 window.fillPatientData = fillPatientData;
 window.searchPatientForRx = searchPatientForRx;
 window.selectPatientForRx = selectPatientForRx;

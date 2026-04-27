@@ -869,7 +869,56 @@ const CONVERSATIONS = [
     {
         triggers: ['version', 'mise a jour', 'update', 'changelog', 'nouveaute'],
         responses: [
-            "Vous utilisez <strong>OrdiveX v4.4</strong>, {name} ! 🆕<br><br>Dernières améliorations :<br>✅ Import massif CSV (50k+ produits)<br>✅ Console propre en production<br>✅ Cartes produit POS compactes<br>✅ Formes pharma (sirop, tube, flacon...)<br>✅ Recherche autocomplete dans les commandes<br>✅ Moi-même : Naomie v2 ! 🤖💙<br><br>Les mises à jour sont automatiques via GitHub Pages !",
+            "Vous utilisez <strong>OrdiveX v4.4</strong>, {name} ! 🆕<br><br>Dernières améliorations :<br>✅ Import massif CSV (50k+ produits)<br>✅ Console propre en production<br>✅ Cartes produit POS compactes<br>✅ Formes pharma (sirop, tube, flacon...)<br>✅ Recherche autocomplete dans les commandes<br>✅ Moi-même : Naomie v3 intelligente ! 🤖💙<br><br>Les mises à jour sont automatiques via GitHub Pages !",
+        ]
+    },
+    // ── Nouvelles conversations v9.2.1 (Bonnes pratiques guide) ──
+    {
+        triggers: ['tiers payant', 'ticket moderateur', 'part patient', 'part entreprise', 'couverture assurance'],
+        responses: [
+            "Le <strong>tiers-payant</strong> fonctionne ainsi, {name} ! 🏥<br><br>Au <strong>POS</strong>, sélectionnez le paiement « <strong>Assurance</strong> » :<br>1️⃣ Saisissez l'organisme (ex: CNSS, ASCOMA)<br>2️⃣ Entrez le numéro de <strong>prise en charge</strong><br>3️⃣ Indiquez le <strong>taux de couverture</strong><br><br>Le système sépare automatiquement :<br>• Le <strong>ticket modérateur</strong> (part patient) → encaissé immédiatement<br>• La <strong>créance assurance</strong> (part entreprise) → en attente de règlement<br><br>Tout est tracé dans l'historique des ventes ! 📋",
+        ]
+    },
+    {
+        triggers: ['cloture', 'cloturer', 'fermer la caisse', 'fin de journee', 'fermeture caisse'],
+        responses: [
+            "Pour <strong>clôturer la caisse</strong>, {name} ! 💰<br><br>1️⃣ Allez dans <strong>Caisse Journalière</strong><br>2️⃣ Vérifiez le total des encaissements par mode de paiement<br>3️⃣ Cliquez <strong>« Clôturer la Caisse »</strong><br>4️⃣ Entrez le <strong>montant physique compté</strong><br>5️⃣ Le système calcule l'<strong>écart de caisse</strong> automatiquement<br><br>📋 Vous pouvez ensuite imprimer le <strong>Rapport de Caisse</strong> depuis le Centre d'Impression ! 🖨️",
+        ]
+    },
+    {
+        triggers: ['destruction', 'detruire', 'pv destruction', 'lot perime', 'eliminer', 'incineration'],
+        responses: [
+            "La <strong>destruction de médicaments périmés</strong> suit un protocole strict, {name} ! 🗑️<br><br>1️⃣ Allez dans <strong>Traçabilité & Pharmacovigilance</strong><br>2️⃣ Sélectionnez le lot à détruire<br>3️⃣ Renseignez le <strong>motif</strong>, la <strong>méthode</strong> (incinération, broyage...) et les <strong>témoins</strong><br>4️⃣ Validez — un <strong>PV de destruction</strong> est généré automatiquement<br><br>Le PV est conforme aux exigences de l'<strong>Inspection Pharmaceutique DNPM</strong> et peut être imprimé ! 📄",
+        ]
+    },
+    {
+        triggers: ['import', 'csv', 'excel', 'importer', 'catalogue en masse', 'bulk', 'fichier'],
+        responses: [
+            "L'<strong>import massif CSV</strong> est ultra-puissant, {name} ! 📤<br><br>1️⃣ Allez dans <strong>Catalogue Produits</strong><br>2️⃣ Cliquez <strong>« Importer CSV »</strong><br>3️⃣ Sélectionnez votre fichier (colonnes : name, dci, brand, form, buyPrice, sellPrice, minStock...)<br>4️⃣ OrdiveX traite les produits par <strong>lots de 100</strong> pour éviter tout blocage<br><br>✅ Supporte jusqu'à <strong>50 000+ produits</strong> en une seule importation !<br>📊 Un rapport d'import détaillé s'affiche à la fin. 🎯",
+        ]
+    },
+    {
+        triggers: ['scan', 'scanner', 'code barre', 'barcode', 'camera', 'lecteur'],
+        responses: [
+            "Le <strong>scan de code-barres</strong> fonctionne de 2 façons, {name} ! 📷<br><br>💻 <strong>Sur PC</strong> :<br>• Branchez un lecteur USB — il tape le code directement<br>• Ou appuyez sur <strong>F9</strong> au POS pour activer la caméra<br><br>📱 <strong>Sur mobile</strong> :<br>• Cliquez l'icône 📷 dans la barre de recherche du POS<br>• La <strong>caméra arrière</strong> s'active automatiquement<br>• Pointez le code-barres — le produit s'ajoute au panier instantanément !<br><br>Assurez-vous que vos produits ont un <strong>code-barres renseigné</strong> dans le Catalogue. 🏷️",
+        ]
+    },
+    {
+        triggers: ['hors ligne', 'offline', 'sans internet', 'pas de connexion', 'deconnecte', 'wi-fi', 'wifi'],
+        responses: [
+            "OrdiveX est conçu <strong>Offline-First</strong>, {name} ! 📡🚫<br><br>✅ <strong>TOUT fonctionne sans internet</strong> :<br>• Ventes au POS ✅<br>• Gestion des stocks ✅<br>• Ordonnances et patients ✅<br>• Impressions et rapports ✅<br>• Alertes et traçabilité ✅<br><br>🔄 Internet n'est utilisé QUE pour la <strong>synchronisation cloud</strong> entre plusieurs appareils.<br><br>Vos données sont stockées localement dans <strong>IndexedDB</strong> — elles ne disparaissent jamais même si vous fermez l'app ! 💾",
+        ]
+    },
+    {
+        triggers: ['export', 'telecharger', 'download', 'exporter', 'comptabilite', 'rapport csv'],
+        responses: [
+            "Plusieurs options d'<strong>export</strong> sont disponibles, {name} ! 📊<br><br>📋 <strong>Historique des Ventes</strong> → Export CSV avec tous les détails<br>📋 <strong>Ordonnances</strong> → Export CSV pour archivage<br>🖨️ <strong>Centre d'Impression</strong> → Rapports imprimables (stock, caisse, PV)<br>💾 <strong>Paramètres > Sauvegarde</strong> → Export JSON complet de toute la base<br><br>Les exports CSV sont compatibles avec <strong>Excel</strong> et tout logiciel comptable ! 📈",
+        ]
+    },
+    {
+        triggers: ['naomie', 'assistante', 'chatbot', 'ia', 'intelligence artificielle', 'tu peux m aider'],
+        responses: [
+            "Je suis <strong>Naomie v3</strong>, votre assistante IA pharmaceutique, {name} ! 🤖💙<br><br>Je maîtrise <strong>30+ sujets</strong> :<br>🛒 Ventes, crédits, assurances<br>📦 Stocks, inventaires, commandes<br>💊 Ordonnances, interactions, allergies<br>📊 KPIs, analyses, statistiques<br>🖨️ Impressions, PV, rapports<br>⚙️ Paramètres, utilisateurs, sync cloud<br><br>Posez-moi n'importe quelle question en <strong>langage naturel</strong> ! Je comprends aussi bien \"Comment je fais un crédit ?\" que \"Gestion du tiers-payant\". 😊",
         ]
     },
 ];
@@ -950,18 +999,27 @@ window.submitFreeQuestion = function() {
                     setTimeout(() => showQuickOptions(), 400);
                 }
             } else {
-                // Aucun match — réponse intelligente contextuelle
+                // Aucun match — réponse intelligente contextuelle ultra-pro
                 const page = (window.Router && window.Router.currentPage) ? window.Router.currentPage : 'dashboard';
                 const pageHints = {
-                    'pos': 'Je vois que vous êtes au <strong>Point de Vente</strong>. Besoin d\'aide pour scanner un produit, gérer un crédit ou une assurance ?',
-                    'products': 'Vous êtes dans le <strong>Catalogue Produits</strong>. Besoin d\'aide pour ajouter un médicament ou configurer le déconditionnement ?',
-                    'stock': 'Vous êtes dans la <strong>Gestion des Stocks</strong>. Besoin d\'aide pour un inventaire ou voir les mouvements ?',
-                    'patients': 'Vous êtes dans les <strong>Dossiers Patients</strong>. Besoin d\'aide pour créer une fiche ou gérer les allergies ?',
-                    'suppliers': 'Vous êtes dans <strong>Fournisseurs & Achats</strong>. Besoin d\'aide pour créer une commande ou réceptionner une livraison ?',
-                    'sales': 'Vous êtes dans l\'<strong>Historique des Ventes</strong>. Besoin d\'aide pour encaisser une dette ou faire un retour ?',
+                    'pos': 'Je vois que vous êtes au <strong>Point de Vente</strong>. Essayez des mots-clés comme : <strong>vente</strong>, <strong>crédit</strong>, <strong>assurance</strong>, <strong>scan</strong>, <strong>déconditionnement</strong>, <strong>ordonnance</strong>',
+                    'products': 'Vous êtes dans le <strong>Catalogue Produits</strong>. Essayez : <strong>ajouter</strong>, <strong>import CSV</strong>, <strong>déconditionnement</strong>, <strong>notice</strong>, <strong>DCI</strong>',
+                    'stock': 'Vous êtes dans la <strong>Gestion des Stocks</strong>. Essayez : <strong>inventaire</strong>, <strong>mouvement</strong>, <strong>FEFO</strong>, <strong>rupture</strong>, <strong>lot</strong>',
+                    'patients': 'Vous êtes dans les <strong>Dossiers Patients</strong>. Essayez : <strong>allergie</strong>, <strong>fiche patient</strong>, <strong>historique</strong>',
+                    'suppliers': 'Vous êtes dans <strong>Fournisseurs</strong>. Essayez : <strong>commande</strong>, <strong>réception</strong>, <strong>score</strong>, <strong>bon de commande</strong>',
+                    'sales': 'Vous êtes dans l\'<strong>Historique des Ventes</strong>. Essayez : <strong>dette</strong>, <strong>retour</strong>, <strong>facture</strong>, <strong>export</strong>',
+                    'prescriptions': 'Vous êtes dans les <strong>Ordonnances</strong>. Essayez : <strong>ordonnance</strong>, <strong>interaction</strong>, <strong>dispenser</strong>, <strong>patient</strong>',
+                    'dashboard': 'Vous êtes sur le <strong>Tableau de Bord</strong>. Essayez : <strong>statistique</strong>, <strong>KPI</strong>, <strong>chiffre d\'affaires</strong>, <strong>marge</strong>',
+                    'metrics': 'Vous êtes dans <strong>Pilotage & Analyses</strong>. Essayez : <strong>KPI</strong>, <strong>rotation</strong>, <strong>bénéfice</strong>, <strong>panier moyen</strong>',
+                    'caisse': 'Vous êtes à la <strong>Caisse</strong>. Essayez : <strong>clôture</strong>, <strong>encaissement</strong>, <strong>espèce</strong>, <strong>Orange Money</strong>',
+                    'settings': 'Vous êtes dans les <strong>Paramètres</strong>. Essayez : <strong>sauvegarde</strong>, <strong>synchronisation</strong>, <strong>utilisateur</strong>, <strong>devise</strong>',
+                    'traceability': 'Vous êtes dans <strong>Traçabilité</strong>. Essayez : <strong>destruction</strong>, <strong>audit</strong>, <strong>pharmacovigilance</strong>, <strong>PV</strong>',
+                    'alerts': 'Vous êtes dans le <strong>Centre d\'Alertes</strong>. Essayez : <strong>rupture</strong>, <strong>péremption</strong>, <strong>stock bas</strong>',
+                    'print': 'Vous êtes dans le <strong>Centre d\'Impression</strong>. Essayez : <strong>imprimer</strong>, <strong>inventaire</strong>, <strong>rapport</strong>, <strong>ticket</strong>',
+                    'returns': 'Vous êtes dans les <strong>Retours</strong>. Essayez : <strong>retour</strong>, <strong>remboursement</strong>, <strong>échange</strong>',
                 };
-                const hint = pageHints[page] || 'Dites-moi ce que vous cherchez à faire, et je vous guiderai !';
-                body.innerHTML += `<div class="chat-bubble chat-bot">Hmm, je n'ai pas trouvé de réponse exacte à "<strong>${safeText}</strong>", ${name}. 🤔<br><br>${hint}<br><br>Vous pouvez aussi :<br>• Reformuler avec un mot-clé (<strong>stock</strong>, <strong>crédit</strong>, <strong>commande</strong>...)<br>• Cliquer un sujet ci-dessous<br>• Contacter le support humain via WhatsApp 👇</div>`;
+                const hint = pageHints[page] || 'Essayez des mots-clés comme : <strong>vente</strong>, <strong>stock</strong>, <strong>commande</strong>, <strong>ordonnance</strong>, <strong>patient</strong>';
+                body.innerHTML += `<div class="chat-bubble chat-bot">Je n'ai pas trouvé de correspondance exacte pour "<strong>${safeText}</strong>", ${name}. 🤔<br><br>${hint}<br><br>💡 <strong>Astuce</strong> : J'utilise la reconnaissance de mots-clés. Plus votre question contient un terme métier précis, plus ma réponse sera pertinente !<br><br>Si votre question est très spécifique, contactez le <strong>support TrillionX</strong> via WhatsApp ci-dessous. 👇</div>`;
                 setTimeout(() => showQuickOptions(), 400);
             }
             body.scrollTop = body.scrollHeight;
