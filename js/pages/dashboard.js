@@ -1,10 +1,39 @@
 /**
  * OrdiveX — Dashboard Page
+ * v9.2.3 — Cache mémoire pour affichage instantané
  */
 
-async function renderDashboard(container) {
-  UI.loading(container, 'Chargement du tableau de bord...');
+// ═══════════════════════════════════════════════════════════════════
+// CACHE MÉMOIRE DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+const _dashCache = {
+  html: null,           // Dernier HTML rendu
+  chartData: null,      // Données des graphiques
+  ts: 0,                // Timestamp du dernier calcul
+  TTL: 30000,           // 30s avant refresh obligatoire
+};
 
+async function renderDashboard(container) {
+  // ── AFFICHAGE INSTANTANÉ depuis le cache ──
+  if (_dashCache.html) {
+    container.innerHTML = _dashCache.html;
+    _drawCharts(_dashCache.chartData);
+    if (window.lucide) lucide.createIcons();
+
+    // Si le cache est frais (< TTL), on s'arrête là
+    if (Date.now() - _dashCache.ts < _dashCache.TTL) return;
+
+    // Sinon, refresh silencieux en arrière-plan (pas de skeleton)
+    _refreshDashboard(container);
+    return;
+  }
+
+  // ── PREMIER CHARGEMENT (aucun cache disponible) ──
+  UI.loading(container, 'Chargement du tableau de bord...');
+  await _refreshDashboard(container);
+}
+
+async function _refreshDashboard(container) {
   try {
     const [stockAll, sales, saleItems, alerts, movements, allReturns, productCount] = await Promise.all([
       DB.dbGetAll('stock'),
@@ -90,7 +119,7 @@ async function renderDashboard(container) {
     });
     const topProducts = Object.entries(productRevenue).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    container.innerHTML = `
+    const html = `
       <div class="page-header">
         <div>
           <h1 class="page-title">Tableau de Bord</h1>
@@ -227,28 +256,60 @@ async function renderDashboard(container) {
       </div>
     `;
 
-    // Draw charts
-    requestAnimationFrame(() => {
-      Charts.line('chart-sales', last15Labels, [{
-        data: last15,
-        color: '#0B3D6F' // Bleu Institutionnel
-      }], { title: '' });
+    // Construire les données des graphiques
+    const payKeys = Object.keys(payBreakdown);
+    const payColors = ['#0B3D6F', '#0D9B6C', '#E8913A', '#2B7BC0', '#D63B3B'];
+    const chartData = {
+      last15, last15Labels,
+      payKeys, payBreakdown, payLabels, payColors,
+    };
 
-      const payKeys = Object.keys(payBreakdown);
-      const payColors = ['#0B3D6F', '#0D9B6C', '#E8913A', '#2B7BC0', '#D63B3B']; // Palette v5 
-      Charts.donut('chart-payments',
-        payKeys.map(k => payLabels[k] || k),
-        payKeys.map(k => payBreakdown[k]),
-        payColors
-      );
+    // ── SAUVEGARDER DANS LE CACHE MÉMOIRE ──
+    _dashCache.html = html;
+    _dashCache.chartData = chartData;
+    _dashCache.ts = Date.now();
+
+    // ── RENDRE (seulement si on est encore sur le dashboard) ──
+    if (Router.currentPage === 'dashboard') {
+      container.innerHTML = html;
+      _drawCharts(chartData);
       if (window.lucide) lucide.createIcons();
-    });
+    }
 
   } catch (err) {
     console.error(err);
-    container.innerHTML = `<div class="error-state">Erreur de chargement : ${err.message}</div>`;
+    // Seulement afficher l'erreur s'il n'y a aucun cache
+    if (!_dashCache.html) {
+      container.innerHTML = `<div class="error-state">Erreur de chargement : ${err.message}</div>`;
+    }
   }
 }
+
+function _drawCharts(chartData) {
+  if (!chartData) return;
+  requestAnimationFrame(() => {
+    try {
+      Charts.line('chart-sales', chartData.last15Labels, [{
+        data: chartData.last15,
+        color: '#0B3D6F'
+      }], { title: '' });
+
+      Charts.donut('chart-payments',
+        chartData.payKeys.map(k => chartData.payLabels[k] || k),
+        chartData.payKeys.map(k => chartData.payBreakdown[k]),
+        chartData.payColors
+      );
+    } catch (e) { /* Canvas pas encore prêt */ }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INVALIDATION DU CACHE
+// ═══════════════════════════════════════════════════════════════════
+// Invalider le cache quand une vente est faite ou un stock modifié
+window._invalidateDashCache = function() {
+  _dashCache.ts = 0; // Force refresh au prochain accès
+};
 
 function alertTypeLabel(type) {
   const labels = {
@@ -264,6 +325,7 @@ async function dismissAlert(alertId) {
   const alert = await DB.dbGet('alerts', alertId);
   if (alert) {
     await DB.dbPut('alerts', { ...alert, status: 'read' });
+    _dashCache.ts = 0; // Invalider le cache
     UI.toast('Alerte marquée comme lue', 'success');
     Router.navigate('dashboard');
   }

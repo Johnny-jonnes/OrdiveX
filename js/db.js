@@ -511,7 +511,7 @@ const _dbCache = new Map();
 const _dbCacheTime = new Map(); // Timestamp du dernier cache
 // Sur mobile : ne PAS cacher les gros stores (products, movements, lots) pour éviter l'OOM
 const _mobileNoCacheStores = new Set(['products', 'movements', 'lots', 'auditLog', 'saleItems']);
-function _invalidateCache(storeName) { _dbCache.delete(storeName); _dbCacheTime.delete(storeName); }
+function _invalidateCache(storeName) { _dbCache.delete(storeName); _dbCacheTime.delete(storeName); if (window._invalidateDashCache) window._invalidateDashCache(); }
 
 // ── Mise à jour chirurgicale du cache mémoire (sans le vider) ──
 // Utilisé par le pull incrémental pour fusionner les nouvelles données
@@ -532,6 +532,7 @@ function _updateCacheInPlace(storeName, newItems) {
     }
   }
   _dbCacheTime.set(storeName, Date.now()); // Rafraîchir le TTL
+  if (window._invalidateDashCache) window._invalidateDashCache();
 }
 
 const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
