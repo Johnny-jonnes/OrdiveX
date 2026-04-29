@@ -376,7 +376,7 @@
       </button>
       <h1>Ordive<span>X</span></h1>
       <p class="subtitle">Guide Utilisateur Complet — ERP Pharmaceutique</p>
-      <div class="version">Version 4.4 — Édition 2026</div>
+      <div class="version">Version 9.2.3 — Spécial Déploiement Terrain</div>
       <p style="margin-top:20px;font-size:13px;opacity:0.7">Conçu et développé par <strong>TrillionX</strong> 🚀</p>
     </div>
 
@@ -405,6 +405,7 @@
         <li><a href="#naomie"><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#091a32"/><text x="12" y="16.5" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text></svg> Naomie v3 — Assistante IA Pharmaceutique</a></li>
         <li><a href="#cloud">Synchronisation Cloud Multi-Appareils</a></li>
         <li><a href="#mobile">Utilisation sur Mobile</a></li>
+        <li><a href="#terrain">Usage en Conditions Réelles & Multi-Postes</a></li>
         <li><a href="#raccourcis">Raccourcis Clavier</a></li>
         <li><a href="#depannage">Dépannage & FAQ</a></li>
       </ol>
@@ -456,9 +457,19 @@
           <td>Tablette 10" ou PC</td>
         </tr>
         <tr>
-          <td>RAM</td>
-          <td>2 Go</td>
-          <td>4 Go+</td>
+          <td>Mémoire RAM</td>
+          <td>4 Go (Limité à 50k items)</td>
+          <td>8 Go+ (Pour +300k items)</td>
+        </tr>
+        <tr>
+          <td>Stockage libre</td>
+          <td>5 Go</td>
+          <td>15 Go+ (Pour gros catalogue)</td>
+        </tr>
+        <tr>
+          <td>Mobile iOS</td>
+          <td>iPhone 11/12 (4 Go RAM)</td>
+          <td>iPhone 13+ (6 Go RAM+)</td>
         </tr>
         <tr>
           <td>Internet</td>
@@ -1696,8 +1707,48 @@
     </div>
 
     <!-- ═══════ 22. RACCOURCIS ═══════ -->
+    <!-- ═══════ 22. USAGE TERRAIN ═══════ -->
+    <div class="section" id="terrain">
+      <h2>22. 🌍 Usage en Conditions Réelles & Multi-Postes</h2>
+      <p>Pour une utilisation saine de l'application avec un volume massif de données (+330 000 items), suivez ces règles d'or issues du terrain :</p>
+      
+      <div class="grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:20px;">
+        <div class="card" style="background:#fff; border:1px solid var(--border); padding:20px; border-radius:12px;">
+          <h3 style="color:var(--primary); margin-bottom:10px;">📱 Hiérarchie des Mobiles</h3>
+          <p>La limite sur mobile est la <strong>RAM</strong> (mémoire vive). Apple bride Safari si l'app consomme trop :</p>
+          <ul style="margin-left:20px; margin-top:10px;">
+            <li><strong>iPhone 11 Pro / 12 (4 Go RAM) :</strong> Installation délicate. Ne quittez JAMAIS l'application pendant la synchronisation initiale. Gardez l'écran allumé.</li>
+            <li><strong>iPhone 13 / 14 / 15 (6 Go RAM+) :</strong> Installation fluide. Supporte parfaitement le catalogue complet.</li>
+          </ul>
+        </div>
+        <div class="card" style="background:#fff; border:1px solid var(--border); padding:20px; border-radius:12px;">
+          <h3 style="color:var(--primary); margin-bottom:10px;">👑 Rôles des Appareils</h3>
+          <p>Désignez un <strong>PC Master</strong> (le plus puissant) pour les opérations lourdes :</p>
+          <ul style="margin-left:20px; margin-top:10px;">
+            <li><strong>PC Comptoir :</strong> Entrées en stock, importations Excel, paramétrage global.</li>
+            <li><strong>Mobiles :</strong> Vente rapide, scan d'ordonnances, inventaire physique en rayon.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tip" style="background:#fff3cd; border-left:4px solid #ffc107; padding:15px; margin:20px 0; border-radius:8px; font-size:14px;">
+        <strong>💡 Règle de l'Écran d'Accueil (PWA)</strong><br>
+        Sur mobile, n'utilisez jamais OrdiveX dans un onglet Safari. Utilisez <strong>"Ajouter à l'écran d'accueil"</strong>. Cela permet à l'app de dépasser les limites de stockage standard du navigateur et d'accéder à plus de RAM.
+      </div>
+
+      <h3 style="margin-top:20px; color:var(--primary);">⏰ Routine de Synchronisation</h3>
+      <p>Vous pouvez vendre <strong>hors-connexion</strong> toute la journée. Pour garder vos stocks synchronisés entre tous les appareils :</p>
+      <ol style="margin-left:20px; margin-top:10px;">
+        <li><strong>Le Matin :</strong> Connectez tous les appareils 2 minutes pour récupérer les mises à jour nocturnes (PULL).</li>
+        <li><strong>Durée la Journée :</strong> Vendez librement sans internet si besoin.</li>
+        <li><strong>Pause Déjeuner :</strong> Allumez le Wi-Fi 5 minutes pour vider les files d'attente (Auto-sync).</li>
+        <li><strong>Le Soir :</strong> Connexion obligatoire avant de fermer l'officine pour assurer la sauvegarde Cloud (PUSH).</li>
+      </ol>
+    </div>
+
+    <!-- ═══════ 23. RACCOURCIS ═══════ -->
     <div class="section" id="raccourcis">
-      <h2>22. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="8" y1="12" x2="8.01" y2="12"/><line x1="12" y1="12" x2="12.01" y2="12"/><line x1="16" y1="12" x2="16.01" y2="12"/><line x1="7" y1="16" x2="17" y2="16"/></svg> Raccourcis Clavier</h2>
+      <h2>23. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="8" y1="12" x2="8.01" y2="12"/><line x1="12" y1="12" x2="12.01" y2="12"/><line x1="16" y1="12" x2="16.01" y2="12"/><line x1="7" y1="16" x2="17" y2="16"/></svg> Raccourcis Clavier</h2>
       <h3>Navigation globale</h3>
       <table>
         <tr>
