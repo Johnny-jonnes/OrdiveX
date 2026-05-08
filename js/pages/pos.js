@@ -22,36 +22,36 @@ let posProductsCache = new Map(); // Cache pour les produits cliqués/ajoutés
 // Format: [DCI_A, DCI_B, niveau (grave/modéré), description]
 // ═══════════════════════════════════════════════════════════════════
 const DRUG_INTERACTIONS = [
-  ['methotrexate','trimethoprime','grave','Risque de pancytopénie potentiellement fatale'],
-  ['warfarine','aspirine','grave','Hémorragie sévère — surveillance INR obligatoire'],
-  ['warfarine','ibuprofène','grave','Hémorragie digestive — AINS contre-indiqués'],
-  ['warfarine','fluconazole','grave','Augmentation effet anticoagulant — hémorragie'],
-  ['metformine','produit de contraste iodé','modéré','Risque acidose lactique'],
-  ['ciprofloxacine','théophylline','grave','Convulsions — surdosage théophylline'],
-  ['érythromycine','simvastatine','grave','Rhabdomyolyse — toxicité musculaire'],
-  ['clarithromycine','simvastatine','grave','Rhabdomyolyse — toxicité musculaire'],
-  ['fluconazole','simvastatine','grave','Rhabdomyolyse — inhibition CYP3A4'],
-  ['métronidazole','alcool','grave','Effet antabuse — nausées, vomissements sévères'],
-  ['ciprofloxacine','fer','modéré','Absorption réduite de la ciprofloxacine'],
-  ['tétracycline','calcium','modéré','Chélation — perte d\'efficacité antibiotique'],
-  ['doxycycline','calcium','modéré','Absorption réduite de la doxycycline'],
-  ['amoxicilline','méthotrexate','grave','Toxicité méthotrexate augmentée'],
-  ['lithium','ibuprofène','grave','Toxicité lithium — insuffisance rénale'],
-  ['lithium','diclofénac','grave','Toxicité lithium — insuffisance rénale'],
-  ['digoxine','amiodarone','grave','Toxicité digitale — bradycardie sévère'],
-  ['digoxine','vérapamil','grave','Bradycardie sévère — bloc AV'],
-  ['carbamazépine','érythromycine','grave','Toxicité carbamazépine — ataxie, nystagmus'],
-  ['phénytoïne','fluconazole','grave','Toxicité phénytoïne augmentée'],
-  ['captopril','spironolactone','modéré','Hyperkaliémie — surveillance potassium'],
-  ['énalapril','spironolactone','modéré','Hyperkaliémie — surveillance potassium'],
-  ['cisapride','fluconazole','grave','Allongement QT — arythmie cardiaque'],
-  ['tramadol','carbamazépine','modéré','Efficacité tramadol réduite — induction enzymatique'],
-  ['clopidogrel','oméprazole','modéré','Efficacité clopidogrel réduite — éviter association'],
-  ['sildenafil','nitrate','grave','Hypotension sévère potentiellement fatale'],
-  ['isoniazide','rifampicine','modéré','Hépatotoxicité — surveillance hépatique obligatoire'],
-  ['amiodarone','simvastatine','grave','Rhabdomyolyse — limiter dose statine'],
-  ['métoclopramide','lévodopa','modéré','Antagonisme dopaminergique — perte d\'efficacité'],
-  ['furosémide','gentamicine','grave','Ototoxicité et néphrotoxicité augmentées'],
+  ['methotrexate', 'trimethoprime', 'grave', 'Risque de pancytopénie potentiellement fatale'],
+  ['warfarine', 'aspirine', 'grave', 'Hémorragie sévère — surveillance INR obligatoire'],
+  ['warfarine', 'ibuprofène', 'grave', 'Hémorragie digestive — AINS contre-indiqués'],
+  ['warfarine', 'fluconazole', 'grave', 'Augmentation effet anticoagulant — hémorragie'],
+  ['metformine', 'produit de contraste iodé', 'modéré', 'Risque acidose lactique'],
+  ['ciprofloxacine', 'théophylline', 'grave', 'Convulsions — surdosage théophylline'],
+  ['érythromycine', 'simvastatine', 'grave', 'Rhabdomyolyse — toxicité musculaire'],
+  ['clarithromycine', 'simvastatine', 'grave', 'Rhabdomyolyse — toxicité musculaire'],
+  ['fluconazole', 'simvastatine', 'grave', 'Rhabdomyolyse — inhibition CYP3A4'],
+  ['métronidazole', 'alcool', 'grave', 'Effet antabuse — nausées, vomissements sévères'],
+  ['ciprofloxacine', 'fer', 'modéré', 'Absorption réduite de la ciprofloxacine'],
+  ['tétracycline', 'calcium', 'modéré', 'Chélation — perte d\'efficacité antibiotique'],
+  ['doxycycline', 'calcium', 'modéré', 'Absorption réduite de la doxycycline'],
+  ['amoxicilline', 'méthotrexate', 'grave', 'Toxicité méthotrexate augmentée'],
+  ['lithium', 'ibuprofène', 'grave', 'Toxicité lithium — insuffisance rénale'],
+  ['lithium', 'diclofénac', 'grave', 'Toxicité lithium — insuffisance rénale'],
+  ['digoxine', 'amiodarone', 'grave', 'Toxicité digitale — bradycardie sévère'],
+  ['digoxine', 'vérapamil', 'grave', 'Bradycardie sévère — bloc AV'],
+  ['carbamazépine', 'érythromycine', 'grave', 'Toxicité carbamazépine — ataxie, nystagmus'],
+  ['phénytoïne', 'fluconazole', 'grave', 'Toxicité phénytoïne augmentée'],
+  ['captopril', 'spironolactone', 'modéré', 'Hyperkaliémie — surveillance potassium'],
+  ['énalapril', 'spironolactone', 'modéré', 'Hyperkaliémie — surveillance potassium'],
+  ['cisapride', 'fluconazole', 'grave', 'Allongement QT — arythmie cardiaque'],
+  ['tramadol', 'carbamazépine', 'modéré', 'Efficacité tramadol réduite — induction enzymatique'],
+  ['clopidogrel', 'oméprazole', 'modéré', 'Efficacité clopidogrel réduite — éviter association'],
+  ['sildenafil', 'nitrate', 'grave', 'Hypotension sévère potentiellement fatale'],
+  ['isoniazide', 'rifampicine', 'modéré', 'Hépatotoxicité — surveillance hépatique obligatoire'],
+  ['amiodarone', 'simvastatine', 'grave', 'Rhabdomyolyse — limiter dose statine'],
+  ['métoclopramide', 'lévodopa', 'modéré', 'Antagonisme dopaminergique — perte d\'efficacité'],
+  ['furosémide', 'gentamicine', 'grave', 'Ototoxicité et néphrotoxicité augmentées'],
 ];
 
 /**
@@ -106,29 +106,29 @@ function findGenericAlternatives(product) {
 // RENDU PRINCIPAL & VÉRIFICATION SYNC
 // ═══════════════════════════════════════════════════════════════════
 async function checkSyncConflicts() {
-   try {
-       const sb = await getSupabaseClient();
-       if (!sb || !navigator.onLine) return false;
-       
-       const { data, error } = await sb.from('settings').select('value').like('key', 'device_status_%');
-       if (error) return false;
-       
-       let hasPendingOtherDevice = false;
-       const localDeviceName = localStorage.getItem('pharma_device_name');
-       
-       for(const row of data) {
-           try {
-               const status = JSON.parse(row.value);
-               if (status.name !== localDeviceName && status.pending > 0) {
-                   hasPendingOtherDevice = true;
-                   break;
-               }
-           } catch(e) {}
-       }
-       return hasPendingOtherDevice;
-   } catch(e) {
-       return false;
-   }
+  try {
+    const sb = await getSupabaseClient();
+    if (!sb || !navigator.onLine) return false;
+
+    const { data, error } = await sb.from('settings').select('value').like('key', 'device_status_%');
+    if (error) return false;
+
+    let hasPendingOtherDevice = false;
+    const localDeviceName = localStorage.getItem('pharma_device_name');
+
+    for (const row of data) {
+      try {
+        const status = JSON.parse(row.value);
+        if (status.name !== localDeviceName && status.pending > 0) {
+          hasPendingOtherDevice = true;
+          break;
+        }
+      } catch (e) { }
+    }
+    return hasPendingOtherDevice;
+  } catch (e) {
+    return false;
+  }
 }
 
 async function renderPOS(container) {
@@ -187,12 +187,12 @@ async function renderPOS(container) {
     renderFullPOSUI(container);
   } else {
     const loadPOS = async () => {
-      if (DB._isPulling) { let w=0; while(DB._isPulling && w<60000){await new Promise(r=>setTimeout(r,500));w+=500;} }
+      if (DB._isPulling) { let w = 0; while (DB._isPulling && w < 60000) { await new Promise(r => setTimeout(r, 500)); w += 500; } }
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
       const stockAll = await DB.dbGetAll('stock');
       posStock = {};
       stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
-      
+
       let products;
       if (isMobile) {
         products = await DB.dbSearchProducts('', 100);
@@ -201,7 +201,7 @@ async function renderPOS(container) {
       }
       posProducts = products.filter(p => p.status !== 'inactive');
       posProducts.forEach(p => posProductsCache.set(p.id, p));
-      
+
       posLots = [];
       _posDataReady = true;
       _posDataTime = Date.now();
@@ -506,7 +506,7 @@ async function refreshPOSData() {
   const stockAll = await DB.dbGetAll('stock');
   posStock = {};
   stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
-  
+
   let products;
   if (isMobile) {
     products = await DB.dbSearchProducts(posSearch || '', 100);
@@ -525,7 +525,7 @@ function buildCatBar() {
   const cats = [...new Set(posProducts.map(p => p.category).filter(Boolean))].sort();
   const el = document.getElementById('pos-catbar');
   if (!el) return;
-  
+
   if (window.innerWidth <= 767) {
     el.innerHTML = `
       <select class="pos-sort-select" style="width:100%" onchange="posActiveCategory = this.value; refreshGrid();">
@@ -559,9 +559,9 @@ function initPosSearch() {
     _posSearchTimer = setTimeout(async () => {
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
       if (isMobile) {
-         const res = await DB.dbSearchProducts(posSearch, 100);
-         posProducts = res;
-         posProducts.forEach(p => posProductsCache.set(p.id, p));
+        const res = await DB.dbSearchProducts(posSearch, 100);
+        posProducts = res;
+        posProducts.forEach(p => posProductsCache.set(p.id, p));
       }
       refreshGrid();
     }, 250);
@@ -719,7 +719,7 @@ function refreshGrid() {
     `);
   }
   // Lucide uniquement sur la grille (pas tout le DOM)
-  if (window.lucide) { const g = document.getElementById('pos-grid'); if (g) lucide.createIcons({node: g}); }
+  if (window.lucide) { const g = document.getElementById('pos-grid'); if (g) lucide.createIcons({ node: g }); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -730,30 +730,30 @@ function addToCart(productId, mode = 'box') {
   if (!p) return;
   const avail = posStock[productId] || 0;
   const existing = posCart.find(c => c.productId === productId && (c.saleMode || 'box') === mode);
-  
+
   // Calcul unités requises
   let unitFactor = 1;
   const totU = (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
   if (p.allowUnitSale) {
-     if (mode === 'box') unitFactor = totU;
-     else if (mode === 'subunit') unitFactor = p.unitsPerBox || 1;
-     else unitFactor = 1;
+    if (mode === 'box') unitFactor = totU;
+    else if (mode === 'subunit') unitFactor = p.unitsPerBox || 1;
+    else unitFactor = 1;
   }
-  
+
   const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => {
-     let f = 1;
-     if (p.allowUnitSale) {
-        if (c.saleMode === 'box') f = totU;
-        else if (c.saleMode === 'subunit') f = p.unitsPerBox || 1;
-        else f = 1;
-     }
-     return sum + (c.qty * f);
+    let f = 1;
+    if (p.allowUnitSale) {
+      if (c.saleMode === 'box') f = totU;
+      else if (c.saleMode === 'subunit') f = p.unitsPerBox || 1;
+      else f = 1;
+    }
+    return sum + (c.qty * f);
   }, 0);
-  
+
   if ((currentlyInCart + unitFactor) > avail) {
-    UI.toast(`Stock insuffisant (${Math.floor(avail/totU)} boîte(s) dispo)`, 'warning'); return;
+    UI.toast(`Stock insuffisant (${Math.floor(avail / totU)} boîte(s) dispo)`, 'warning'); return;
   }
-  
+
   // Alerte allergie patient
   if (posCurrentPatient?.allergies) {
     const txt = (p.name + ' ' + (p.dci || '')).toLowerCase();
@@ -767,7 +767,7 @@ function addToCart(productId, mode = 'box') {
       const icon = inter.level === 'grave' ? '🚨' : '⚠️';
       UI.toast(`${icon} INTERACTION ${inter.level.toUpperCase()} — ${p.name} + ${inter.with}\n${inter.desc}`, 'error', 10000);
     }
-  } catch(e) { console.warn('[Interactions] Erreur vérification:', e); }
+  } catch (e) { console.warn('[Interactions] Erreur vérification:', e); }
 
   // FEFO : identifier le lot
   const fefoLot = getFEFOLot(productId);
@@ -794,13 +794,13 @@ function checkStockCart(productId) {
   const avail = posStock[productId] || 0;
   const totU = (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
   const currentlyInCart = posCart.filter(c => c.productId === productId).reduce((sum, c) => {
-     let f = 1;
-     if (p?.allowUnitSale) {
-        if (c.saleMode === 'box') f = totU;
-        else if (c.saleMode === 'subunit') f = p.unitsPerBox || 1;
-        else f = 1;
-     }
-     return sum + (c.qty * f);
+    let f = 1;
+    if (p?.allowUnitSale) {
+      if (c.saleMode === 'box') f = totU;
+      else if (c.saleMode === 'subunit') f = p.unitsPerBox || 1;
+      else f = 1;
+    }
+    return sum + (c.qty * f);
   }, 0);
   return currentlyInCart <= avail;
 }
@@ -812,10 +812,10 @@ function changeQty(productId, mode, delta) {
   if (nq <= 0) {
     posCart = posCart.filter(c => !(c.productId === productId && c.saleMode === mode));
   } else {
-    item.qty = nq; 
-    if (!checkStockCart(productId)) { 
+    item.qty = nq;
+    if (!checkStockCart(productId)) {
       item.qty -= delta; // rollback
-      UI.toast('Stock insuffisant', 'warning'); return; 
+      UI.toast('Stock insuffisant', 'warning'); return;
     }
     item.total = nq * item.unitPrice;
   }
@@ -829,9 +829,9 @@ function setQtyDirect(productId, mode, val) {
   if (!item) return;
   const oldQty = item.qty;
   item.qty = nq;
-  if (!checkStockCart(productId)) { 
+  if (!checkStockCart(productId)) {
     item.qty = oldQty; // rollback
-    UI.toast('Stock insuffisant', 'warning'); return; 
+    UI.toast('Stock insuffisant', 'warning'); return;
   }
   item.total = nq * item.unitPrice;
   refreshCartUI(); updateCardUI(productId);
@@ -928,7 +928,7 @@ function refreshCartUI() {
 
   refreshTotals();
   // Lucide uniquement sur le panier (pas tout le DOM)
-  if (window.lucide) { const b = document.getElementById('pos-cart-items'); if (b) lucide.createIcons({node: b}); }
+  if (window.lucide) { const b = document.getElementById('pos-cart-items'); if (b) lucide.createIcons({ node: b }); }
 }
 
 function refreshTotals() {
@@ -1024,8 +1024,8 @@ function selectPay(btn) {
     renderDynamicAssurances();
     calcAssurance();
     if (posCurrentPatient?.phone) {
-        const ph = document.getElementById('assur-patient-phone');
-        if (ph && !ph.value) ph.value = posCurrentPatient.phone;
+      const ph = document.getElementById('assur-patient-phone');
+      if (ph && !ph.value) ph.value = posCurrentPatient.phone;
     }
   }
 }
@@ -1033,7 +1033,7 @@ function selectPay(btn) {
 function renderDynamicAssurances() {
   const container = document.getElementById('assur-dynamic-list');
   if (!container) return;
-  
+
   if (posCurrentPatient && posCurrentPatient.assurances && posCurrentPatient.assurances.length > 0) {
     const total = getTotal();
     let html = '';
@@ -1116,15 +1116,15 @@ function onCombinedChange() {
 // ═══════════════════════════════════════════════════════════════════
 function calcAssurance() {
   const total = getTotal();
-  
+
   // Aggregate all assurance amounts
   let assurAmt = 0;
   document.querySelectorAll('.assur-amount-field').forEach(input => {
     assurAmt += parseFloat(input.value || 0);
   });
-  
+
   const patientPart = Math.max(0, total - assurAmt);
-  
+
   const elPatientPart = document.getElementById('assur-patient-part');
   if (elPatientPart) {
     elPatientPart.textContent = UI.formatCurrency(patientPart);
@@ -1148,7 +1148,7 @@ function calcAssurance() {
   const pMethod = document.getElementById('assur-patient-method')?.value || 'cash';
   const pRecvWrap = document.getElementById('assur-patient-recv-wrap');
   const pPhoneWrap = document.getElementById('assur-patient-phone-wrap');
-  
+
   if (pMethod === 'cash') {
     if (pRecvWrap) pRecvWrap.style.display = 'block';
     if (pPhoneWrap) pPhoneWrap.style.display = 'none';
@@ -1637,7 +1637,7 @@ async function validerVente() {
     if (!posCurrentPatient) {
       UI.toast('Un patient doit être sélectionné pour une prise en charge', 'error'); return;
     }
-    
+
     let assurAmt = 0;
     let hasValidationErrors = false;
     document.querySelectorAll('.assur-amount-field').forEach(input => {
@@ -1645,7 +1645,7 @@ async function validerVente() {
       if (val < 0) hasValidationErrors = true;
       assurAmt += val;
     });
-    
+
     if (hasValidationErrors) { UI.toast('Le montant pris en charge est invalide', 'error'); return; }
     if (assurAmt <= 0) {
       UI.toast('Le montant pris en charge global doit être supérieur à zéro', 'error'); return;
@@ -1672,13 +1672,13 @@ async function validerVente() {
     if (limit <= 0) {
       UI.toast('⛔ Le crédit est bloqué pour ce patient (Plafond à 0).', 'error', 5000); return;
     }
-    
+
     // Check pending debt
     try {
       const allSales = await DB.dbGetAll('sales', 'patientId', posCurrentPatient.id);
       const pendingSales = allSales.filter(s => s.status === 'pending' && s.paymentMethod === 'credit');
       const totalDebt = pendingSales.reduce((a, s) => a + (s.total || 0), 0);
-      
+
       if ((totalDebt + total) > limit) {
         UI.toast(`⛔ Plafond de crédit dépassé.\n\nDettes actuelles: ${UI.formatCurrency(totalDebt)}\nTotal demandé: ${UI.formatCurrency(total)}\n\nPlafond autorisé: ${UI.formatCurrency(limit)}`, 'error', 10000);
         return;
@@ -1739,21 +1739,21 @@ async function validerVente() {
 
       const patientPart = Math.max(0, total - assurAmt);
       const pMethod = document.getElementById('assur-patient-method')?.value || 'cash';
-      
+
       assurData = {
-         assuranceName: insuranceDetails.length === 1 ? insuranceDetails[0].name : 'Multi-Assurances',
-         assuranceRef: insuranceDetails.length === 1 ? insuranceDetails[0].ref : 'Multiple',
-         assuranceAmount: assurAmt,
-         insuranceDetails: insuranceDetails.length > 0 ? insuranceDetails : null
+        assuranceName: insuranceDetails.length === 1 ? insuranceDetails[0].name : 'Multi-Assurances',
+        assuranceRef: insuranceDetails.length === 1 ? insuranceDetails[0].ref : 'Multiple',
+        assuranceAmount: assurAmt,
+        insuranceDetails: insuranceDetails.length > 0 ? insuranceDetails : null
       };
-      
+
       combinedDetails = [...insuranceDetails.map(ins => ({ method: 'assurance', amount: ins.amount, entity: ins.name }))];
       if (patientPart > 0) {
-         combinedDetails.push({ method: pMethod, amount: patientPart, label: 'Ticket modérateur' });
+        combinedDetails.push({ method: pMethod, amount: patientPart, label: 'Ticket modérateur' });
       }
-      
+
       if (pMethod !== 'cash') {
-         combinedMmPhone = document.getElementById('assur-patient-phone')?.value;
+        combinedMmPhone = document.getElementById('assur-patient-phone')?.value;
       }
     }
 
@@ -1762,11 +1762,11 @@ async function validerVente() {
     if (method === 'cash') cashRcv = parseFloat(document.getElementById('cash-in')?.value || 0);
     else if (method === 'combined') cashRcv = combinedDetails?.find(d => d.method === 'cash')?.amount || 0;
     else if (method === 'assurance') {
-       const pMethod = document.getElementById('assur-patient-method')?.value || 'cash';
-       if (pMethod === 'cash') {
-           // L'argent reçu physiquement par le patient
-           cashRcv = parseFloat(document.getElementById('assur-patient-recv')?.value || 0);
-       }
+      const pMethod = document.getElementById('assur-patient-method')?.value || 'cash';
+      if (pMethod === 'cash') {
+        // L'argent reçu physiquement par le patient
+        cashRcv = parseFloat(document.getElementById('assur-patient-recv')?.value || 0);
+      }
     }
 
     // Status: credit = pending debt for FULL total
@@ -1811,10 +1811,10 @@ async function validerVente() {
       const isSub = (item.saleMode === 'subunit');
       let deductQty = item.qty;
       if (p?.allowUnitSale) {
-         if (isBox) deductQty = item.qty * (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
-         else if (isSub) deductQty = item.qty * (p.unitsPerBox || 1);
+        if (isBox) deductQty = item.qty * (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
+        else if (isSub) deductQty = item.qty * (p.unitsPerBox || 1);
       }
-      
+
       // FEFO: décrémentation du lot le plus proche de l'expiration
       let assignedLotNumber = item.fefoLotNumber || null;
       let remainingQty = deductQty;
@@ -1830,7 +1830,7 @@ async function validerVente() {
           assignedLotNumber = assignedLotNumber || lot.lotNumber;
           await DB.dbPut('lots', lot);
         }
-      } catch(e) { console.warn('[FEFO] Erreur décrément lot:', e); }
+      } catch (e) { console.warn('[FEFO] Erreur décrément lot:', e); }
 
       await DB.dbAdd('saleItems', {
         saleId, productId: item.productId, productName: item.name,
@@ -1838,7 +1838,7 @@ async function validerVente() {
         purchasePrice: item.purchasePrice, total: item.total,
         lotNumber: assignedLotNumber, saleMode: item.saleMode || 'box'
       });
-      
+
       // Lookup stock direct via Map O(1) au lieu de dbGetAll
       const se = stockMap.get(item.productId);
       if (se) {
@@ -1909,7 +1909,7 @@ async function validerVente() {
     console.error(err);
     UI.toast('Erreur : ' + err.message, 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle"></i> Valider (F5)'; const g = document.getElementById('pos-grid'); if (g && window.lucide) lucide.createIcons({node: g}); }
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle"></i> Valider (F5)'; const g = document.getElementById('pos-grid'); if (g && window.lucide) lucide.createIcons({ node: g }); }
   }
 }
 
@@ -2368,10 +2368,10 @@ async function searchByBarcode(code) {
     (p.ean || '').toUpperCase() === code ||
     (p.cip || '').toUpperCase() === code
   );
-  
+
   if (!product) {
-     const res = await DB.dbSearchProducts(code, 10);
-     product = res.find(p => (p.code || '').toUpperCase() === code || (p.ean || '').toUpperCase() === code || (p.cip || '').toUpperCase() === code);
+    const res = await DB.dbSearchProducts(code, 10);
+    product = res.find(p => (p.code || '').toUpperCase() === code || (p.ean || '').toUpperCase() === code || (p.cip || '').toUpperCase() === code);
   }
 
   UI.closeModal();
@@ -2442,17 +2442,29 @@ window.renderRepertoryPage = renderRepertoryPage;
 // ═══════════════════════════════════════════════════════════════════
 // FEEDBACK AJOUT PANIER — Son + Animation
 // ═══════════════════════════════════════════════════════════════════
+let _posAudioCtx = null;
 function posAddFeedback(productName) {
-  // Son bip court
+  // Son bip court — Singleton AudioContext (v9.2.4)
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
+    // Couche 1 : Création unique
+    if (!_posAudioCtx) {
+      _posAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    // Couche 2 : Réveil si suspendu par le navigateur
+    if (_posAudioCtx.state === 'suspended') {
+      _posAudioCtx.resume();
+    }
+    // Couche 3 : Recréation si le moteur est mort (débranchement casque/BT)
+    if (_posAudioCtx.state === 'closed') {
+      _posAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const osc = _posAudioCtx.createOscillator();
+    const gain = _posAudioCtx.createGain();
+    osc.connect(gain); gain.connect(_posAudioCtx.destination);
     osc.frequency.value = 800;
     gain.gain.value = 0.08;
-    osc.start(); osc.stop(ctx.currentTime + 0.08);
-  } catch (e) { /* AudioContext non disponible */ }
+    osc.start(); osc.stop(_posAudioCtx.currentTime + 0.08);
+  } catch (e) { /* Couche 4 : Son échoue → vente continue normalement */ }
 
   // Flash visuel sur le panier
   const panel = document.getElementById('pos-cart-panel');
@@ -2524,7 +2536,7 @@ async function loadRecentSales() {
       return `<div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid rgba(0,0,0,0.05);background:${bgColor};font-size:12px;cursor:pointer" onclick="if(typeof viewSaleDetail==='function')viewSaleDetail(${s.id})" title="Voir le détail">
         <span style="font-size:16px">${payIcons[s.paymentMethod] || '💰'}</span>
         <div style="min-width:0">
-          <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#${String(s.id).padStart(4,'0')} · ${s.patientName || 'Comptoir'}</div>
+          <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#${String(s.id).padStart(4, '0')} · ${s.patientName || 'Comptoir'}</div>
           <div style="font-size:10px;color:#888">${s.itemCount || '?'} art. · ${dateStr} ${time}</div>
         </div>
         <div style="font-weight:800;color:#1A56DB;white-space:nowrap">${UI.formatCurrency(s.total)}</div>
@@ -2541,8 +2553,8 @@ async function loadRecentSales() {
 // ═══════════════════════════════════════════════════════════════════
 async function handleRuptureClick(productId) {
   const p = posProductsCache.get(productId) || posProducts.find(x => x.id === productId);
-  if (!p || !p.dci) { UI.toast('Rupture de stock — aucune alternative DCI en stock','error'); return; }
-  
+  if (!p || !p.dci) { UI.toast('Rupture de stock — aucune alternative DCI en stock', 'error'); return; }
+
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
   let alts = [];
   if (isMobile) {
@@ -2551,12 +2563,12 @@ async function handleRuptureClick(productId) {
   } else {
     alts = posProducts.filter(a => a.id !== p.id && a.dci === p.dci && (posStock[a.id] || 0) > 0);
   }
-  
+
   if (alts.length > 0) {
     alts.forEach(a => posProductsCache.set(a.id, a));
     showGenericAlternatives(p, alts);
   } else {
-    UI.toast('Rupture de stock — aucune alternative DCI en stock','error');
+    UI.toast('Rupture de stock — aucune alternative DCI en stock', 'error');
   }
 }
 
@@ -2712,7 +2724,7 @@ function mobileCleanupPOS() {
 // Hook dans refreshCartUI pour mettre à jour le badge
 const _origRefreshCartUI = refreshCartUI;
 window._refreshCartUI = refreshCartUI;
-refreshCartUI = function() {
+refreshCartUI = function () {
   _origRefreshCartUI();
   mobileUpdateCartBadge();
 };

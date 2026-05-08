@@ -321,6 +321,7 @@
       body {
         font-size: 12px;
       }
+
       .no-print {
         display: none !important;
       }
@@ -370,8 +371,14 @@
 
     <!-- ═══════════════════════════════════════ COUVERTURE ═══════════════════════════════════════ -->
     <div class="cover">
-      <button onclick="window.print()" class="no-print" style="position: absolute; top: 20px; right: 20px; padding: 10px 16px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: inherit; font-size: 14px; display: flex; align-items: center; gap: 8px;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      <button onclick="window.print()" class="no-print"
+        style="position: absolute; top: 20px; right: 20px; padding: 10px 16px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); font-family: inherit; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
         Télécharger PDF
       </button>
       <h1>Ordive<span>X</span></h1>
@@ -382,7 +389,12 @@
 
     <!-- ═══════════════════════════════════════ TABLE DES MATIÈRES ═══════════════════════════════════════ -->
     <div class="toc">
-      <h2><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h12"/></svg> Table des Matières</h2>
+      <h2><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 6h16" />
+          <path d="M4 12h16" />
+          <path d="M4 18h12" />
+        </svg> Table des Matières</h2>
       <ol>
         <li><a href="#intro">Présentation d'OrdiveX</a></li>
         <li><a href="#prereqs">Prérequis & Installation</a></li>
@@ -402,7 +414,11 @@
         <li><a href="#tracabilite">Traçabilité & Pharmacovigilance</a></li>
         <li><a href="#impression">Centre d'Impression</a></li>
         <li><a href="#parametres">Paramètres & Administration</a></li>
-        <li><a href="#naomie"><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#091a32"/><text x="12" y="16.5" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text></svg> Naomie v3 — Assistante IA Pharmaceutique</a></li>
+        <li><a href="#naomie"><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px"
+              viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="11" fill="#091a32" /><text x="12" y="16.5" text-anchor="middle" fill="white"
+                font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text>
+            </svg> Naomie v3 — Assistante IA Pharmaceutique</a></li>
         <li><a href="#cloud">Synchronisation Cloud Multi-Appareils</a></li>
         <li><a href="#mobile">Utilisation sur Mobile</a></li>
         <li><a href="#terrain">Usage en Conditions Réelles & Multi-Postes</a></li>
@@ -413,20 +429,84 @@
 
     <!-- ═══════ 1. PRÉSENTATION ═══════ -->
     <div class="section" id="intro">
-      <h2>1. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/></svg> Présentation d'OrdiveX</h2>
+      <h2>1. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 21h18" />
+          <path d="M9 8h1" />
+          <path d="M9 12h1" />
+          <path d="M9 16h1" />
+          <path d="M14 8h1" />
+          <path d="M14 12h1" />
+          <path d="M14 16h1" />
+          <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+        </svg> Présentation d'OrdiveX</h2>
       <p><strong>OrdiveX</strong> est un ERP (Enterprise Resource Planning) pharmaceutique conçu spécifiquement pour les
         pharmacies d'Afrique francophone. Il permet de gérer l'intégralité de votre officine depuis un seul outil :</p>
       <ul>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> <strong>Ventes</strong> — POS ultra-rapide avec scan code-barres</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> <strong>Stocks</strong> — Gestion automatique FEFO (First Expired, First Out)</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg> <strong>Catalogue</strong> — 50 000+ produits avec DCI, formes, et notices</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> <strong>Ordonnances</strong> — Enregistrement numérique avec interactions médicamenteuses</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> <strong>Patients</strong> — Dossiers complets avec allergies et historique</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg> <strong>Fournisseurs</strong> — Commandes, réceptions, évaluation</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> <strong>Analyses</strong> — Tableau de bord, métriques financières, tendances</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#091a32"/><text x="12" y="16.5" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text></svg> <strong>Naomie</strong> — Assistante IA intégrée qui vous guide en temps réel</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg> <strong>Cloud</strong> — Synchronisation entre PC, tablette et mobile</li>
-        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> <strong>Offline-first</strong> — Fonctionne à 100% sans internet</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg> <strong>Ventes</strong> — POS ultra-rapide avec scan code-barres</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+            <path d="m3.3 7 8.7 5 8.7-5" />
+            <path d="M12 22V12" />
+          </svg> <strong>Stocks</strong> — Gestion automatique FEFO (First Expired, First Out)</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
+            <path d="m8.5 8.5 7 7" />
+          </svg> <strong>Catalogue</strong> — 50 000+ produits avec DCI, formes, et notices</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+          </svg> <strong>Ordonnances</strong> — Enregistrement numérique avec interactions médicamenteuses</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg> <strong>Patients</strong> — Dossiers complets avec allergies et historique</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
+            <path d="M15 18H9" />
+            <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
+            <circle cx="17" cy="18" r="2" />
+            <circle cx="7" cy="18" r="2" />
+          </svg> <strong>Fournisseurs</strong> — Commandes, réceptions, évaluation</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+          </svg> <strong>Analyses</strong> — Tableau de bord, métriques financières, tendances</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="11" fill="#091a32" /><text x="12" y="16.5" text-anchor="middle" fill="white"
+              font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text>
+          </svg> <strong>Naomie</strong> — Assistante IA intégrée qui vous guide en temps réel</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+          </svg> <strong>Cloud</strong> — Synchronisation entre PC, tablette et mobile</li>
+        <li><svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="1" y1="1" x2="23" y2="23" />
+            <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+            <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+            <line x1="12" y1="20" x2="12.01" y2="20" />
+          </svg> <strong>Offline-first</strong> — Fonctionne à 100% sans internet</li>
       </ul>
 
       <div class="important">
@@ -495,10 +575,16 @@
 
     <!-- ═══════ 3. CONNEXION ═══════ -->
     <div class="section" id="connexion">
-      <h2>3. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Connexion & Rôles Utilisateurs</h2>
+      <h2>3. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+          <polyline points="10 17 15 12 10 7" />
+          <line x1="15" y1="12" x2="3" y2="12" />
+        </svg> Connexion & Rôles Utilisateurs</h2>
       <h3>Page de connexion</h3>
       <p>Au lancement, OrdiveX affiche un écran de connexion sécurisé. Entrez votre <strong>identifiant</strong> et
-        <strong>mot de passe</strong> fournis par l'administrateur.</p>
+        <strong>mot de passe</strong> fournis par l'administrateur.
+      </p>
 
       <h3>Les 3 rôles disponibles</h3>
       <table>
@@ -534,10 +620,15 @@
 
     <!-- ═══════ 4. NAVIGATION ═══════ -->
     <div class="section" id="navigation">
-      <h2>4. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg> Navigation dans l'Interface</h2>
+      <h2>4. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+        </svg> Navigation dans l'Interface</h2>
       <h3>La barre latérale (Sidebar)</h3>
       <p>Le menu principal se trouve dans la <strong>barre latérale gauche</strong>. Sur mobile, appuyez sur le bouton
-        <strong>☰</strong> (hamburger) en haut à gauche pour l'ouvrir.</p>
+        <strong>☰</strong> (hamburger) en haut à gauche pour l'ouvrir.
+      </p>
       <p>Les sections du menu sont :</p>
       <table>
         <tr>
@@ -577,19 +668,56 @@
       <h3>La barre supérieure (Topbar)</h3>
       <p>En haut de l'écran, vous trouverez :</p>
       <ul>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg> Menu (mobile)</li>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> Alertes — avec badge rouge si alertes non lues</li>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Accès rapide à l'impression</li>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Sauvegarde rapide</li>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Bascule thème sombre/clair</li>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2m-9-11h2m18 0h2m-4.22-5.78 1.42-1.42M4.22 19.78l1.42-1.42M4.22 4.22l1.42 1.42m14.14 14.14 1.42 1.42"/></svg> Paramètres (admin uniquement)</li>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Moniteur de réseau multi-appareils</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg> Menu (mobile)</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+          </svg> Alertes — avec badge rouge si alertes non lues</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" />
+          </svg> Accès rapide à l'impression</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+            <polyline points="17 21 17 13 7 13 7 21" />
+            <polyline points="7 3 7 8 15 8" />
+          </svg> Sauvegarde rapide</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg> Bascule thème sombre/clair</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M12 1v2m0 18v2m-9-11h2m18 0h2m-4.22-5.78 1.42-1.42M4.22 19.78l1.42-1.42M4.22 4.22l1.42 1.42m14.14 14.14 1.42 1.42" />
+          </svg> Paramètres (admin uniquement)</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+            <line x1="12" y1="18" x2="12.01" y2="18" />
+          </svg> Moniteur de réseau multi-appareils</li>
       </ul>
     </div>
 
     <!-- ═══════ 5. DASHBOARD ═══════ -->
     <div class="section" id="dashboard">
-      <h2>5. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg> Tableau de Bord</h2>
+      <h2>5. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1" />
+          <rect x="14" y="3" width="7" height="5" rx="1" />
+          <rect x="14" y="12" width="7" height="9" rx="1" />
+          <rect x="3" y="16" width="7" height="5" rx="1" />
+        </svg> Tableau de Bord</h2>
       <p>Le Tableau de Bord est la première page après connexion. Il affiche en un coup d'œil :</p>
       <h3>KPIs du jour</h3>
       <ul>
@@ -613,7 +741,18 @@
 
     <!-- ═══════ 6. POS ═══════ -->
     <div class="section" id="pos">
-      <h2>6. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></svg> Point de Vente (POS)</h2>
+      <h2>6. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="M6 8h.01" />
+          <path d="M10 8h.01" />
+          <path d="M14 8h.01" />
+          <path d="M18 8h.01" />
+          <path d="M8 12h.01" />
+          <path d="M12 12h.01" />
+          <path d="M16 12h.01" />
+          <path d="M7 16h10" />
+        </svg> Point de Vente (POS)</h2>
       <p>Le POS est le cœur d'OrdiveX. C'est ici que vous réalisez les ventes quotidiennes.</p>
 
       <h3>Faire une vente — Procédure pas-à-pas</h3>
@@ -685,7 +824,11 @@
 
     <!-- ═══════ 7. CATALOGUE ═══════ -->
     <div class="section" id="catalogue">
-      <h2>7. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg> Catalogue Produits</h2>
+      <h2>7. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
+          <path d="m8.5 8.5 7 7" />
+        </svg> Catalogue Produits</h2>
       <p>Le catalogue contient tous les médicaments et produits parapharmaceutiques de votre pharmacie.</p>
 
       <h3>Ajouter un nouveau produit</h3>
@@ -712,7 +855,13 @@
 
     <!-- ═══════ 8. STOCK ═══════ -->
     <div class="section" id="stock">
-      <h2>8. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Gestion des Stocks</h2>
+      <h2>8. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
+        </svg> Gestion des Stocks</h2>
 
       <h3>Vue d'ensemble</h3>
       <p>La page Stock affiche tous vos produits avec :</p>
@@ -720,7 +869,10 @@
         <li>Quantité en stock (temps réel)</li>
         <li>Stock minimum configuré</li>
         <li>Statut : <span style="color:green">✅ OK</span> / <span style="color:orange">⚠️ Bas</span> / <span
-            style="color:red"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="#E74C3C"><circle cx="12" cy="12" r="6"/></svg> Rupture</span></li>
+            style="color:red"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px"
+              viewBox="0 0 24 24" fill="#E74C3C">
+              <circle cx="12" cy="12" r="6" />
+            </svg> Rupture</span></li>
         <li>Lots associés avec dates de péremption</li>
       </ul>
 
@@ -749,7 +901,13 @@
 
     <!-- ═══════ 9. ORDONNANCES ═══════ -->
     <div class="section" id="ordonnances">
-      <h2>9. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Ordonnances</h2>
+      <h2>9. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg> Ordonnances</h2>
       <p>Le module Ordonnances permet l'enregistrement numérique des prescriptions avec contrôle pharmaceutique.</p>
 
       <h3>Créer une ordonnance</h3>
@@ -772,7 +930,12 @@
       <p>OrdiveX vérifie automatiquement <strong>30+ interactions médicamenteuses critiques</strong> entre les
         médicaments de l'ordonnance :</p>
       <ul>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> <strong>Interactions graves</strong> (bandeau rouge) : Ex. Warfarine + Aspirine → Hémorragie</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg> <strong>Interactions graves</strong> (bandeau rouge) : Ex. Warfarine + Aspirine → Hémorragie</li>
         <li>⚠️ <strong>Interactions modérées</strong> (bandeau orange) : Ex. Fer + Ciprofloxacine → Absorption réduite
         </li>
         <li>La note du pharmacien est pré-remplie automatiquement avec les interactions détectées</li>
@@ -780,7 +943,12 @@
 
       <h3>Dispenser une ordonnance</h3>
       <ol class="steps">
-        <li>Trouvez l'ordonnance dans la liste et cliquez <strong><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg> Dispenser</strong></li>
+        <li>Trouvez l'ordonnance dans la liste et cliquez <strong><svg
+              style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" />
+              <path d="m8.5 8.5 7 7" />
+            </svg> Dispenser</strong></li>
         <li>Si le patient a des allergies, une alerte de sécurité s'affiche</li>
         <li>Vous êtes redirigé vers le POS avec les produits de l'ordonnance déjà dans le panier</li>
         <li>Validez la vente normalement</li>
@@ -789,7 +957,13 @@
 
     <!-- ═══════ 10. PATIENTS ═══════ -->
     <div class="section" id="patients">
-      <h2>10. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Dossiers Patients</h2>
+      <h2>10. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg> Dossiers Patients</h2>
       <h3>Créer un dossier patient</h3>
       <ol class="steps">
         <li>Cliquez <strong>« + Nouveau Patient »</strong></li>
@@ -818,7 +992,14 @@
 
     <!-- ═══════ 11. FOURNISSEURS ═══════ -->
     <div class="section" id="fournisseurs">
-      <h2>11. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg> Fournisseurs & Achats</h2>
+      <h2>11. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
+          <path d="M15 18H9" />
+          <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
+          <circle cx="17" cy="18" r="2" />
+          <circle cx="7" cy="18" r="2" />
+        </svg> Fournisseurs & Achats</h2>
 
       <h3>Ajouter un fournisseur</h3>
       <ol class="steps">
@@ -856,7 +1037,12 @@
 
     <!-- ═══════ 12. CAISSE ═══════ -->
     <div class="section" id="caisse">
-      <h2>12. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg> Caisse Journalière</h2>
+      <h2>12. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+          <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+          <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+        </svg> Caisse Journalière</h2>
       <p>La Caisse affiche en temps réel les encaissements de la journée :</p>
       <ul>
         <li>💵 <strong>Total Espèces</strong></li>
@@ -870,7 +1056,12 @@
 
     <!-- ═══════ 13. VENTES & RETOURS ═══════ -->
     <div class="section" id="ventes">
-      <h2>13. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg> Historique des Ventes & Retours</h2>
+      <h2>13. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M12 7v5l4 2" />
+        </svg> Historique des Ventes & Retours</h2>
 
       <h3>Historique des Ventes</h3>
       <p>Toutes les ventes effectuées sont archivées avec :</p>
@@ -902,7 +1093,12 @@
 
     <!-- ═══════ 14. METRICS ═══════ -->
     <div class="section" id="metrics">
-      <h2>14. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Business Intelligence (Métriques)</h2>
+      <h2>14. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10" />
+          <line x1="12" y1="20" x2="12" y2="4" />
+          <line x1="6" y1="20" x2="6" y2="14" />
+        </svg> Business Intelligence (Métriques)</h2>
       <p>La page <strong>Métriques Business</strong> est votre cockpit de pilotage financier :</p>
 
       <h3>Section « Hero Financier »</h3>
@@ -928,7 +1124,11 @@
 
     <!-- ═══════ 15. ALERTES ═══════ -->
     <div class="section" id="alertes">
-      <h2>15. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> Centre d'Alertes</h2>
+      <h2>15. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </svg> Centre d'Alertes</h2>
       <p>OrdiveX génère automatiquement des alertes en temps réel :</p>
       <table>
         <tr>
@@ -938,22 +1138,37 @@
         </tr>
         <tr>
           <td>Rupture de stock</td>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="#E74C3C"><circle cx="12" cy="12" r="6"/></svg></td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24"
+              fill="#E74C3C">
+              <circle cx="12" cy="12" r="6" />
+            </svg></td>
           <td>Produit avec 0 unité en stock</td>
         </tr>
         <tr>
           <td>Stock bas</td>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="#F39C12"><circle cx="12" cy="12" r="6"/></svg></td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24"
+              fill="#F39C12">
+              <circle cx="12" cy="12" r="6" />
+            </svg></td>
           <td>Produit sous le seuil configuré</td>
         </tr>
         <tr>
           <td>Expiration proche</td>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#F39C12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#F39C12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg></td>
           <td>Lot expirant dans les 90 jours</td>
         </tr>
         <tr>
           <td>Expiration critique</td>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#E74C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg></td>
           <td>Lot expirant dans les 30 jours</td>
         </tr>
       </table>
@@ -963,7 +1178,10 @@
 
     <!-- ═══════ 16. TRAÇABILITÉ ═══════ -->
     <div class="section" id="tracabilite">
-      <h2>16. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Traçabilité & Pharmacovigilance</h2>
+      <h2>16. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg> Traçabilité & Pharmacovigilance</h2>
       <p>Le module Traçabilité permet de retracer l'intégralité du parcours d'un médicament :</p>
       <ul>
         <li><strong>Origine</strong> : Fournisseur, bon de commande d'origine</li>
@@ -981,7 +1199,12 @@
 
     <!-- ═══════ 17. IMPRESSION ═══════ -->
     <div class="section" id="impression">
-      <h2>17. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Centre d'Impression</h2>
+      <h2>17. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <rect x="6" y="14" width="12" height="8" />
+        </svg> Centre d'Impression</h2>
       <p>Le Centre d'Impression permet de générer et imprimer :</p>
       <ul>
         <li><strong>Reçus de vente</strong> — Format 58mm ou 80mm pour imprimantes thermiques</li>
@@ -999,7 +1222,12 @@
 
     <!-- ═══════ 18. PARAMÈTRES ═══════ -->
     <div class="section" id="parametres">
-      <h2>18. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Paramètres & Administration</h2>
+      <h2>18. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg> Paramètres & Administration</h2>
       <p>Accessible uniquement aux <strong>Administrateurs</strong>.</p>
 
       <h3>Informations de la pharmacie</h3>
@@ -1031,21 +1259,28 @@
 
       <h3>Journal d'Audit</h3>
       <p>Les 20 dernières actions sont affichées avec : date/heure, utilisateur, action, entité et détails. C'est votre
-        <strong>traçabilité des accès</strong>.</p>
+        <strong>traçabilité des accès</strong>.
+      </p>
     </div>
 
     <!-- ═══════ 19. NAOMIE — ASSISTANTE IA ═══════ -->
     <div class="section" id="naomie">
-      <h2>19. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#091a32"/><text x="12" y="16.5" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text></svg> Naomie v3 — Assistante IA Pharmaceutique</h2>
+      <h2>19. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="11" fill="#091a32" /><text x="12" y="16.5" text-anchor="middle" fill="white"
+            font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text>
+        </svg> Naomie v3 — Assistante IA Pharmaceutique</h2>
 
-      <p><strong>Naomie v3</strong> est l'intelligence artificielle pharmaceutique d'OrdiveX. Conçue par <strong>TrillionX</strong>,
-        elle maîtrise <strong>30+ sujets métier</strong> et fournit une assistance continue directement depuis l'interface — sans
+      <p><strong>Naomie v3</strong> est l'intelligence artificielle pharmaceutique d'OrdiveX. Conçue par
+        <strong>TrillionX</strong>,
+        elle maîtrise <strong>30+ sujets métier</strong> et fournit une assistance continue directement depuis
+        l'interface — sans
         connexion internet ni abonnement tiers.</p>
 
       <!-- ── Accès ── -->
       <h3>Accéder à Naomie</h3>
       <ol class="steps">
-        <li>Cliquez sur le <strong>bouton circulaire bleu nuit</strong> en bas à droite de l'écran (icône bulle de conversation)</li>
+        <li>Cliquez sur le <strong>bouton circulaire bleu nuit</strong> en bas à droite de l'écran (icône bulle de
+          conversation)</li>
         <li>La fenêtre de chat s'ouvre avec un message d'accueil <strong>personnalisé à votre nom</strong></li>
         <li>Saisissez votre question en <strong>langage naturel</strong> ou cliquez un bouton de suggestion rapide</li>
         <li>Naomie affiche une <strong>animation de frappe</strong> (●●●) puis répond avec des étapes détaillées</li>
@@ -1056,17 +1291,23 @@
       <ul>
         <li><strong>Avatar</strong> : Lettre « N » sur fond dégradé (bleu, violet) avec cercle bleu nuit</li>
         <li><strong>En-tête</strong> : « Naomie AI » avec le sous-titre « En ligne — Propulsé par OrdiveX »</li>
-        <li><strong>Indicateur de frappe</strong> : Animation de trois points (●●●) lorsqu'elle traite votre requête</li>
-        <li><strong>Ton</strong> : Professionnel, bienveillant et institutionnel — adapté au contexte pharmaceutique</li>
+        <li><strong>Indicateur de frappe</strong> : Animation de trois points (●●●) lorsqu'elle traite votre requête
+        </li>
+        <li><strong>Ton</strong> : Professionnel, bienveillant et institutionnel — adapté au contexte pharmaceutique
+        </li>
       </ul>
 
       <!-- ── 30+ sujets ── -->
       <h3>🧠 Les 30+ sujets maîtrisés par Naomie</h3>
-      <p>Naomie comprend le vocabulaire métier pharmaceutique. Voici la <strong>cartographie complète</strong> de ses compétences :</p>
+      <p>Naomie comprend le vocabulaire métier pharmaceutique. Voici la <strong>cartographie complète</strong> de ses
+        compétences :</p>
 
       <h4>💊 Opérations quotidiennes</h4>
       <table>
-        <tr><th>Sujet</th><th>Exemples de questions reconnues</th></tr>
+        <tr>
+          <th>Sujet</th>
+          <th>Exemples de questions reconnues</th>
+        </tr>
         <tr>
           <td><strong>Ventes &amp; POS</strong></td>
           <td>« Comment faire une vente ? », « Comment annuler une vente ? », « Historique facture ? »</td>
@@ -1077,7 +1318,8 @@
         </tr>
         <tr>
           <td><strong>Assurances &amp; Tiers-payant</strong></td>
-          <td>« Comment administrer le tiers-payant ? », « Ticket modérateur ? », « Part patient / part entreprise ? »</td>
+          <td>« Comment administrer le tiers-payant ? », « Ticket modérateur ? », « Part patient / part entreprise ? »
+          </td>
         </tr>
         <tr>
           <td><strong>Déconditionnement</strong></td>
@@ -1095,7 +1337,10 @@
 
       <h4>📦 Stock &amp; Approvisionnement</h4>
       <table>
-        <tr><th>Sujet</th><th>Exemples de questions reconnues</th></tr>
+        <tr>
+          <th>Sujet</th>
+          <th>Exemples de questions reconnues</th>
+        </tr>
         <tr>
           <td><strong>Gestion des stocks</strong></td>
           <td>« Comment consulter le stock ? », « Rupture ? », « Inventaire ? », « Mouvements ? »</td>
@@ -1124,7 +1369,10 @@
 
       <h4>👤 Patients &amp; Ordonnances</h4>
       <table>
-        <tr><th>Sujet</th><th>Exemples de questions reconnues</th></tr>
+        <tr>
+          <th>Sujet</th>
+          <th>Exemples de questions reconnues</th>
+        </tr>
         <tr>
           <td><strong>Dossiers patients</strong></td>
           <td>« Comment créer une fiche patient ? », « Allergies ? », « Historique achats ? »</td>
@@ -1145,7 +1393,10 @@
 
       <h4>📊 Analyses &amp; Finance</h4>
       <table>
-        <tr><th>Sujet</th><th>Exemples de questions reconnues</th></tr>
+        <tr>
+          <th>Sujet</th>
+          <th>Exemples de questions reconnues</th>
+        </tr>
         <tr>
           <td><strong>Tableau de bord &amp; KPIs</strong></td>
           <td>« Comment accéder aux statistiques ? », « Chiffre d'affaires ? », « Marge ? », « Panier moyen ? »</td>
@@ -1166,7 +1417,10 @@
 
       <h4>⚙️ Administration &amp; Sécurité</h4>
       <table>
-        <tr><th>Sujet</th><th>Exemples de questions reconnues</th></tr>
+        <tr>
+          <th>Sujet</th>
+          <th>Exemples de questions reconnues</th>
+        </tr>
         <tr>
           <td><strong>Utilisateurs &amp; Rôles</strong></td>
           <td>« Comment gérer les accès ? », « Rôles Manager / Pharmacien / Caissier ? », « Mot de passe ? »</td>
@@ -1231,7 +1485,8 @@
 
       <!-- ── Fonctions dynamiques ── -->
       <h3>⚡ Fonctions intelligentes en temps réel</h3>
-      <p>En plus de la base de connaissances, Naomie possède des <strong>capacités dynamiques</strong> qui interrogent vos données en direct :</p>
+      <p>En plus de la base de connaissances, Naomie possède des <strong>capacités dynamiques</strong> qui interrogent
+        vos données en direct :</p>
 
       <h4>📊 Analyse de données en temps réel</h4>
       <div class="chat-example">
@@ -1246,34 +1501,76 @@
       <h4>📍 Localisation contextuelle</h4>
       <div class="chat-example">
         <div class="chat-ex-user">Où suis-je ?</div>
-        <div class="chat-ex-bot">Vous êtes actuellement sur la page <strong>Point de Vente (POS)</strong>. Besoin d'aide pour utiliser cette section ?</div>
+        <div class="chat-ex-bot">Vous êtes actuellement sur la page <strong>Point de Vente (POS)</strong>. Besoin d'aide
+          pour utiliser cette section ?</div>
       </div>
       <p><strong>Mots-clés reconnus :</strong> où suis-je, quelle page, je me trouve, c'est quoi cette page</p>
 
       <h4>⏰ Information temporelle</h4>
       <div class="chat-example">
         <div class="chat-ex-user">Quelle heure est-il ?</div>
-        <div class="chat-ex-bot">Il est <strong>14:32</strong> ! Nous sommes le <strong>lundi 28 avril 2026</strong>.</div>
+        <div class="chat-ex-bot">Il est <strong>14:32</strong> ! Nous sommes le <strong>lundi 28 avril 2026</strong>.
+        </div>
       </div>
       <p><strong>Mots-clés reconnus :</strong> heure, quelle heure, date, quel jour, aujourd'hui</p>
 
       <!-- ── Conversation naturelle ── -->
       <h3>💬 Conversation naturelle</h3>
-      <p>Naomie ne se limite pas aux questions techniques. Elle comprend aussi les <strong>échanges conversationnels courants</strong> :</p>
+      <p>Naomie ne se limite pas aux questions techniques. Elle comprend aussi les <strong>échanges conversationnels
+          courants</strong> :</p>
       <table>
-        <tr><th>Vous dites...</th><th>Naomie répond...</th></tr>
-        <tr><td>« Bonjour », « Salut », « Hey »</td><td>Message d'accueil personnalisé avec votre prénom</td></tr>
-        <tr><td>« Merci », « Super », « Parfait »</td><td>Remerciement chaleureux et proposition d'aide supplémentaire</td></tr>
-        <tr><td>« Qui es-tu ? », « Tu fais quoi ? »</td><td>Présentation de ses 30+ sujets de compétence</td></tr>
-        <tr><td>« Qui t'a créé ? », « TrillionX ? »</td><td>Présentation de TrillionX et de la mission d'OrdiveX</td></tr>
-        <tr><td>« Des conseils ? », « Astuces ? »</td><td>5 astuces concrètes pour optimiser votre pharmacie</td></tr>
-        <tr><td>« Raconte une blague »</td><td>Humour pharmaceutique adapté 😄</td></tr>
-        <tr><td>« Courage ! », « Je suis fatigué »</td><td>Message de motivation personnalisé</td></tr>
-        <tr><td>« L'app est lente », « Bug ! »</td><td>Diagnostic en 3 étapes + orientation support si nécessaire</td></tr>
-        <tr><td>« Comparaison ? », « Concurrent ? »</td><td>Points forts d'OrdiveX face à la concurrence</td></tr>
-        <tr><td>« Combien ça coûte ? », « Tarif ? »</td><td>Orientation vers l'équipe commerciale TrillionX</td></tr>
-        <tr><td>« Au revoir », « Bye »</td><td>Message de clôture personnalisé et encourageant</td></tr>
-        <tr><td>« Oui », « OK », « D'accord »</td><td>Confirmation et proposition d'aide supplémentaire</td></tr>
+        <tr>
+          <th>Vous dites...</th>
+          <th>Naomie répond...</th>
+        </tr>
+        <tr>
+          <td>« Bonjour », « Salut », « Hey »</td>
+          <td>Message d'accueil personnalisé avec votre prénom</td>
+        </tr>
+        <tr>
+          <td>« Merci », « Super », « Parfait »</td>
+          <td>Remerciement chaleureux et proposition d'aide supplémentaire</td>
+        </tr>
+        <tr>
+          <td>« Qui es-tu ? », « Tu fais quoi ? »</td>
+          <td>Présentation de ses 30+ sujets de compétence</td>
+        </tr>
+        <tr>
+          <td>« Qui t'a créé ? », « TrillionX ? »</td>
+          <td>Présentation de TrillionX et de la mission d'OrdiveX</td>
+        </tr>
+        <tr>
+          <td>« Des conseils ? », « Astuces ? »</td>
+          <td>5 astuces concrètes pour optimiser votre pharmacie</td>
+        </tr>
+        <tr>
+          <td>« Raconte une blague »</td>
+          <td>Humour pharmaceutique adapté 😄</td>
+        </tr>
+        <tr>
+          <td>« Courage ! », « Je suis fatigué »</td>
+          <td>Message de motivation personnalisé</td>
+        </tr>
+        <tr>
+          <td>« L'app est lente », « Bug ! »</td>
+          <td>Diagnostic en 3 étapes + orientation support si nécessaire</td>
+        </tr>
+        <tr>
+          <td>« Comparaison ? », « Concurrent ? »</td>
+          <td>Points forts d'OrdiveX face à la concurrence</td>
+        </tr>
+        <tr>
+          <td>« Combien ça coûte ? », « Tarif ? »</td>
+          <td>Orientation vers l'équipe commerciale TrillionX</td>
+        </tr>
+        <tr>
+          <td>« Au revoir », « Bye »</td>
+          <td>Message de clôture personnalisé et encourageant</td>
+        </tr>
+        <tr>
+          <td>« Oui », « OK », « D'accord »</td>
+          <td>Confirmation et proposition d'aide supplémentaire</td>
+        </tr>
       </table>
 
       <!-- ── Bonnes pratiques ── -->
@@ -1301,58 +1598,98 @@
 
       <h4>❌ Requêtes à éviter (trop vagues)</h4>
       <ul>
-        <li><strong>« Aide »</strong> → Trop générique. Dites plutôt « aide pour le stock » ou « aide pour une commande »</li>
+        <li><strong>« Aide »</strong> → Trop générique. Dites plutôt « aide pour le stock » ou « aide pour une commande
+          »</li>
         <li><strong>« Ça ne marche pas »</strong> → Précisez le module (ex: « le POS ne scanne pas »)</li>
         <li><strong>« Comment on fait ? »</strong> → Ajoutez l'action visée (ex: « comment faire un retour ? »)</li>
       </ul>
 
       <!-- ── Fallback contextuel ── -->
       <h3>🎯 Fallback intelligent contextuel</h3>
-      <p>Si Naomie ne trouve pas de correspondance exacte, elle ne vous laisse <strong>jamais sans aide</strong>. Elle analyse
-        automatiquement la <strong>page sur laquelle vous vous trouvez</strong> (16 pages reconnues) et vous suggère les mots-clés
+      <p>Si Naomie ne trouve pas de correspondance exacte, elle ne vous laisse <strong>jamais sans aide</strong>. Elle
+        analyse
+        automatiquement la <strong>page sur laquelle vous vous trouvez</strong> (16 pages reconnues) et vous suggère les
+        mots-clés
         les plus pertinents pour cette page :</p>
 
       <div class="chat-example">
         <div class="chat-ex-user">Comment je fais la chose là ?</div>
-        <div class="chat-ex-bot">Je n'ai pas trouvé de correspondance exacte. Vous êtes sur le <strong>Point de Vente</strong>.
+        <div class="chat-ex-bot">Je n'ai pas trouvé de correspondance exacte. Vous êtes sur le <strong>Point de
+            Vente</strong>.
           Essayez des mots-clés comme : <strong>vente</strong>, <strong>crédit</strong>, <strong>assurance</strong>,
           <strong>scan</strong>, <strong>déconditionnement</strong>, <strong>ordonnance</strong>.<br><br>
-          💡 Astuce : Plus votre question contient un terme métier précis, plus ma réponse sera pertinente !</div>
+          💡 Astuce : Plus votre question contient un terme métier précis, plus ma réponse sera pertinente !
+        </div>
       </div>
 
-      <p>Les 16 pages avec fallback contextuel sont : POS, Catalogue, Stocks, Patients, Fournisseurs, Historique des Ventes,
-        Ordonnances, Tableau de Bord, Pilotage, Caisse, Paramètres, Traçabilité, Alertes, Centre d'Impression, Retours, et
+      <p>Les 16 pages avec fallback contextuel sont : POS, Catalogue, Stocks, Patients, Fournisseurs, Historique des
+        Ventes,
+        Ordonnances, Tableau de Bord, Pilotage, Caisse, Paramètres, Traçabilité, Alertes, Centre d'Impression, Retours,
+        et
         la page par défaut.</p>
 
       <!-- ── Boutons rapides ── -->
       <h3>Boutons de suggestion rapide</h3>
-      <p>Après chaque réponse, Naomie propose <strong>8 boutons d'accès rapide</strong> aux sujets les plus demandés :</p>
+      <p>Après chaque réponse, Naomie propose <strong>8 boutons d'accès rapide</strong> aux sujets les plus demandés :
+      </p>
       <table>
-        <tr><th>Bouton</th><th>Sujet déclenché</th></tr>
-        <tr><td>🧭 Navigation</td><td>Architecture des modules et guide de navigation</td></tr>
-        <tr><td>💳 Crédits</td><td>Procédure de gestion des crédits et recouvrement</td></tr>
-        <tr><td>🚚 Commandes</td><td>Cycle d'approvisionnement et réception fournisseur</td></tr>
-        <tr><td>📦 Stocks</td><td>Supervision de l'état des stocks et inventaires</td></tr>
-        <tr><td>🖨️ Impression</td><td>Configuration et utilisation des impressions</td></tr>
-        <tr><td>📊 KPIs</td><td>Business Intelligence et analyses financières</td></tr>
-        <tr><td>🛡️ Assurance</td><td>Administration du tiers-payant et ticket modérateur</td></tr>
-        <tr><td>☁️ Synchro</td><td>Synchronisation cloud multi-appareils (PUSH/PULL)</td></tr>
+        <tr>
+          <th>Bouton</th>
+          <th>Sujet déclenché</th>
+        </tr>
+        <tr>
+          <td>🧭 Navigation</td>
+          <td>Architecture des modules et guide de navigation</td>
+        </tr>
+        <tr>
+          <td>💳 Crédits</td>
+          <td>Procédure de gestion des crédits et recouvrement</td>
+        </tr>
+        <tr>
+          <td>🚚 Commandes</td>
+          <td>Cycle d'approvisionnement et réception fournisseur</td>
+        </tr>
+        <tr>
+          <td>📦 Stocks</td>
+          <td>Supervision de l'état des stocks et inventaires</td>
+        </tr>
+        <tr>
+          <td>🖨️ Impression</td>
+          <td>Configuration et utilisation des impressions</td>
+        </tr>
+        <tr>
+          <td>📊 KPIs</td>
+          <td>Business Intelligence et analyses financières</td>
+        </tr>
+        <tr>
+          <td>🛡️ Assurance</td>
+          <td>Administration du tiers-payant et ticket modérateur</td>
+        </tr>
+        <tr>
+          <td>☁️ Synchro</td>
+          <td>Synchronisation cloud multi-appareils (PUSH/PULL)</td>
+        </tr>
       </table>
 
       <!-- ── Escalade ── -->
       <h3>Escalade vers le support humain</h3>
-      <p>Si votre question dépasse le périmètre de Naomie (question commerciale, demande de personnalisation, incident serveur),
-        un bouton <strong>« Parler à un Humain (WhatsApp) »</strong> est toujours disponible en bas de la fenêtre de chat.
+      <p>Si votre question dépasse le périmètre de Naomie (question commerciale, demande de personnalisation, incident
+        serveur),
+        un bouton <strong>« Parler à un Humain (WhatsApp) »</strong> est toujours disponible en bas de la fenêtre de
+        chat.
         Ce canal sécurisé vous met en relation directe avec un ingénieur <strong>TrillionX</strong>.</p>
 
       <!-- ── Limites ── -->
       <h3>Ce que Naomie ne fait pas</h3>
       <p>Pour garantir la transparence, voici les limites actuelles :</p>
       <ul>
-        <li>Elle ne se connecte <strong>pas à internet</strong> — sa base de connaissances est 100% embarquée localement</li>
-        <li>Elle ne peut pas <strong>exécuter d'actions</strong> à votre place (créer une vente, modifier un produit) — elle vous guide vers la procédure</li>
+        <li>Elle ne se connecte <strong>pas à internet</strong> — sa base de connaissances est 100% embarquée localement
+        </li>
+        <li>Elle ne peut pas <strong>exécuter d'actions</strong> à votre place (créer une vente, modifier un produit) —
+          elle vous guide vers la procédure</li>
         <li>Elle ne stocke <strong>aucune donnée personnelle</strong> de vos conversations</li>
-        <li>Elle ne répond pas aux questions <strong>médicales cliniques</strong> (diagnostic, prescription) — c'est une IA de gestion, pas de consultation</li>
+        <li>Elle ne répond pas aux questions <strong>médicales cliniques</strong> (diagnostic, prescription) — c'est une
+          IA de gestion, pas de consultation</li>
         <li>Pour les questions hors périmètre, elle vous oriente vers le support humain</li>
       </ul>
 
@@ -1373,15 +1710,20 @@
 
     <!-- OLD NAOMIE REMOVED -->
     <div style="display:none">
-      <h2>OLD</h2> <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#091a32"/><text x="12" y="16.5" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text></svg> Naomie AI — Assistante Intelligente Intégrée</h2>
+      <h2>OLD</h2> <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="11" fill="#091a32" /><text x="12" y="16.5" text-anchor="middle" fill="white"
+          font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text>
+      </svg> Naomie AI — Assistante Intelligente Intégrée</h2>
 
-      <p><strong>Naomie</strong> est l'intelligence artificielle dédiée d'OrdiveX. Conçue par <strong>TrillionX</strong>,
+      <p><strong>Naomie</strong> est l'intelligence artificielle dédiée d'OrdiveX. Conçue par
+        <strong>TrillionX</strong>,
         elle fournit une assistance métier continue directement depuis l'interface du logiciel — sans nécessiter de
         connexion internet ni d'abonnement tiers.</p>
 
       <!-- ── Accès ── -->
       <h3>Accéder à Naomie</h3>
-      <p>Naomie est disponible en permanence via le <strong>bouton circulaire bleu nuit</strong> situé en bas à droite de
+      <p>Naomie est disponible en permanence via le <strong>bouton circulaire bleu nuit</strong> situé en bas à droite
+        de
         votre écran. Un point de statut vert confirme que ses systèmes sont opérationnels.</p>
       <ol class="steps">
         <li>Cliquez sur le bouton circulaire (icône de bulle de conversation)</li>
@@ -1396,7 +1738,8 @@
       <ul>
         <li><strong>Avatar</strong> : Lettre « N » sur fond dégradé (bleu, violet) avec cercle bleu nuit</li>
         <li><strong>En-tête</strong> : « Naomie AI » avec le sous-titre « En ligne — Propulsé par OrdiveX »</li>
-        <li><strong>Indicateur de frappe</strong> : Animation de trois points (●●●) lorsqu'elle traite votre requête</li>
+        <li><strong>Indicateur de frappe</strong> : Animation de trois points (●●●) lorsqu'elle traite votre requête
+        </li>
         <li><strong>Ton</strong> : Professionnel et institutionnel — adapté au contexte médical et pharmaceutique</li>
       </ul>
 
@@ -1585,35 +1928,72 @@
           <th>Action déclenchée</th>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg> Navigation</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg> Navigation</td>
           <td>Architecture fonctionnelle et guide des modules</td>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Crédits</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+              <line x1="1" y1="10" x2="23" y2="10" />
+            </svg> Crédits</td>
           <td>Procédure de gestion des crédits et recouvrement</td>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg> Commandes</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2" />
+              <path d="M15 18H9" />
+              <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14" />
+              <circle cx="17" cy="18" r="2" />
+              <circle cx="7" cy="18" r="2" />
+            </svg> Commandes</td>
           <td>Cycle d'approvisionnement et réception fournisseur</td>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Stocks</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+              <path d="m3.3 7 8.7 5 8.7-5" />
+              <path d="M12 22V12" />
+            </svg> Stocks</td>
           <td>Supervision de l'état des stocks et inventaires</td>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Retours</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg> Retours</td>
           <td>Formalisation d'un retour et remboursement</td>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Statistiques</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="6" y1="20" x2="6" y2="14" />
+            </svg> Statistiques</td>
           <td>Exploitation des données analytiques et KPIs</td>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Assurance</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg> Assurance</td>
           <td>Administration du tiers-payant</td>
         </tr>
         <tr>
-          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg> Synchro</td>
+          <td><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+              stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+            </svg> Synchro</td>
           <td>Synchronisation cloud multi-terminaux</td>
         </tr>
       </table>
@@ -1623,7 +2003,8 @@
       <p>Si votre requête dépasse le périmètre fonctionnel du logiciel (question commerciale, demande de
         personnalisation, incident serveur), Naomie vous propose un lien direct vers l'équipe d'ingénierie
         <strong>TrillionX</strong> via le bouton <strong>« Parler à un Humain (WhatsApp) »</strong> situé en bas de la
-        fenêtre de chat.</p>
+        fenêtre de chat.
+      </p>
       <p>Ce canal sécurisé vous met en relation avec un ingénieur support qui prendra le relais.</p>
 
       <!-- ── Limites ── -->
@@ -1648,14 +2029,18 @@
 
       <div class="warning">
         <strong>▸ Note importante</strong>
-        Naomie adopte un ton professionnel et institutionnel adapté au contexte médical. Si vous cherchez une information
+        Naomie adopte un ton professionnel et institutionnel adapté au contexte médical. Si vous cherchez une
+        information
         précise, privilégiez les termes techniques (ex: « déconditionnement » plutôt que « casser une boîte »).
       </div>
     </div> <!-- end hidden old naomie -->
 
     <!-- ═══════ 20. CLOUD ═══════ -->
     <div class="section" id="cloud">
-      <h2>20. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg> Synchronisation Cloud Multi-Appareils</h2>
+      <h2>20. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+        </svg> Synchronisation Cloud Multi-Appareils</h2>
 
       <h3>Comment ça fonctionne</h3>
       <p>OrdiveX fonctionne en <strong>offline-first</strong> : toutes vos données sont stockées localement. Le cloud
@@ -1664,7 +2049,7 @@
       <h3>Configuration initiale</h3>
       <ol class="steps">
         <li>Allez dans <strong>Paramètres → Appareil & Cloud</strong></li>
-        <li>Entrez l'URL Supabase et la Clé Supabase (fournis par TrillionX)</li>
+        <li>Entrez l'URL et la Clé (fournis par TrillionX)</li>
         <li>Cliquez <strong>« Enregistrer la config Cloud »</strong></li>
         <li>Donnez un <strong>nom à cet appareil</strong> (ex: « PC Bureau », « Mobile Vente »)</li>
       </ol>
@@ -1690,7 +2075,11 @@
 
     <!-- ═══════ 21. MOBILE ═══════ -->
     <div class="section" id="mobile">
-      <h2>21. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Utilisation sur Mobile</h2>
+      <h2>21. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+          <line x1="12" y1="18" x2="12.01" y2="18" />
+        </svg> Utilisation sur Mobile</h2>
       <p>OrdiveX est optimisé pour une utilisation sur smartphone et tablette :</p>
       <ul>
         <li>Tous les tableaux s'adaptent automatiquement en mode responsive</li>
@@ -1710,15 +2099,19 @@
     <!-- ═══════ 22. USAGE TERRAIN ═══════ -->
     <div class="section" id="terrain">
       <h2>22. 🌍 Usage en Conditions Réelles & Multi-Postes</h2>
-      <p>Pour une utilisation saine de l'application avec un volume massif de données (+330 000 items), suivez ces règles d'or issues du terrain :</p>
-      
+      <p>Pour une utilisation saine de l'application avec un volume massif de données (+330 000 items), suivez ces
+        règles d'or issues du terrain :</p>
+
       <div class="grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top:20px;">
         <div class="card" style="background:#fff; border:1px solid var(--border); padding:20px; border-radius:12px;">
           <h3 style="color:var(--primary); margin-bottom:10px;">📱 Hiérarchie des Mobiles</h3>
-          <p>La limite sur mobile est la <strong>RAM</strong> (mémoire vive). Apple bride Safari si l'app consomme trop :</p>
+          <p>La limite sur mobile est la <strong>RAM</strong> (mémoire vive). Apple bride Safari si l'app consomme trop
+            :</p>
           <ul style="margin-left:20px; margin-top:10px;">
-            <li><strong>iPhone 11 Pro / 12 (4 Go RAM) :</strong> Installation délicate. Ne quittez JAMAIS l'application pendant la synchronisation initiale. Gardez l'écran allumé.</li>
-            <li><strong>iPhone 13 / 14 / 15 (6 Go RAM+) :</strong> Installation fluide. Supporte parfaitement le catalogue complet.</li>
+            <li><strong>iPhone 11 Pro / 12 (4 Go RAM) :</strong> Installation délicate. Ne quittez JAMAIS l'application
+              pendant la synchronisation initiale. Gardez l'écran allumé.</li>
+            <li><strong>iPhone 13 / 14 / 15 (6 Go RAM+) :</strong> Installation fluide. Supporte parfaitement le
+              catalogue complet.</li>
           </ul>
         </div>
         <div class="card" style="background:#fff; border:1px solid var(--border); padding:20px; border-radius:12px;">
@@ -1731,24 +2124,42 @@
         </div>
       </div>
 
-      <div class="tip" style="background:#fff3cd; border-left:4px solid #ffc107; padding:15px; margin:20px 0; border-radius:8px; font-size:14px;">
+      <div class="tip"
+        style="background:#fff3cd; border-left:4px solid #ffc107; padding:15px; margin:20px 0; border-radius:8px; font-size:14px;">
         <strong>💡 Règle de l'Écran d'Accueil (PWA)</strong><br>
-        Sur mobile, n'utilisez jamais OrdiveX dans un onglet Safari. Utilisez <strong>"Ajouter à l'écran d'accueil"</strong>. Cela permet à l'app de dépasser les limites de stockage standard du navigateur et d'accéder à plus de RAM.
+        Sur mobile, n'utilisez jamais OrdiveX dans un onglet Safari. Utilisez <strong>"Ajouter à l'écran
+          d'accueil"</strong>. Cela permet à l'app de dépasser les limites de stockage standard du navigateur et
+        d'accéder à plus de RAM.
       </div>
 
       <h3 style="margin-top:20px; color:var(--primary);">⏰ Routine de Synchronisation</h3>
-      <p>Vous pouvez vendre <strong>hors-connexion</strong> toute la journée. Pour garder vos stocks synchronisés entre tous les appareils :</p>
+      <p>Vous pouvez vendre <strong>hors-connexion</strong> toute la journée. Pour garder vos stocks synchronisés entre
+        tous les appareils :</p>
       <ol style="margin-left:20px; margin-top:10px;">
-        <li><strong>Le Matin :</strong> Connectez tous les appareils 2 minutes pour récupérer les mises à jour nocturnes (PULL).</li>
+        <li><strong>Le Matin :</strong> Connectez tous les appareils 2 minutes pour récupérer les mises à jour nocturnes
+          (PULL).</li>
         <li><strong>Durée la Journée :</strong> Vendez librement sans internet si besoin.</li>
-        <li><strong>Pause Déjeuner :</strong> Allumez le Wi-Fi 5 minutes pour vider les files d'attente (Auto-sync).</li>
-        <li><strong>Le Soir :</strong> Connexion obligatoire avant de fermer l'officine pour assurer la sauvegarde Cloud (PUSH).</li>
+        <li><strong>Pause Déjeuner :</strong> Allumez le Wi-Fi 5 minutes pour vider les files d'attente (Auto-sync).
+        </li>
+        <li><strong>Le Soir :</strong> Connexion obligatoire avant de fermer l'officine pour assurer la sauvegarde Cloud
+          (PUSH).</li>
       </ol>
     </div>
 
     <!-- ═══════ 23. RACCOURCIS ═══════ -->
     <div class="section" id="raccourcis">
-      <h2>23. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><line x1="6" y1="8" x2="6.01" y2="8"/><line x1="10" y1="8" x2="10.01" y2="8"/><line x1="14" y1="8" x2="14.01" y2="8"/><line x1="18" y1="8" x2="18.01" y2="8"/><line x1="8" y1="12" x2="8.01" y2="12"/><line x1="12" y1="12" x2="12.01" y2="12"/><line x1="16" y1="12" x2="16.01" y2="12"/><line x1="7" y1="16" x2="17" y2="16"/></svg> Raccourcis Clavier</h2>
+      <h2>23. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
+          <line x1="6" y1="8" x2="6.01" y2="8" />
+          <line x1="10" y1="8" x2="10.01" y2="8" />
+          <line x1="14" y1="8" x2="14.01" y2="8" />
+          <line x1="18" y1="8" x2="18.01" y2="8" />
+          <line x1="8" y1="12" x2="8.01" y2="12" />
+          <line x1="12" y1="12" x2="12.01" y2="12" />
+          <line x1="16" y1="12" x2="16.01" y2="12" />
+          <line x1="7" y1="16" x2="17" y2="16" />
+        </svg> Raccourcis Clavier</h2>
       <h3>Navigation globale</h3>
       <table>
         <tr>
@@ -1816,7 +2227,11 @@
 
     <!-- ═══════ 23. DÉPANNAGE ═══════ -->
     <div class="section" id="depannage">
-      <h2>23. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> Dépannage & FAQ</h2>
+      <h2>23. <svg style="width:18px;height:18px;vertical-align:-3px;margin-right:4px" viewBox="0 0 24 24" fill="none"
+          stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path
+            d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg> Dépannage & FAQ</h2>
 
       <h3>L'application est lente</h3>
       <ul>
@@ -1859,8 +2274,15 @@
       <h3>Contacter le support TrillionX</h3>
       <p>Si le problème persiste, contactez l'équipe de support :</p>
       <ul>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#091a32"/><text x="12" y="16.5" text-anchor="middle" fill="white" font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text></svg> <strong>Naomie</strong> — via le bouton bleu dans l'app</li>
-        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> <strong>WhatsApp</strong> — Lien accessible depuis Naomie → « Contacter le support humain »</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="11" fill="#091a32" /><text x="12" y="16.5" text-anchor="middle" fill="white"
+              font-size="14" font-weight="800" font-family="Inter,sans-serif">N</text>
+          </svg> <strong>Naomie</strong> — via le bouton bleu dans l'app</li>
+        <li><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:3px" viewBox="0 0 24 24" fill="none"
+            stroke="#0B3D6F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+          </svg> <strong>WhatsApp</strong> — Lien accessible depuis Naomie → « Contacter le support humain »</li>
       </ul>
     </div>
 
