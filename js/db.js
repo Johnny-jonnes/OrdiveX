@@ -118,6 +118,8 @@ const AppState = {
 
 let _realtimeSubscription = null;
 let _realtimeTimeout = null;
+let _broadcastChannel = null;
+let _broadcastPullTimer = null;
 
 // ── Connexion Resilience Engine ──
 let _connectivityDebounceTimer = null;
@@ -259,9 +261,11 @@ async function getSupabaseClient() {
         }
       } catch (e) { /* silencieux */ }
 
-      // Lancer le realtime APRÈS 10s pour laisser l'auth se stabiliser
-      // Évite le warning WebSocket au démarrage
-      setTimeout(() => _setupRealtime(_supabaseInstance), 3000);
+      // Lancer le realtime + broadcast APRÈS 3s pour laisser l'auth se stabiliser
+      setTimeout(() => {
+        _setupRealtime(_supabaseInstance);
+        _setupBroadcast(_supabaseInstance);
+      }, 3000);
       return _supabaseInstance;
     }
   } catch (e) { /* silencieux */ }
@@ -335,6 +339,50 @@ function _setupRealtime(sbClient) {
         // Ne PAS retenter immédiatement — le backoff gère ça
       }
     });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BROADCAST CHANNEL — Notification instantanée entre appareils
+// Contrairement à postgres_changes (qui requiert la publication Realtime),
+// le Broadcast fonctionne SANS configuration Supabase.
+// Flux : Appareil A push → broadcast "j'ai pushé" → Appareil B pull immédiat
+// ═══════════════════════════════════════════════════════════════════
+function _setupBroadcast(sbClient) {
+  if (_broadcastChannel || !navigator.onLine) return;
+
+  try {
+    _broadcastChannel = sbClient.channel('ordivex-live-sync', {
+      config: { broadcast: { self: false } }
+    })
+    .on('broadcast', { event: 'sync_push' }, (msg) => {
+      var payload = msg.payload || {};
+
+      // Guard : ignorer notre propre appareil (double sécurité)
+      if (payload.deviceId === AppState.deviceId) return;
+
+      _logOnce('log', '[LiveSync] \u{1F4E1} Signal de ' + (payload.deviceName || 'appareil') + ' (' + (payload.count || '?') + ' éléments) — pull immédiat...');
+
+      // Debounce : si plusieurs broadcasts arrivent en rafale, un seul pull
+      if (_broadcastPullTimer) clearTimeout(_broadcastPullTimer);
+      _broadcastPullTimer = setTimeout(async () => {
+        _broadcastPullTimer = null;
+        if (!navigator.onLine) return;
+        try {
+          await pullFromSupabase(false);
+        } catch (e) { /* silencieux */ }
+      }, 300);
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        _logOnce('log', '[LiveSync] \u2705 Canal broadcast connecté — sync instantanée active');
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        try { sbClient.removeChannel(_broadcastChannel).catch(() => {}); } catch(e) {}
+        _broadcastChannel = null;
+      }
+    });
+  } catch (e) {
+    _broadcastChannel = null;
+  }
 }
 
 async function initDB() {
@@ -1188,6 +1236,22 @@ async function syncToSupabase() {
 
     if (totalPendingCount > 0) console.log(`[Flash] ⚡ Sync terminée — ${totalPendingCount} éléments envoyés`);
 
+    // ── BROADCAST : Notifier les autres appareils instantanément ──
+    if (totalPendingCount > 0 && _broadcastChannel) {
+      try {
+        _broadcastChannel.send({
+          type: 'broadcast',
+          event: 'sync_push',
+          payload: {
+            deviceId: AppState.deviceId,
+            deviceName: AppState.deviceName,
+            count: totalPendingCount,
+            ts: Date.now()
+          }
+        });
+      } catch (e) { /* silencieux */ }
+    }
+
     // ── TRACKING DU PUSH (SAUVEGARDE) POUR LE SUIVI ADMINISTRATEUR ──
     if (totalPendingCount > 0) {
       try {
@@ -1691,6 +1755,7 @@ function resetSupabaseClient() {
   if (_supabaseInstance) {
     try { _supabaseInstance.auth?.stopAutoRefresh(); } catch (e) { }
     try { if (_realtimeSubscription) { _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { }); _realtimeSubscription = null; } } catch (e) { }
+    try { if (_broadcastChannel) { _supabaseInstance.removeChannel(_broadcastChannel).catch(() => { }); _broadcastChannel = null; } } catch (e) { }
   }
   _supabaseInstance = null;
 }
@@ -1780,8 +1845,9 @@ function _handleConnectivityChange(isOnline) {
         if (sb.auth?.startAutoRefresh) {
           sb.auth.startAutoRefresh();
         }
-        // Relancer le realtime (avec cooldown intégré)
+        // Relancer le realtime + broadcast (avec cooldown intégré)
         _setupRealtime(sb);
+        _setupBroadcast(sb);
         // Tenter un sync
         syncToSupabase().then(() => {
           _reconnectAttempts = 0; // Reset sur succès
@@ -1802,6 +1868,10 @@ function _handleConnectivityChange(isOnline) {
           if (_realtimeSubscription) {
             _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { });
             _realtimeSubscription = null;
+          }
+          if (_broadcastChannel) {
+            _supabaseInstance.removeChannel(_broadcastChannel).catch(() => { });
+            _broadcastChannel = null;
           }
           _supabaseInstance.realtime?.disconnect?.();
           _realtimeCooldown = false;
