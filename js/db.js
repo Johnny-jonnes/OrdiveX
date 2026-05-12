@@ -21,7 +21,8 @@
     '401 (Unauthorized)', '400 (Bad Request)', 'Bad Request',
     'CORS', 'AbortError', 'TypeError: Load failed',
     'The user aborted a request', 'CHANNEL_ERROR',
-    'AudioContext'
+    'AudioContext', 'Realtime send()', 'InvalidStateError',
+    'beforeinstallpromptevent', 'IDBRequest'
   ];
   function _isNoise(args) {
     var s = Array.prototype.join.call(args, ' ');
@@ -32,6 +33,16 @@
   }
   console.error = function () { if (!_isNoise(arguments)) _origError.apply(console, arguments); };
   console.warn = function () { if (!_isNoise(arguments)) _origWarn.apply(console, arguments); };
+
+  // ── FILET DE SÉCURITÉ GLOBAL — empêche les Uncaught de crasher l'app ──
+  window.addEventListener('error', function(e) {
+    var msg = (e.message || '') + ' ' + (e.filename || '');
+    if (_isNoise([msg])) { e.preventDefault(); return; }
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    var msg = String(e.reason?.message || e.reason || '');
+    if (_isNoise([msg])) { e.preventDefault(); return; }
+  });
 })();
 
 const DB_NAME = 'OrdiveXDB';
