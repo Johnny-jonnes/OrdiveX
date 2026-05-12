@@ -1333,6 +1333,9 @@ async function pullFromSupabase(isManual = false) {
 
     // Fonction d'écriture IDB — MERGE avec les données locales existantes
     // pour préserver les champs qui n'existent pas dans Supabase
+    // ── HELPER : céder le thread principal pendant les opérations lourdes ──
+    const _yieldToUI = () => new Promise(r => setTimeout(r, 0));
+
     const writeBatchToIDB = async (storeName, items) => {
       const prepared = items.map(item => {
         let localItem = { ...item, _synced: true, _updatedAt: item.updatedAt || Date.now() };
@@ -1347,45 +1350,98 @@ async function pullFromSupabase(isManual = false) {
       }).filter(item => !(storeName === 'settings' && item.status === 'DELETED'));
       if (prepared.length === 0) return 0;
 
-      // Passe 1 : lire tous les enregistrements existants dans une transaction readonly
-      var existingMap = {};
-      try {
-        await new Promise((resolve, reject) => {
-          var tx1 = db.transaction(storeName, 'readonly');
-          var store1 = tx1.objectStore(storeName);
-          var getAllReq = store1.getAll();
-          getAllReq.onsuccess = function() {
-            var all = getAllReq.result || [];
-            for (var i = 0; i < all.length; i++) {
-              var k = (storeName === 'settings') ? all[i].key : all[i].id;
-              if (k !== undefined && k !== null) existingMap[k] = all[i];
-            }
-            resolve();
-          };
-          getAllReq.onerror = function() { resolve(); }; // continuer même si erreur
-          tx1.onerror = function() { resolve(); };
-        });
-      } catch (e) { /* ignore, on continue sans merge */ }
+      var keyProp = (storeName === 'settings') ? 'key' : 'id';
 
-      // Passe 2 : merge + écriture dans une transaction readwrite
-      await new Promise((resolve, reject) => {
-        var tx2 = db.transaction(storeName, 'readwrite');
-        var store2 = tx2.objectStore(storeName);
+      // ── STRATÉGIE ADAPTATIVE ──
+      // Petit lot (incrémental) : get ciblés — rapide, aucun lag
+      // Gros lot (full pull) : getAll — plus efficace en masse
+      if (prepared.length < 100) {
+        // ── FAST PATH : get ciblés uniquement les IDs nécessaires ──
+        var existingMap = {};
+        var keysToFetch = [];
         for (var i = 0; i < prepared.length; i++) {
-          var item = prepared[i];
-          var keyVal = (storeName === 'settings') ? item.key : item.id;
-          var existing = (keyVal !== undefined && keyVal !== null) ? existingMap[keyVal] : null;
-          if (existing) {
-            // Fusionner : base = local (préserve champs locaux), overlay = Supabase
-            store2.put(Object.assign({}, existing, item));
-          } else {
-            store2.put(item);
-          }
+          var k = prepared[i][keyProp];
+          if (k !== undefined && k !== null) keysToFetch.push(k);
         }
-        tx2.oncomplete = function() { resolve(); };
-        tx2.onerror = function() { reject(tx2.error); };
-        tx2.onabort = function() { reject(tx2.error); };
-      });
+        if (keysToFetch.length > 0) {
+          try {
+            await new Promise(function(resolve) {
+              var tx = db.transaction(storeName, 'readonly');
+              var store = tx.objectStore(storeName);
+              var done = 0;
+              for (var j = 0; j < keysToFetch.length; j++) {
+                (function(key) {
+                  var req = store.get(key);
+                  req.onsuccess = function() {
+                    if (req.result) existingMap[key] = req.result;
+                    if (++done >= keysToFetch.length) resolve();
+                  };
+                  req.onerror = function() {
+                    if (++done >= keysToFetch.length) resolve();
+                  };
+                })(keysToFetch[j]);
+              }
+              tx.oncomplete = function() { resolve(); };
+              tx.onerror = function() { resolve(); };
+            });
+          } catch (e) { /* continue sans merge */ }
+        }
+        // Écriture
+        await new Promise(function(resolve, reject) {
+          var tx2 = db.transaction(storeName, 'readwrite');
+          var store2 = tx2.objectStore(storeName);
+          for (var i = 0; i < prepared.length; i++) {
+            var item = prepared[i];
+            var kv = item[keyProp];
+            var ex = (kv !== undefined && kv !== null) ? existingMap[kv] : null;
+            store2.put(ex ? Object.assign({}, ex, item) : item);
+          }
+          tx2.oncomplete = function() { resolve(); };
+          tx2.onerror = function() { reject(tx2.error); };
+          tx2.onabort = function() { reject(tx2.error); };
+        });
+      } else {
+        // ── BULK PATH : getAll + écriture par chunks de 200 ──
+        var existingMap = {};
+        try {
+          await new Promise(function(resolve) {
+            var tx1 = db.transaction(storeName, 'readonly');
+            var store1 = tx1.objectStore(storeName);
+            var req = store1.getAll();
+            req.onsuccess = function() {
+              var all = req.result || [];
+              for (var i = 0; i < all.length; i++) {
+                var k = all[i][keyProp];
+                if (k !== undefined && k !== null) existingMap[k] = all[i];
+              }
+              resolve();
+            };
+            req.onerror = function() { resolve(); };
+            tx1.onerror = function() { resolve(); };
+          });
+        } catch (e) { /* continue */ }
+
+        // Écriture par chunks — évite de bloquer le thread principal
+        var CHUNK = 200;
+        for (var start = 0; start < prepared.length; start += CHUNK) {
+          var chunk = prepared.slice(start, start + CHUNK);
+          await new Promise(function(resolve, reject) {
+            var tx2 = db.transaction(storeName, 'readwrite');
+            var store2 = tx2.objectStore(storeName);
+            for (var i = 0; i < chunk.length; i++) {
+              var item = chunk[i];
+              var kv = item[keyProp];
+              var ex = (kv !== undefined && kv !== null) ? existingMap[kv] : null;
+              store2.put(ex ? Object.assign({}, ex, item) : item);
+            }
+            tx2.oncomplete = function() { resolve(); };
+            tx2.onerror = function() { reject(tx2.error); };
+            tx2.onabort = function() { reject(tx2.error); };
+          });
+          // Yield au navigateur entre chaque chunk
+          if (start + CHUNK < prepared.length) await _yieldToUI();
+        }
+      }
       return prepared.length;
     };
 
@@ -1429,8 +1485,8 @@ async function pullFromSupabase(isManual = false) {
                 }
               }
             }
-            // Yield entre chaque batch — POS reste 100% réactif
-            await new Promise(r => setTimeout(r, 50));
+            // Micro-yield entre batches — POS 100% réactif
+            await new Promise(r => setTimeout(r, 5));
           }
 
         } else {
@@ -1456,7 +1512,7 @@ async function pullFromSupabase(isManual = false) {
                   storeItemCount += await writeBatchToIDB(storeName, res.data);
                 }
               }
-              await new Promise(r => setTimeout(r, 5));
+              await new Promise(r => setTimeout(r, 0));
             }
 
             if (storeItemCount > 0) {
@@ -1660,19 +1716,25 @@ async function doBackup() {
  * Appelé une fois au démarrage de l'app
  */
 function startAutoBackup() {
-  // Backup initial au démarrage (après 10 secondes pour laisser l'app s'initialiser)
-  setTimeout(async () => {
-    await autoBackupToStorage();
-  }, 10000);
+  // Helper : exécuter en arrière-plan quand le navigateur est libre
+  var _idle = typeof requestIdleCallback === 'function'
+    ? function(fn) { requestIdleCallback(fn, { timeout: 5000 }); }
+    : function(fn) { setTimeout(fn, 100); };
 
-  // Backup toutes les 30 minutes
-  setInterval(async () => {
-    await autoBackupToStorage();
-    // Si en ligne, synchroniser aussi vers le cloud
-    if (AppState.isOnline) {
-      syncToSupabase().catch(() => { });
-    }
-  }, 30 * 60 * 1000); // 30 minutes
+  // Backup initial au démarrage (après 60s pour laisser le pull finir d'abord)
+  setTimeout(function() {
+    _idle(function() { autoBackupToStorage(); });
+  }, 60000);
+
+  // Backup toutes les 30 minutes — toujours en idle
+  setInterval(function() {
+    _idle(function() {
+      autoBackupToStorage();
+      if (AppState.isOnline) {
+        syncToSupabase().catch(function() {});
+      }
+    });
+  }, 30 * 60 * 1000);
 
   console.log('[Backup] ✅ Auto-backup démarré (toutes les 30 min)');
 }
@@ -1697,9 +1759,8 @@ function startAutoPull() {
     _autoPullTimer = setTimeout(loop, delay);
   };
 
-  // On attend 5 secondes au démarrage de l'app avant de lancer la première boucle
-  // pour laisser l'interface (POS) se charger sans concurrence
-  _autoPullTimer = setTimeout(loop, 5000);
+  // On attend 8 secondes au démarrage pour laisser le UI charger
+  _autoPullTimer = setTimeout(loop, 8000);
 }
 
 /**
