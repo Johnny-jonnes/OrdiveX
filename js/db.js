@@ -35,11 +35,11 @@
   console.warn = function () { if (!_isNoise(arguments)) _origWarn.apply(console, arguments); };
 
   // ── FILET DE SÉCURITÉ GLOBAL — empêche les Uncaught de crasher l'app ──
-  window.addEventListener('error', function(e) {
+  window.addEventListener('error', function (e) {
     var msg = (e.message || '') + ' ' + (e.filename || '');
     if (_isNoise([msg])) { e.preventDefault(); return; }
   });
-  window.addEventListener('unhandledrejection', function(e) {
+  window.addEventListener('unhandledrejection', function (e) {
     var msg = String(e.reason?.message || e.reason || '');
     if (_isNoise([msg])) { e.preventDefault(); return; }
   });
@@ -280,8 +280,8 @@ async function getSupabaseClient() {
 
       // Lancer le realtime + broadcast APRÈS 3s pour laisser l'auth se stabiliser
       setTimeout(() => {
-        try { _setupRealtime(_supabaseInstance); } catch(e) { /* WebSocket optionnel */ }
-        try { _setupBroadcast(_supabaseInstance); } catch(e) { /* Broadcast optionnel */ }
+        try { _setupRealtime(_supabaseInstance); } catch (e) { /* WebSocket optionnel */ }
+        try { _setupBroadcast(_supabaseInstance); } catch (e) { /* Broadcast optionnel */ }
       }, 3000);
       return _supabaseInstance;
     }
@@ -371,32 +371,32 @@ function _setupBroadcast(sbClient) {
     _broadcastChannel = sbClient.channel('ordivex-live-sync', {
       config: { broadcast: { self: false } }
     })
-    .on('broadcast', { event: 'sync_push' }, (msg) => {
-      var payload = msg.payload || {};
+      .on('broadcast', { event: 'sync_push' }, (msg) => {
+        var payload = msg.payload || {};
 
-      // Guard : ignorer notre propre appareil (double sécurité)
-      if (payload.deviceId === AppState.deviceId) return;
+        // Guard : ignorer notre propre appareil (double sécurité)
+        if (payload.deviceId === AppState.deviceId) return;
 
-      _logOnce('log', '[LiveSync] \u{1F4E1} Signal de ' + (payload.deviceName || 'appareil') + ' (' + (payload.count || '?') + ' éléments) — pull immédiat...');
+        _logOnce('log', '[LiveSync] \u{1F4E1} Signal de ' + (payload.deviceName || 'appareil') + ' (' + (payload.count || '?') + ' éléments) — pull immédiat...');
 
-      // Debounce : si plusieurs broadcasts arrivent en rafale, un seul pull
-      if (_broadcastPullTimer) clearTimeout(_broadcastPullTimer);
-      _broadcastPullTimer = setTimeout(async () => {
-        _broadcastPullTimer = null;
-        if (!navigator.onLine) return;
-        try {
-          await pullFromSupabase(false);
-        } catch (e) { /* silencieux */ }
-      }, 300);
-    })
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        _logOnce('log', '[LiveSync] \u2705 Canal broadcast connecté — sync instantanée active');
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        try { sbClient.removeChannel(_broadcastChannel).catch(() => {}); } catch(e) {}
-        _broadcastChannel = null;
-      }
-    });
+        // Debounce : si plusieurs broadcasts arrivent en rafale, un seul pull
+        if (_broadcastPullTimer) clearTimeout(_broadcastPullTimer);
+        _broadcastPullTimer = setTimeout(async () => {
+          _broadcastPullTimer = null;
+          if (!navigator.onLine) return;
+          try {
+            await pullFromSupabase(false);
+          } catch (e) { /* silencieux */ }
+        }, 300);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          _logOnce('log', '[LiveSync] \u2705 Canal broadcast connecté — sync instantanée active');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          try { sbClient.removeChannel(_broadcastChannel).catch(() => { }); } catch (e) { }
+          _broadcastChannel = null;
+        }
+      });
   } catch (e) {
     _broadcastChannel = null;
   }
@@ -1038,7 +1038,7 @@ async function syncToSupabase() {
       if (probeReq.error) {
         // Si 401 → re-auth et retry
         if (probeReq.error.message?.includes('401') || probeReq.error.code === 'PGRST301') {
-          try { await sb.auth.signInAnonymously(); } catch(e) {}
+          try { await sb.auth.signInAnonymously(); } catch (e) { }
           const retry = await sb.from('settings').select('key').limit(1);
           if (retry.error) throw retry.error;
         } else {
@@ -1262,7 +1262,7 @@ async function syncToSupabase() {
     // ── TRACKING DU PUSH (SAUVEGARDE) POUR LE SUIVI ADMINISTRATEUR ──
     if (totalPendingCount > 0) {
       try {
-        const settings = await DB.dbGetAll('settings');
+        const settings = await dbGetAll('settings');
         const pharmacyName = settings.find(s => s.key === 'pharmacy_name')?.value || 'Inconnu';
         await sb.from('push_tracking').insert([{
           device_id: currentDeviceId,
@@ -1371,29 +1371,29 @@ async function pullFromSupabase(isManual = false) {
         }
         if (keysToFetch.length > 0) {
           try {
-            await new Promise(function(resolve) {
+            await new Promise(function (resolve) {
               var tx = db.transaction(storeName, 'readonly');
               var store = tx.objectStore(storeName);
               var done = 0;
               for (var j = 0; j < keysToFetch.length; j++) {
-                (function(key) {
+                (function (key) {
                   var req = store.get(key);
-                  req.onsuccess = function() {
+                  req.onsuccess = function () {
                     if (req.result) existingMap[key] = req.result;
                     if (++done >= keysToFetch.length) resolve();
                   };
-                  req.onerror = function() {
+                  req.onerror = function () {
                     if (++done >= keysToFetch.length) resolve();
                   };
                 })(keysToFetch[j]);
               }
-              tx.oncomplete = function() { resolve(); };
-              tx.onerror = function() { resolve(); };
+              tx.oncomplete = function () { resolve(); };
+              tx.onerror = function () { resolve(); };
             });
           } catch (e) { /* continue sans merge */ }
         }
         // Écriture
-        await new Promise(function(resolve, reject) {
+        await new Promise(function (resolve, reject) {
           var tx2 = db.transaction(storeName, 'readwrite');
           var store2 = tx2.objectStore(storeName);
           for (var i = 0; i < prepared.length; i++) {
@@ -1402,19 +1402,19 @@ async function pullFromSupabase(isManual = false) {
             var ex = (kv !== undefined && kv !== null) ? existingMap[kv] : null;
             store2.put(ex ? Object.assign({}, ex, item) : item);
           }
-          tx2.oncomplete = function() { resolve(); };
-          tx2.onerror = function() { reject(tx2.error); };
-          tx2.onabort = function() { reject(tx2.error); };
+          tx2.oncomplete = function () { resolve(); };
+          tx2.onerror = function () { reject(tx2.error); };
+          tx2.onabort = function () { reject(tx2.error); };
         });
       } else {
         // ── BULK PATH : getAll + écriture par chunks de 200 ──
         var existingMap = {};
         try {
-          await new Promise(function(resolve) {
+          await new Promise(function (resolve) {
             var tx1 = db.transaction(storeName, 'readonly');
             var store1 = tx1.objectStore(storeName);
             var req = store1.getAll();
-            req.onsuccess = function() {
+            req.onsuccess = function () {
               var all = req.result || [];
               for (var i = 0; i < all.length; i++) {
                 var k = all[i][keyProp];
@@ -1422,8 +1422,8 @@ async function pullFromSupabase(isManual = false) {
               }
               resolve();
             };
-            req.onerror = function() { resolve(); };
-            tx1.onerror = function() { resolve(); };
+            req.onerror = function () { resolve(); };
+            tx1.onerror = function () { resolve(); };
           });
         } catch (e) { /* continue */ }
 
@@ -1431,7 +1431,7 @@ async function pullFromSupabase(isManual = false) {
         var CHUNK = 200;
         for (var start = 0; start < prepared.length; start += CHUNK) {
           var chunk = prepared.slice(start, start + CHUNK);
-          await new Promise(function(resolve, reject) {
+          await new Promise(function (resolve, reject) {
             var tx2 = db.transaction(storeName, 'readwrite');
             var store2 = tx2.objectStore(storeName);
             for (var i = 0; i < chunk.length; i++) {
@@ -1440,9 +1440,9 @@ async function pullFromSupabase(isManual = false) {
               var ex = (kv !== undefined && kv !== null) ? existingMap[kv] : null;
               store2.put(ex ? Object.assign({}, ex, item) : item);
             }
-            tx2.oncomplete = function() { resolve(); };
-            tx2.onerror = function() { reject(tx2.error); };
-            tx2.onabort = function() { reject(tx2.error); };
+            tx2.oncomplete = function () { resolve(); };
+            tx2.onerror = function () { reject(tx2.error); };
+            tx2.onabort = function () { reject(tx2.error); };
           });
           // Yield au navigateur entre chaque chunk
           if (start + CHUNK < prepared.length) await _yieldToUI();
@@ -1565,7 +1565,7 @@ async function pullFromSupabase(isManual = false) {
     // ── TRACKING DU PULL POUR LE SUIVI PHARMACIEN ──
     if (isManual && totalItemsPulled > 0) {
       try {
-        const settings = await DB.dbGetAll('settings');
+        const settings = await dbGetAll('settings');
         const pharmacyName = settings.find(s => s.key === 'pharmacy_name')?.value || 'Inconnu';
         await sb.from('pull_tracking').insert([{
           device_id: localStorage.getItem('pharma_device_id') || 'N/A',
@@ -1576,7 +1576,7 @@ async function pullFromSupabase(isManual = false) {
           pulled_at: new Date().toISOString()
         }]);
       } catch (trackErr) {
-        console.warn('[Flash] Erreur tracking pull:', trackErr);
+        // Silencieux en production — le tracking est non-critique
       }
     }
 
@@ -1724,20 +1724,20 @@ async function doBackup() {
 function startAutoBackup() {
   // Helper : exécuter en arrière-plan quand le navigateur est libre
   var _idle = typeof requestIdleCallback === 'function'
-    ? function(fn) { requestIdleCallback(fn, { timeout: 5000 }); }
-    : function(fn) { setTimeout(fn, 100); };
+    ? function (fn) { requestIdleCallback(fn, { timeout: 5000 }); }
+    : function (fn) { setTimeout(fn, 100); };
 
   // Backup initial au démarrage (après 60s pour laisser le pull finir d'abord)
-  setTimeout(function() {
-    _idle(function() { autoBackupToStorage(); });
+  setTimeout(function () {
+    _idle(function () { autoBackupToStorage(); });
   }, 60000);
 
   // Backup toutes les 30 minutes — toujours en idle
-  setInterval(function() {
-    _idle(function() {
+  setInterval(function () {
+    _idle(function () {
       autoBackupToStorage();
       if (AppState.isOnline) {
-        syncToSupabase().catch(function() {});
+        syncToSupabase().catch(function () { });
       }
     });
   }, 30 * 60 * 1000);
@@ -1947,8 +1947,8 @@ function _handleConnectivityChange(isOnline) {
           sb.auth.startAutoRefresh();
         }
         // Relancer le realtime + broadcast (avec cooldown intégré)
-        try { _setupRealtime(sb); } catch(e) { /* optionnel */ }
-        try { _setupBroadcast(sb); } catch(e) { /* optionnel */ }
+        try { _setupRealtime(sb); } catch (e) { /* optionnel */ }
+        try { _setupBroadcast(sb); } catch (e) { /* optionnel */ }
         // Tenter un sync
         syncToSupabase().then(() => {
           _reconnectAttempts = 0; // Reset sur succès
