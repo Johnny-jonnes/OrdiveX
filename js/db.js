@@ -261,6 +261,12 @@ async function getSupabaseClient() {
           autoRefreshToken: true,
           detectSessionInUrl: false,
           persistSession: true,
+        },
+        realtime: {
+          params: { eventsPerSecond: 1 },
+          heartbeatIntervalMs: 60000,
+          reconnectAfterMs: (tries) => Math.min(tries * 5000, 120000),
+          timeout: 20000,
         }
       });
 
@@ -274,8 +280,8 @@ async function getSupabaseClient() {
 
       // Lancer le realtime + broadcast APRÈS 3s pour laisser l'auth se stabiliser
       setTimeout(() => {
-        _setupRealtime(_supabaseInstance);
-        _setupBroadcast(_supabaseInstance);
+        try { _setupRealtime(_supabaseInstance); } catch(e) { /* WebSocket optionnel */ }
+        try { _setupBroadcast(_supabaseInstance); } catch(e) { /* Broadcast optionnel */ }
       }, 3000);
       return _supabaseInstance;
     }
@@ -1941,8 +1947,8 @@ function _handleConnectivityChange(isOnline) {
           sb.auth.startAutoRefresh();
         }
         // Relancer le realtime + broadcast (avec cooldown intégré)
-        _setupRealtime(sb);
-        _setupBroadcast(sb);
+        try { _setupRealtime(sb); } catch(e) { /* optionnel */ }
+        try { _setupBroadcast(sb); } catch(e) { /* optionnel */ }
         // Tenter un sync
         syncToSupabase().then(() => {
           _reconnectAttempts = 0; // Reset sur succès

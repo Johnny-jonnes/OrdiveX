@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrdiveX — Guide Technique de Déploiement</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="js/vendor/lucide.min.js"></script>
+    <style>
+        :root {
+            --primary: #1B4F72;
+            --primary-light: #2874A6;
+            --accent: #2EAF7D;
+            --bg: #F8FAFC;
+            --surface: #FFFFFF;
+            --text: #1E293B;
+            --text-muted: #64748B;
+            --border: #E2E8F0;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border-radius: var(--radius);
+            box-shadow: 0 10px 25px rgba(27, 79, 114, 0.2);
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .header-logo i { width: 40px; height: 40px; color: var(--accent); }
+        .header-title { font-size: 2.5rem; font-weight: 800; letter-spacing: -0.02em; }
+        .header-subtitle { font-size: 1.1rem; opacity: 0.9; font-weight: 400; }
+
+        nav.toc {
+            background: var(--surface);
+            padding: 24px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 40px;
+            position: sticky;
+            top: 20px;
+            z-index: 10;
+            box-shadow: var(--shadow);
+        }
+
+        .toc-title { font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .toc-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+        .toc-list a { text-decoration: none; color: var(--text-muted); font-size: 0.9rem; transition: color 0.2s; }
+        .toc-list a:hover { color: var(--primary); font-weight: 500; }
+
+        section {
+            background: var(--surface);
+            padding: 40px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            margin-bottom: 40px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: var(--primary); }
+        h2 i { color: var(--accent); }
+        h3 { font-size: 1.25rem; font-weight: 600; margin: 32px 0 16px; color: var(--text); border-left: 4px solid var(--accent); padding-left: 12px; }
+
+        p { margin-bottom: 16px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin: 24px 0; }
+        .card {
+            padding: 24px;
+            border-radius: var(--radius);
+            background: #F1F5F9;
+            border: 1px solid var(--border);
+        }
+
+        .card-title { font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        
+        .alert {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .alert-info { background: #E0F2FE; color: #0369A1; border-left: 4px solid #0EA5E9; }
+        .alert-important { background: #F0FDF4; color: #15803D; border-left: 4px solid #22C55E; }
+        .alert-warning { background: #FFF7ED; color: #9A3412; border-left: 4px solid #F97316; }
+        .alert-danger { background: #FEF2F2; color: #991B1B; border-left: 4px solid #EF4444; }
+
+        code { font-family: 'JetBrains Mono', monospace; background: #F1F5F9; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: var(--primary); }
+        pre { background: #1E293B; color: #E2E8F0; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 16px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; }
+        th { text-align: left; background: #F8FAFC; padding: 12px; border-bottom: 2px solid var(--border); }
+        td { padding: 12px; border-bottom: 1px solid var(--border); }
+
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-primary { background: var(--primary); color: white; }
+        .badge-accent { background: var(--accent); color: white; }
+
+        .btn-print {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        @media print {
+            .no-print, .btn-print, .toc { display: none !important; }
+            body { background: white; }
+            section { box-shadow: none; border: none; padding: 20px 0; }
+            .container { max-width: 100%; padding: 0; }
+            header { background: white !important; color: black !important; border: 1px solid #eee; }
+        }
+
+        @media (max-width: 768px) {
+            .header-title { font-size: 1.75rem; }
+            section { padding: 20px; }
+            .toc-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <button class="btn-print no-print" onclick="window.print()">
+        <i data-lucide="printer"></i> Imprimer le guide
+    </button>
+
+    <div class="container">
+        <header>
+            <div class="header-logo">
+                <i data-lucide="activity"></i>
+                <div style="font-size: 1.5rem; font-weight: 800;">Ordive<span style="color:var(--accent)">X</span></div>
+            </div>
+            <h1 class="header-title">Guide Technique de Déploiement</h1>
+            <p class="header-subtitle">Installation complète, personnalisation et migration de données (v9.3.4)</p>
+        </header>
+
+        <nav class="toc no-print">
+            <div class="toc-title"><i data-lucide="list"></i> Sommaire</div>
+            <ul class="toc-list">
+                <li><a href="#prequis">1. Prérequis</a></li>
+                <li><a href="#pwa">2. Installation PWA</a></li>
+                <li><a href="#onboarding">3. Onboarding</a></li>
+                <li><a href="#supabase">4. Configuration Cloud</a></li>
+                <li><a href="#import">5. Import de Données</a></li>
+                <li><a href="#utilisateurs">6. Utilisateurs</a></li>
+                <li><a href="#assurances">7. Assurances</a></li>
+                <li><a href="#stock">8. Initialisation Stock</a></li>
+                <li><a href="#checklist">9. Checklist Finale</a></li>
+                <li><a href="#depannage">10. Dépannage</a></li>
+            </ul>
+        </nav>
+
+        <section id="prequis">
+            <h2><i data-lucide="monitor"></i> 1. Prérequis & Matériel</h2>
+            <p>OrdiveX est une PWA (Progressive Web App) ultra-légère. Elle ne nécessite aucun serveur local, mais demande un navigateur moderne pour fonctionner de manière optimale.</p>
+            
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i data-lucide="tablet"></i> Terminaux</div>
+                    <p>PC (Windows/Mac), Tablettes (iPad/Android) ou Smartphones. Un écran de 10 pouces minimum est recommandé pour le point de vente.</p>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i data-lucide="wifi"></i> Connectivité</div>
+                    <p>Internet requis pour l'installation et la synchronisation. L'application reste utilisable <strong>100% hors-ligne</strong> pour les ventes.</p>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>Élément</th><th>Minimum</th><th>Recommandé</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>RAM</td><td>2 Go</td><td>4 Go+</td></tr>
+                    <tr><td>Navigateur</td><td>Chrome 90+ / Safari 14+</td><td>Dernière version Chrome</td></tr>
+                    <tr><td>Stockage libre</td><td>500 Mo</td><td>2 Go</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="pwa">
+            <h2><i data-lucide="download"></i> 2. Installation PWA</h2>
+            <p>L'installation transforme le site web en une application native sur l'appareil, supprimant la barre d'adresse et permettant l'accès hors-ligne.</p>
+            
+            <h3>Sur Android (Chrome)</h3>
+            <ol style="margin-left: 20px; margin-bottom: 16px;">
+                <li>Accédez à l'URL de votre instance OrdiveX.</li>
+                <li>Attendez l'apparition du bandeau en bas de l'écran ou allez dans le menu <strong>⋮</strong>.</li>
+                <li>Sélectionnez <strong>"Installer l'application"</strong>.</li>
+            </ol>
+
+            <h3>Sur iOS (Safari)</h3>
+            <ol style="margin-left: 20px; margin-bottom: 16px;">
+                <li>Appuyez sur le bouton <strong>Partager</strong> (carré avec flèche).</li>
+                <li>Faites défiler vers le bas et appuyez sur <strong>"Sur l'écran d'accueil"</strong>.</li>
+                <li>Validez le nom de l'application.</li>
+            </ol>
+
+            <div class="alert alert-important">
+                <i data-lucide="shield-check"></i>
+                <div>
+                    <strong>Important :</strong> Une fois installée, lancez toujours l'application depuis son icône sur l'écran d'accueil pour garantir la stabilité et la persistance des données localement.
+                </div>
+            </div>
+        </section>
+
+        <section id="onboarding">
+            <h2><i data-lucide="sparkles"></i> 3. Onboarding & Personnalisation</h2>
+            <p>Au premier lancement, l'assistant de configuration définit l'identité visuelle de la pharmacie.</p>
+            
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title"><i data-lucide="image"></i> Identité Visuelle</div>
+                    <p>Téléchargez le logo de la pharmacie. Il sera utilisé sur tous les tickets de caisse et factures A4 générés.</p>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i data-lucide="map-pin"></i> Coordonnées</div>
+                    <p>Le nom, l'adresse et le téléphone sont obligatoires pour la conformité des documents légaux.</p>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i data-lucide="info"></i>
+                <div>
+                    <strong>Option de Restauration :</strong> Si vous installez un nouveau terminal pour une pharmacie existante, utilisez le <strong>Magic Link</strong> lors de l'onboarding pour récupérer instantanément toute la configuration.
+                </div>
+            </div>
+        </section>
+
+        <section id="supabase">
+            <h2><i data-lucide="cloud"></i> 4. Configuration Cloud (Supabase)</h2>
+            <p>Indispensable pour la synchronisation multi-terminaux et la sauvegarde automatique en temps réel.</p>
+            
+            <h3>Étape 1 : Création du projet</h3>
+            <p>Créez un compte gratuit sur <a href="https://supabase.com" target="_blank">supabase.com</a> et créez un nouveau projet "Pharmacie [Nom]".</p>
+
+            <h3>Étape 2 : Initialisation SQL</h3>
+            <p>Copiez le contenu du fichier <code>supabase_schema.sql</code> dans le <strong>SQL Editor</strong> de Supabase et cliquez sur <strong>Run</strong>.</p>
+
+            <h3>Étape 3 : Liaison API</h3>
+            <p>Dans OrdiveX, allez dans <strong>Paramètres > Synchronisation Cloud</strong> et renseignez :</p>
+            <ul>
+                <li><strong>Supabase URL</strong></li>
+                <li><strong>Supabase Anon Key</strong></li>
+            </ul>
+        </section>
+
+        <section id="import">
+            <h2><i data-lucide="upload-cloud"></i> 5. Import de Données & Catalogue</h2>
+            <p>Le succès du déploiement repose sur la qualité du catalogue initial. Voici comment procéder selon votre situation.</p>
+            
+            <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 24px;">
+                <div class="card-title"><span class="badge badge-accent">Scénario A</span> Pharmacie sur Cahier</div>
+                <p>Aucune donnée numérique n'est disponible.</p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Méthode :</strong> Saisie manuelle progressive via <code>Produits > Ajouter</code>.</li>
+                    <li><strong>Conseil :</strong> Priorisez les 20% des produits qui génèrent 80% des ventes (Loi de Pareto).</li>
+                </ul>
+            </div>
+
+            <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 24px;">
+                <div class="card-title"><span class="badge badge-accent">Scénario B</span> Fichier Excel/CSV</div>
+                <p>Vous disposez déjà d'une liste sous Excel.</p>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Action :</strong> Adaptez votre tableau aux colonnes OrdiveX : <code>Code, Nom, DCI, Marque, Categorie, Prix Vente, Prix Achat, Rx</code>.</li>
+                    <li><strong>Import :</strong> Allez dans <code>Produits > Importer</code> et glissez votre fichier CSV (UTF-8).</li>
+                </ul>
+            </div>
+
+            <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 24px;">
+                <div class="card-title"><span class="badge badge-accent">Scénario C</span> Logiciel Existant</div>
+                <p>Migration depuis un ancien système (ex: logiciel sous Windows).</p>
+                <ol style="margin-left: 20px;">
+                    <li>Exportez le catalogue au format Excel/CSV depuis l'ancien logiciel.</li>
+                    <li>Utilisez le script de mapping pour aligner les colonnes (Désignation → Nom, PA → Prix Achat, etc.).</li>
+                    <li>Nettoyez les doublons avant l'import final.</li>
+                </ol>
+            </div>
+
+            <div class="alert alert-warning">
+                <i data-lucide="alert-circle"></i>
+                <div>
+                    <strong>Fichiers volumineux :</strong> Pour les catalogues de plus de 50 000 références, l'import peut prendre plusieurs minutes. L'application traite les données par lots de 1000 pour ne pas ralentir l'interface.
+                </div>
+            </div>
+        </section>
+
+        <section id="utilisateurs">
+            <h2><i data-lucide="users"></i> 6. Gestion des Utilisateurs</h2>
+            <p>La sécurité repose sur l'attribution correcte des rôles.</p>
+            
+            <table>
+                <thead>
+                    <tr><th>Rôle</th><th>Droits</th><th>Profil type</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Admin</strong></td><td>Accès total (Prix d'achat, Marges, Paramètres)</td><td>Propriétaire / Titulaire</td></tr>
+                    <tr><td><strong>Pharmacien</strong></td><td>Ventes, Stock, Patients, Rapports métier</td><td>Pharmacien assistant</td></tr>
+                    <tr><td><strong>Caissier</strong></td><td>Ventes POS uniquement (Prix d'achat masqués)</td><td>Vendeur comptoir</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="assurances">
+            <h2><i data-lucide="shield"></i> 7. Paramétrage Assurances</h2>
+            <p>OrdiveX gère nativement le tiers-payant pour les entreprises et mutuelles de Guinée.</p>
+            <ol style="margin-left: 20px;">
+                <li>Lors d'une vente, sélectionnez le mode <strong>"Assurance"</strong>.</li>
+                <li>Renseignez le nom de la mutuelle (ex: NSIA, SONAM, etc.).</li>
+                <li>Saisissez le montant ou le pourcentage pris en charge.</li>
+                <li>Le système sépare automatiquement la part patient de la part entreprise dans les rapports.</li>
+            </ol>
+        </section>
+
+        <section id="stock">
+            <h2><i data-lucide="package"></i> 8. Initialisation du Stock</h2>
+            <p>Une fois le catalogue importé (Quantité = 0), vous devez initialiser votre inventaire réel.</p>
+            <ul>
+                <li><strong>Option Rapide :</strong> Ajustement manuel via <code>Stock > Entrée de stock</code>.</li>
+                <li><strong>Option Pro :</strong> Création d'un <code>Bon de commande</code> fournisseur, réceptionné pour alimenter le stock avec traçabilité des lots et dates de péremption.</li>
+            </ul>
+        </section>
+
+        <section id="checklist">
+            <h2><i data-lucide="check-square"></i> 9. Checklist Finale</h2>
+            <div class="card">
+                <ul style="list-style: none;">
+                    <li style="margin-bottom: 8px;"><i data-lucide="check" style="color:var(--success); width:16px;"></i> PWA installée sur l'écran d'accueil</li>
+                    <li style="margin-bottom: 8px;"><i data-lucide="check" style="color:var(--success); width:16px;"></i> Logo et coordonnées vérifiés sur les factures</li>
+                    <li style="margin-bottom: 8px;"><i data-lucide="check" style="color:var(--success); width:16px;"></i> Test de synchronisation Cloud réussi</li>
+                    <li style="margin-bottom: 8px;"><i data-lucide="check" style="color:var(--success); width:16px;"></i> Profils caissiers créés et testés</li>
+                    <li style="margin-bottom: 8px;"><i data-lucide="check" style="color:var(--success); width:16px;"></i> Sauvegarde manuelle effectuée (export JSON)</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="depannage">
+            <h2><i data-lucide="help-circle"></i> 10. Dépannage & Support</h2>
+            <div class="grid">
+                <div class="card">
+                    <div class="card-title">Écran Blanc</div>
+                    <p>Videz le cache du navigateur ou vérifiez la connexion internet lors du premier chargement.</p>
+                </div>
+                <div class="card">
+                    <div class="card-title">Erreur Sync</div>
+                    <p>Vérifiez les clés API Supabase dans les paramètres et assurez-vous que le RLS est désactivé sur les tables.</p>
+                </div>
+            </div>
+            <p style="text-align: center; margin-top: 40px; color: var(--text-muted); font-size: 0.8rem;">
+                Propulsé par <strong>TrillionX</strong> — Technologie de Santé Avancée
+            </p>
+        </section>
+
+
+    </div>
+
+    <script>
+        if (window.lucide) lucide.createIcons();
+    </script>
+</body>
+</html>
