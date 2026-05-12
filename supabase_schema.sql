@@ -867,21 +867,22 @@ ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "validityDate" TEXT;
 ALTER PUBLICATION supabase_realtime ADD TABLE products, stock, sales, "saleItems", settings, app_users, patients, returns, "cashRegister", movements, lots, suppliers, "purchaseOrders", prescriptions, "auditLog", alerts;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- MIGRATION v9.3.5 — Colonnes manquantes + correction types
+-- MIGRATION v9.3.5 — Audit complet : TOUTES les colonnes locales → Supabase
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 -- ── PATIENTS : colonnes manquantes ──
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS "createdAt" TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS "creditLimit" NUMERIC DEFAULT 0;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS note TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS insurance TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS "insuranceNumber" TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS "bloodType" TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS "emergencyContact" TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS gender TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active';
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS "medicalHistory" JSONB;
-ALTER TABLE patients ADD COLUMN IF NOT EXISTS note TEXT;
 
 -- ── PATIENTS : correction type updatedAt (BIGINT → TEXT pour accepter ISO dates) ──
 ALTER TABLE patients ALTER COLUMN "updatedAt" TYPE TEXT USING "updatedAt"::TEXT;
@@ -890,9 +891,32 @@ ALTER TABLE patients ALTER COLUMN "updatedAt" TYPE TEXT USING "updatedAt"::TEXT;
 ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "closedByRole" TEXT;
 ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS reference TEXT;
 ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "saleId" BIGINT;
+ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "returnId" BIGINT;
+ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "refundAmount" NUMERIC DEFAULT 0;
+
+-- ── SALES : colonnes manquantes ──
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "paymentDetails" JSONB;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceName" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceRef" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceAmount" NUMERIC DEFAULT 0;
+
+-- ── SALEITEMS : colonnes manquantes ──
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "lotNumber" TEXT;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "saleMode" TEXT DEFAULT 'box';
+
+-- ── MOVEMENTS : colonnes manquantes ──
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS "subType" TEXT;
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS reference TEXT;
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS "lotNumber" TEXT;
+
+-- ── RETURNS : correction type updatedAt ──
+ALTER TABLE returns ALTER COLUMN "updatedAt" TYPE TEXT USING "updatedAt"::TEXT;
+
+-- ── CASHREGISTER : correction type updatedAt ──
+ALTER TABLE "cashRegister" ALTER COLUMN "updatedAt" TYPE TEXT USING "updatedAt"::TEXT;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FIN MIGRATION v9.3.5
--- Après exécution, vider le cache de colonnes sur chaque appareil :
+-- Après exécution sur Supabase, vider le cache sur chaque appareil :
 --   localStorage.removeItem('pharma_bad_columns');
 -- ═══════════════════════════════════════════════════════════════════════════════
