@@ -1335,29 +1335,45 @@ async function pullFromSupabase(isManual = false) {
         return localItem;
       }).filter(item => !(storeName === 'settings' && item.status === 'DELETED'));
       if (prepared.length === 0) return 0;
-      await new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const txStore = tx.objectStore(storeName);
-        for (const item of prepared) {
-          // MERGE : lire l'existant local, fusionner avec les données Supabase
-          // Cela préserve les champs local-only (subUnitsPerBox, controlledClass, etc.)
-          var keyVal = (storeName === 'settings') ? item.key : item.id;
-          if (keyVal === undefined || keyVal === null) { txStore.put(item); continue; }
-          var getReq = txStore.get(keyVal);
-          getReq.onsuccess = function() {
-            var existing = getReq.result;
-            if (existing) {
-              // Fusionner : base = local (préserve champs locaux), overlay = Supabase
-              var merged = Object.assign({}, existing, item);
-              txStore.put(merged);
-            } else {
-              txStore.put(item);
+
+      // Passe 1 : lire tous les enregistrements existants dans une transaction readonly
+      var existingMap = {};
+      try {
+        await new Promise((resolve, reject) => {
+          var tx1 = db.transaction(storeName, 'readonly');
+          var store1 = tx1.objectStore(storeName);
+          var getAllReq = store1.getAll();
+          getAllReq.onsuccess = function() {
+            var all = getAllReq.result || [];
+            for (var i = 0; i < all.length; i++) {
+              var k = (storeName === 'settings') ? all[i].key : all[i].id;
+              if (k !== undefined && k !== null) existingMap[k] = all[i];
             }
+            resolve();
           };
+          getAllReq.onerror = function() { resolve(); }; // continuer même si erreur
+          tx1.onerror = function() { resolve(); };
+        });
+      } catch (e) { /* ignore, on continue sans merge */ }
+
+      // Passe 2 : merge + écriture dans une transaction readwrite
+      await new Promise((resolve, reject) => {
+        var tx2 = db.transaction(storeName, 'readwrite');
+        var store2 = tx2.objectStore(storeName);
+        for (var i = 0; i < prepared.length; i++) {
+          var item = prepared[i];
+          var keyVal = (storeName === 'settings') ? item.key : item.id;
+          var existing = (keyVal !== undefined && keyVal !== null) ? existingMap[keyVal] : null;
+          if (existing) {
+            // Fusionner : base = local (préserve champs locaux), overlay = Supabase
+            store2.put(Object.assign({}, existing, item));
+          } else {
+            store2.put(item);
+          }
         }
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error);
+        tx2.oncomplete = function() { resolve(); };
+        tx2.onerror = function() { reject(tx2.error); };
+        tx2.onabort = function() { reject(tx2.error); };
       });
       return prepared.length;
     };
