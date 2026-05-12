@@ -330,6 +330,7 @@ async function renderReorderSuggestions(container) {
         <p class="page-subtitle">Basé sur la consommation des 30 derniers jours</p>
       </div>
       <div class="header-actions">
+        <button class="btn btn-primary" id="bulk-order-btn" onclick="bulkOrderFromSuggestions()" style="display:none"><i data-lucide="shopping-cart"></i> Commander la sélection</button>
         <button class="btn btn-secondary" onclick="Router.navigate('purchase-orders')"><i data-lucide="file-text"></i> Bons de Commande</button>
       </div>
     </div>
@@ -349,6 +350,22 @@ function updateReorderState(idx, key, val) {
   if (!window._reorderSuggestions) return;
   if (key === 'selected') window._reorderSuggestions[idx].selected = val;
   if (key === 'qty') window._reorderSuggestions[idx].suggestedQtyToOrder = parseInt(val) || 0;
+  // Mettre à jour le bouton de commande massive
+  _updateBulkOrderBtn();
+}
+
+function _updateBulkOrderBtn() {
+  var btn = document.getElementById('bulk-order-btn');
+  if (!btn) return;
+  var suggestions = window._reorderSuggestions || [];
+  var selected = suggestions.filter(function(s) { return s.selected; });
+  if (selected.length > 0) {
+    btn.style.display = 'inline-flex';
+    btn.innerHTML = '<i data-lucide="shopping-cart"></i> Commander ' + selected.length + ' produit(s)';
+    if (window.lucide) lucide.createIcons({ node: btn });
+  } else {
+    btn.style.display = 'none';
+  }
 }
 
 function renderReorderTable() {
@@ -425,6 +442,7 @@ function toggleAllSuggestions(cb) {
   if (!window._reorderSuggestions) return;
   window._reorderSuggestions.forEach(s => s.selected = cb.checked);
   renderReorderTable();
+  _updateBulkOrderBtn();
 }
 
 async function createOrderFromSuggestions() {
@@ -472,12 +490,113 @@ async function createOrderFromSuggestions() {
 }
 
 async function quickOrder(productId, productName) {
-  const suppliers = await DB.dbGetAll('suppliers');
+  var suppliers = await DB.dbGetAll('suppliers');
   if (suppliers.length === 0) {
     UI.toast('Ajoutez d\'abord un fournisseur', 'warning');
     return;
   }
-  await showNewOrder(suppliers[0].id, suppliers[0].name, productId);
+  // Récupérer les infos complètes du produit pour le pré-remplissage
+  var product = await DB.dbGet('products', parseInt(productId));
+  await showNewOrder(suppliers[0].id, suppliers[0].name, product || { id: productId, name: productName });
+}
+
+async function bulkOrderFromSuggestions() {
+  var suggestions = window._reorderSuggestions || [];
+  var selected = suggestions.filter(function(s) { return s.selected; });
+  if (selected.length === 0) {
+    UI.toast('Sélectionnez au moins un produit', 'warning');
+    return;
+  }
+
+  var suppliers = await DB.dbGetAll('suppliers');
+  if (suppliers.length === 0) {
+    UI.toast('Ajoutez d\'abord un fournisseur dans le menu Fournisseurs', 'warning');
+    return;
+  }
+
+  // Modale de choix du fournisseur + confirmation
+  var supplierOptions = suppliers.map(function(s) {
+    return '<option value="' + s.id + '">' + s.name + '</option>';
+  }).join('');
+
+  var totalEstime = selected.reduce(function(acc, s) {
+    return acc + (s.suggestedQtyToOrder || s.suggestedQty) * (s.product.purchasePrice || 0);
+  }, 0);
+
+  UI.modal('<i data-lucide="shopping-cart" class="modal-icon-inline"></i> Commander ' + selected.length + ' produits', '\
+    <div class="form-grid">\
+      <div class="form-group">\
+        <label>Fournisseur *</label>\
+        <select id="bulk-order-supplier" class="form-control">' + supplierOptions + '</select>\
+      </div>\
+      <div class="form-group">\
+        <label>Date de livraison prévue</label>\
+        <input type="date" id="bulk-order-date" class="form-control" value="' + new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0] + '">\
+      </div>\
+      <div class="form-group">\
+        <label>Note / Urgence</label>\
+        <textarea id="bulk-order-note" class="form-control" rows="2" placeholder="Commande urgente, spécifications spéciales..."></textarea>\
+      </div>\
+    </div>\
+    <div style="margin-top:16px;padding:12px;background:var(--surface-hover);border-radius:8px">\
+      <strong>' + selected.length + ' produits sélectionnés</strong>\
+      <span style="float:right;font-weight:700;color:var(--primary)">Total estimé : ' + UI.formatCurrency(totalEstime) + '</span>\
+      <div style="margin-top:8px;max-height:200px;overflow-y:auto">\
+        <table class="data-table" style="font-size:12px"><thead><tr><th>Produit</th><th>Qté</th><th>P.U.</th><th>Total</th></tr></thead><tbody>' +
+        selected.map(function(s) {
+          var qty = s.suggestedQtyToOrder || s.suggestedQty;
+          var price = s.product.purchasePrice || 0;
+          return '<tr><td>' + s.product.name + '</td><td>' + qty + '</td><td>' + UI.formatCurrency(price) + '</td><td>' + UI.formatCurrency(qty * price) + '</td></tr>';
+        }).join('') +
+        '</tbody></table>\
+      </div>\
+    </div>', {
+    size: 'large',
+    footer: '\
+      <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>\
+      <button class="btn btn-warning" onclick="submitBulkOrder(\'pending\')"><i data-lucide="save"></i> Brouillon</button>\
+      <button class="btn btn-primary" onclick="submitBulkOrder(\'sent\')"><i data-lucide="send"></i> Créer & Envoyer</button>'
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
+async function submitBulkOrder(status) {
+  var suggestions = window._reorderSuggestions || [];
+  var selected = suggestions.filter(function(s) { return s.selected; });
+  var supplierId = parseInt(document.getElementById('bulk-order-supplier')?.value);
+  var expectedDate = document.getElementById('bulk-order-date')?.value || '';
+  var note = document.getElementById('bulk-order-note')?.value || '';
+
+  if (!supplierId) { UI.toast('Sélectionnez un fournisseur', 'error'); return; }
+  if (selected.length === 0) { UI.toast('Aucun produit sélectionné', 'warning'); return; }
+
+  var items = selected.map(function(s) {
+    return {
+      productId: s.product.id,
+      productName: s.product.name,
+      quantity: s.suggestedQtyToOrder || s.suggestedQty,
+      unitPrice: s.product.purchasePrice || 0,
+      receivedQty: 0
+    };
+  });
+
+  var totalAmount = items.reduce(function(a, i) { return a + i.quantity * i.unitPrice; }, 0);
+  var orderId = await DB.dbAdd('purchaseOrders', {
+    supplierId: supplierId,
+    orderNumber: 'BC-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-5),
+    date: new Date().toISOString().split('T')[0],
+    expectedDate: expectedDate,
+    items: items,
+    totalAmount: totalAmount,
+    status: status,
+    note: note || 'Commande groupée depuis le réapprovisionnement (' + items.length + ' produits)',
+    createdBy: DB.AppState.currentUser?.id,
+  });
+
+  await DB.writeAudit('CREATE_BULK_ORDER', 'purchaseOrders', orderId, { itemCount: items.length, totalAmount: totalAmount });
+  UI.closeModal();
+  UI.toast('Bon de commande créé — ' + items.length + ' produits — ' + UI.formatCurrency(totalAmount), 'success', 4000);
+  Router.navigate('purchase-orders');
 }
 
 window.AlertsEngine = AlertsEngine;
@@ -486,5 +605,8 @@ window.renderReorderSuggestions = renderReorderSuggestions;
 window.toggleAllSuggestions = toggleAllSuggestions;
 window.createOrderFromSuggestions = createOrderFromSuggestions;
 window.quickOrder = quickOrder;
+window.bulkOrderFromSuggestions = bulkOrderFromSuggestions;
+window.submitBulkOrder = submitBulkOrder;
+window._updateBulkOrderBtn = _updateBulkOrderBtn;
 
 Router.register('reorder', (container) => renderReorderSuggestions(container));

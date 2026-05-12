@@ -475,24 +475,35 @@ async function showNewOrder(supplierId, supplierName, preselectedProductId) {
 
   // Auto-ajouter le produit pré-sélectionné s'il est fourni
   if (preselectedProductId) {
-    const pid = parseInt(preselectedProductId);
+    // preselectedProductId peut être un objet produit complet ou un ID
+    var preProduct = (typeof preselectedProductId === 'object') ? preselectedProductId : null;
+    var pid = preProduct ? preProduct.id : parseInt(preselectedProductId);
+
     addOrderItem();
-    // Sélectionner automatiquement le produit dans le premier item ajouté
-    setTimeout(() => {
-      const sel = document.getElementById('order-prod-0');
-      if (sel) {
-        sel.value = String(pid);
-        // Déclencher la mise à jour du prix et du total
-        if (sel.selectedIndex >= 0) {
-          const opt = sel.options[sel.selectedIndex];
-          if (opt && opt.dataset && opt.dataset.price) {
-            const priceInput = document.getElementById('order-price-0');
-            if (priceInput) priceInput.value = opt.dataset.price;
-          }
+
+    setTimeout(function() {
+      // Remplir le champ de recherche avec le nom du produit
+      var searchInput = document.getElementById('order-search-0');
+      var hiddenInput = document.getElementById('order-prod-0');
+      var priceInput = document.getElementById('order-price-0');
+
+      if (!preProduct && window._allProducts) {
+        preProduct = window._allProducts.find(function(p) { return p.id === pid; });
+      }
+
+      if (preProduct && searchInput) {
+        searchInput.value = preProduct.name || '';
+        if (hiddenInput) {
+          hiddenInput.value = pid;
+          hiddenInput.dataset.name = preProduct.name || '';
+          hiddenInput.dataset.price = preProduct.purchasePrice || 0;
+        }
+        if (priceInput && preProduct.purchasePrice) {
+          priceInput.value = preProduct.purchasePrice;
         }
         updateOrderTotal();
       }
-    }, 100);
+    }, 150);
   }
 }
 
