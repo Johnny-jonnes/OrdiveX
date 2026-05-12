@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX v3 — Gestion des Retours de Médicaments
  * Permet le retour partiel ou total dans un délai configurable (défaut : 72h)
  * Remet le stock, enregistre le mouvement, génère un reçu.
@@ -112,6 +112,19 @@ function renderReturnsTable(data) {
     const container = document.getElementById('returns-table-container');
     if (!container) return;
 
+    // ── PAGINATION ──
+    const PAGE_SIZE = 30;
+    window._filteredReturns = data;
+    window._returnsPage = window._returnsPage || 1;
+    if (data !== window._lastFilteredReturns) {
+      window._returnsPage = 1;
+      window._lastFilteredReturns = data;
+    }
+    const totalPages = Math.max(1, Math.ceil(data.length / PAGE_SIZE));
+    if (window._returnsPage > totalPages) window._returnsPage = totalPages;
+    const start = (window._returnsPage - 1) * PAGE_SIZE;
+    const pageData = data.slice(start, start + PAGE_SIZE);
+
     const statusBadge = (s) => {
         const map = {
             approved: ['badge-success', 'check-circle', 'Approuvé'],
@@ -141,7 +154,21 @@ function renderReturnsTable(data) {
         },
     ];
 
-    UI.table(container, columns, data, { emptyMessage: 'Aucun retour enregistré', emptyIcon: 'undo-2' });
+    UI.table(container, columns, pageData, { emptyMessage: 'Aucun retour enregistré', emptyIcon: 'undo-2', pageSize: PAGE_SIZE });
+
+    // ── Contrôles de pagination ──
+    if (data.length > PAGE_SIZE) {
+      const pagDiv = document.createElement('div');
+      pagDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:16px 0;gap:12px;flex-wrap:wrap;';
+      pagDiv.innerHTML = `
+        <span style="font-size:13px;color:var(--text-muted)">${data.length.toLocaleString()} retours — Page ${window._returnsPage}/${totalPages}</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary btn-sm" ${window._returnsPage <= 1 ? 'disabled' : ''} onclick="window._returnsPage--;renderReturnsTable(window._filteredReturns)">◀ Précédent</button>
+          <button class="btn btn-secondary btn-sm" ${window._returnsPage >= totalPages ? 'disabled' : ''} onclick="window._returnsPage++;renderReturnsTable(window._filteredReturns)">Suivant ▶</button>
+        </div>
+      `;
+      container.appendChild(pagDiv);
+    }
     if (window.lucide) lucide.createIcons();
 }
 
@@ -692,5 +719,6 @@ window.exportReturns = function () {
 window.openNewReturn = openNewReturn;
 window.processReturn = processReturn;
 window.filterReturns = filterReturns;
+window.renderReturnsTable = renderReturnsTable;
 
 Router.register('returns', renderReturns);
