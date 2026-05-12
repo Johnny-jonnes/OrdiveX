@@ -1079,23 +1079,13 @@ async function syncToSupabase() {
             }
           }
 
-          // --- FILTRAGE PROACTIF DES COLONNES LOCALES ---
-          // Ces colonnes n'existent pas sur Supabase et causeraient des erreurs 400
-          // Audit complet v9.2.2 — pré-enregistrement exhaustif pour 0 erreur 400
+          // ── COLONNES LOCAL-ONLY : à supprimer au fur et à mesure qu'elles sont ajoutées à Supabase ──
+          // Après exécution de la migration v9.3.3, cette liste peut être vide
+          // Seules restent les colonnes véritablement fantômes/legacy
           const _localOnlyColumns = {
-            products: ['subUnitsPerBox', 'pricePerSubUnit', 'controlledClass', 'isControlled', 'manufacturer', 'noticePdfUrl', 'notices', 'interactions', 'dosageForm', 'costPrice'],
+            products: ['notices', 'interactions', 'dosageForm', 'costPrice'],
             lots: ['productionDate', 'manufactureDate', 'supplier'],
             stock: ['lastUpdate', 'minQuantity'],
-            patients: ['createdAt', 'creditLimit', 'notes', 'insurance', 'insuranceNumber', 'bloodType', 'emergencyContact'],
-            prescriptions: ['notes', 'patientName', 'dispensedAt', 'dispensedBy', 'saleId', 'archiveDate', 'doctorEstablishment', 'doctorOrderNumber', 'doctorSpecialty', 'note', 'photoData', 'renewCount', 'renewUsed', 'renewable', 'validatedAt', 'validatedBy', 'validityDate'],
-            sales: ['assuranceName', 'assuranceRef', 'assuranceAmount', 'paymentDetails', 'paidAt', 'paidDate', 'paidMethod', 'returnStatus', 'lastReturnId', 'lastReturnDate', 'patientName', 'patientPhone', 'patientId', 'discount', 'discountType', 'prescriptionId'],
-            saleItems: ['lotNumber', 'productName', 'dci', 'dosage', 'saleMode', 'purchasePrice', 'requiresPrescription'],
-            returns: ['patientName', 'processedBy', 'isFullReturn', 'saleRef', 'patientId', 'paymentMethod'],
-            movements: ['subType', 'note', 'reference', 'lotNumber'],
-            cashRegister: ['reference', 'saleId', 'returnId', 'timestamp', 'sessionId'],
-            auditLog: ['action', 'entity', 'entityId', 'details', 'userName'],
-            purchaseOrders: ['sentAt', 'cancelledAt', 'receivedBy', 'notes'],
-            suppliers: ['rating', 'contactName', 'contactPhone', 'contactEmail', 'leadTime', 'notes'],
           };
           const localOnly = _localOnlyColumns[storeName];
           if (localOnly) {
@@ -1330,7 +1320,8 @@ async function pullFromSupabase(isManual = false) {
       'pharmacy_phone', 'pharmacy_dnpm', 'pharmacy_name', 'key', 'value'
     ];
 
-    // Fonction d'écriture IDB
+    // Fonction d'écriture IDB — MERGE avec les données locales existantes
+    // pour préserver les champs qui n'existent pas dans Supabase
     const writeBatchToIDB = async (storeName, items) => {
       const prepared = items.map(item => {
         let localItem = { ...item, _synced: true, _updatedAt: item.updatedAt || Date.now() };
@@ -1347,7 +1338,23 @@ async function pullFromSupabase(isManual = false) {
       await new Promise((resolve, reject) => {
         const tx = db.transaction(storeName, 'readwrite');
         const txStore = tx.objectStore(storeName);
-        for (const item of prepared) { txStore.put(item); }
+        for (const item of prepared) {
+          // MERGE : lire l'existant local, fusionner avec les données Supabase
+          // Cela préserve les champs local-only (subUnitsPerBox, controlledClass, etc.)
+          var keyVal = (storeName === 'settings') ? item.key : item.id;
+          if (keyVal === undefined || keyVal === null) { txStore.put(item); continue; }
+          var getReq = txStore.get(keyVal);
+          getReq.onsuccess = function() {
+            var existing = getReq.result;
+            if (existing) {
+              // Fusionner : base = local (préserve champs locaux), overlay = Supabase
+              var merged = Object.assign({}, existing, item);
+              txStore.put(merged);
+            } else {
+              txStore.put(item);
+            }
+          };
+        }
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error);

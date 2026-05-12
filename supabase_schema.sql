@@ -754,3 +754,118 @@ DROP POLICY IF EXISTS "allow_select_admin_push" ON push_tracking;
 CREATE POLICY "allow_select_admin_push" ON push_tracking FOR SELECT USING (true);
 -- Sans cette colonne, impossible de savoir si "quantité: 2" signifie 2 boîtes ou 2 comprimés 
 ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "saleMode" TEXT DEFAULT 'box';
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- MIGRATION v9.3.3 — Alignement complet schéma local ↔ Supabase
+-- Exécuter ces ALTER TABLE dans le SQL Editor de Supabase
+-- Toutes les commandes sont idempotentes (IF NOT EXISTS)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ── PRODUCTS : Déconditionnement + Contrôle + Fabricant ──
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "subUnitsPerBox" INTEGER DEFAULT 1;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "pricePerSubUnit" NUMERIC DEFAULT 0;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "isControlled" BOOLEAN DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "controlledClass" TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS manufacturer TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "noticePdfUrl" TEXT;
+
+-- ── SALES : Assurance + Patient + Remise + Retours ──
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceName" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceRef" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceAmount" NUMERIC DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "paymentDetails" JSONB;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "paidAt" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "paidDate" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "paidMethod" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "returnStatus" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "lastReturnId" BIGINT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "lastReturnDate" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "patientName" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "patientPhone" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "patientId" BIGINT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount NUMERIC DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "discountType" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "prescriptionId" BIGINT;
+
+-- ── SALE_ITEMS : Détails produit embarqués ──
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "lotNumber" TEXT;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "productName" TEXT;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS dci TEXT;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS dosage TEXT;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "purchasePrice" NUMERIC DEFAULT 0;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "requiresPrescription" BOOLEAN DEFAULT false;
+
+-- ── RETURNS : Infos patient + traitement ──
+ALTER TABLE returns ADD COLUMN IF NOT EXISTS "patientName" TEXT;
+ALTER TABLE returns ADD COLUMN IF NOT EXISTS "processedBy" TEXT;
+ALTER TABLE returns ADD COLUMN IF NOT EXISTS "isFullReturn" BOOLEAN DEFAULT false;
+ALTER TABLE returns ADD COLUMN IF NOT EXISTS "saleRef" TEXT;
+ALTER TABLE returns ADD COLUMN IF NOT EXISTS "patientId" BIGINT;
+ALTER TABLE returns ADD COLUMN IF NOT EXISTS "paymentMethod" TEXT;
+
+-- ── MOVEMENTS : Sous-type + références ──
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS "subType" TEXT;
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS note TEXT;
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS reference TEXT;
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS "lotNumber" TEXT;
+
+-- ── CASH_REGISTER : Références croisées ──
+ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS reference TEXT;
+ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "saleId" BIGINT;
+ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "returnId" BIGINT;
+ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "timestamp" BIGINT;
+ALTER TABLE "cashRegister" ADD COLUMN IF NOT EXISTS "sessionId" TEXT;
+
+-- ── AUDIT_LOG : Détails de traçabilité ──
+ALTER TABLE "auditLog" ADD COLUMN IF NOT EXISTS action TEXT;
+ALTER TABLE "auditLog" ADD COLUMN IF NOT EXISTS entity TEXT;
+ALTER TABLE "auditLog" ADD COLUMN IF NOT EXISTS "entityId" BIGINT;
+ALTER TABLE "auditLog" ADD COLUMN IF NOT EXISTS details JSONB;
+ALTER TABLE "auditLog" ADD COLUMN IF NOT EXISTS "userName" TEXT;
+
+-- ── PURCHASE_ORDERS : Dates de suivi ──
+ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "sentAt" TEXT;
+ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "cancelledAt" TEXT;
+ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "receivedBy" TEXT;
+ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- ── SUPPLIERS : Évaluation + contact détaillé ──
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS rating NUMERIC DEFAULT 0;
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS "contactName" TEXT;
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS "contactPhone" TEXT;
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS "contactEmail" TEXT;
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS "leadTime" INTEGER DEFAULT 7;
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- ── PATIENTS : Infos médicales complètes ──
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS "createdAt" BIGINT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS "creditLimit" NUMERIC DEFAULT 0;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS insurance TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS "insuranceNumber" TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS "bloodType" TEXT;
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS "emergencyContact" TEXT;
+
+-- ── PRESCRIPTIONS : Détails complets ──
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "patientName" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "dispensedAt" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "dispensedBy" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "saleId" BIGINT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "archiveDate" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "doctorEstablishment" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "doctorOrderNumber" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "doctorSpecialty" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "photoData" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "renewCount" INTEGER DEFAULT 0;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "renewUsed" INTEGER DEFAULT 0;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS renewable BOOLEAN DEFAULT false;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "validatedAt" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "validatedBy" TEXT;
+ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS "validityDate" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- FIN MIGRATION v9.3.3
+-- Après exécution, vider le cache local sur chaque appareil :
+--   localStorage.removeItem('pharma_bad_columns');
+-- ═══════════════════════════════════════════════════════════════════════════════
