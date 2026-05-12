@@ -9,7 +9,7 @@ async function renderProducts(container) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title">Catalogue Médicaments</h1>
+        <h1 class="page-title">Catalogue Produits</h1>
         <p class="page-subtitle">${products.length} produits référencés</p>
       </div>
       <div class="header-actions">
@@ -70,7 +70,7 @@ function renderProductsTable(data) {
 
   const columns = [
     { label: 'Code', render: r => `<code class="code-tag">${r.code}</code>` },
-    { label: 'Médicament', render: r => `<div><strong>${r.name}</strong><br><span class="text-muted text-sm">${r.dci || ''} ${r.dosage || ''}</span></div>` },
+    { label: 'Produit', render: r => `<div><strong>${r.name}</strong><br><span class="text-muted text-sm">${r.dci || ''} ${r.dosage || ''}</span></div>` },
     { label: 'Marque', key: 'brand' },
     { label: 'Forme', key: 'form' },
     { label: 'Catégorie', render: r => `<span class="category-tag">${r.category}</span>` },
@@ -159,10 +159,41 @@ async function viewProduct(id) {
   `, { size: 'medium' });
 }
 
+// Catégories médicaments + parapharmacie
+const _PHARMA_CATEGORIES = [
+  { group: 'Médicaments', items: ['Antalgique', 'Antibiotique', 'Anti-inflammatoire', 'Antidiabétique', 'Antipaludique', 'Antihypertenseur', 'Antihistaminique', 'Gastroprotecteur', 'Hématologie', 'Réhydratation', 'Vitamine', 'Dermatologie', 'Ophtalmologie'] },
+  { group: 'Parapharmacie', items: ['Parfumerie & Cosmétique', 'Hygiène & Soins', 'Huiles & Compléments', 'Nutrition & Diététique', 'Bébé & Maternité', 'Matériel Médical', 'Accessoires'] },
+  { group: 'Autre', items: ['Autre'] }
+];
+const _PARA_CATEGORIES = ['Parfumerie & Cosmétique', 'Hygiène & Soins', 'Huiles & Compléments', 'Nutrition & Diététique', 'Bébé & Maternité', 'Matériel Médical', 'Accessoires'];
+
+function _buildCategoryOptions(selected) {
+  return _PHARMA_CATEGORIES.map(g =>
+    '<optgroup label="' + g.group + '">' +
+    g.items.map(c => '<option value="' + c + '"' + (c === selected ? ' selected' : '') + '>' + c + '</option>').join('') +
+    '</optgroup>'
+  ).join('');
+}
+
+function _onCategoryChange(formId) {
+  var form = document.getElementById(formId);
+  if (!form) return;
+  var cat = form.querySelector('[name="category"]')?.value || '';
+  var isPara = _PARA_CATEGORIES.indexOf(cat) !== -1;
+  // Masquer/afficher les sections médicales
+  var medSections = form.querySelectorAll('.med-only-section');
+  medSections.forEach(function(el) { el.style.display = isPara ? 'none' : ''; });
+  // Masquer/afficher le champ DCI
+  var dciGroup = form.querySelector('.dci-group');
+  if (dciGroup) dciGroup.style.display = isPara ? 'none' : '';
+  // Masquer/afficher Rx
+  var rxGroup = form.querySelector('.rx-group');
+  if (rxGroup) rxGroup.style.display = isPara ? 'none' : '';
+}
+
 async function showAddProduct() {
   const products = await DB.dbGetAll('products');
   const codeAuto = 'P' + String(products.length + 1).padStart(3, '0');
-  const categories = ['Antalgique', 'Antibiotique', 'Anti-inflammatoire', 'Antidiabétique', 'Antipaludique', 'Antihypertenseur', 'Antihistaminique', 'Gastroprotecteur', 'Hématologie', 'Réhydratation', 'Vitamine', 'Dermatologie', 'Ophtalmologie', 'Autre'];
 
   UI.modal('<i data-lucide="plus-circle" class="modal-icon-inline"></i> Nouveau Produit', `
     <form id="product-form" class="form-grid">
@@ -171,10 +202,10 @@ async function showAddProduct() {
           <label>Code *</label>
           <input type="text" name="code" class="form-control" value="${codeAuto}" required>
         </div>
-        <div class="form-group">
-          <label>DCI (Nom générique) *</label>
+        <div class="form-group dci-group">
+          <label>DCI (Nom générique)</label>
           <div style="display:flex; gap:8px">
-            <input type="text" name="dci" class="form-control" placeholder="Paracétamol" required>
+            <input type="text" name="dci" class="form-control" placeholder="Paracétamol">
             <button type="button" class="btn btn-secondary btn-sm" onclick="simulerVidalCloud('product-form')" style="white-space:nowrap;flex-shrink:0" title="Base Médicale — Résumé des Caractéristiques du Produit"><i data-lucide="cloud-lightning"></i> Base RCP</button>
           </div>
         </div>
@@ -195,7 +226,7 @@ async function showAddProduct() {
           </div>
         </div>
       </div>
-      <div class="form-row">
+      <div class="form-row med-only-section">
         <div class="form-group">
           <label>Forme galénique</label>
           <input type="text" name="form" class="form-control" placeholder="Comprimé, Sirop...">
@@ -208,12 +239,12 @@ async function showAddProduct() {
       <div class="form-row">
         <div class="form-group">
           <label>Catégorie *</label>
-          <select name="category" class="form-control" required>
+          <select name="category" class="form-control" required onchange="_onCategoryChange('product-form')">
             <option value="">Choisir...</option>
-            ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
+            ${_buildCategoryOptions('')}
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group rx-group">
           <label>Statut</label>
           <select name="requiresPrescription" class="form-control">
             <option value="0">OTC — Sans ordonnance</option>
@@ -241,7 +272,7 @@ async function showAddProduct() {
           <input type="text" name="unit" class="form-control" value="boîte">
         </div>
       </div>
-      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+      <div class="med-only-section" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
         <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="package-open"></i> Déconditionnement (Vente à l'unité)</h4>
         <div class="form-group">
            <label style="display:flex; align-items:center; gap:8px">
@@ -272,7 +303,7 @@ async function showAddProduct() {
           </div>
         </div>
       </div>
-      <div class="form-row">
+      <div class="form-row med-only-section">
         <div class="form-group">
           <label>Date de Péremption</label>
           <input type="date" name="expiryDate" class="form-control">
@@ -296,7 +327,7 @@ async function showAddProduct() {
         </div>
         <div class="form-group"></div>
       </div>
-      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+      <div class="med-only-section" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
         <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="file-text"></i> Notice Médicale</h4>
         <div class="form-group">
           <label>Posologie recommandée</label>
@@ -361,7 +392,7 @@ async function submitProduct() {
 async function editProductForm(id) {
   const p = await DB.dbGet('products', id);
   if (!p) { UI.toast('Produit introuvable', 'error'); return; }
-  const categories = ['Antalgique', 'Antibiotique', 'Anti-inflammatoire', 'Antidiabétique', 'Antipaludique', 'Antihypertenseur', 'Antihistaminique', 'Gastroprotecteur', 'Hématologie', 'Réhydratation', 'Vitamine', 'Dermatologie', 'Ophtalmologie', 'Autre'];
+  const isPara = _PARA_CATEGORIES.indexOf(p.category) !== -1;
   UI.modal('<i data-lucide="edit-3" class="modal-icon-inline"></i> Modifier le Produit', `
     <form id="edit-product-form" class="form-grid">
       <input type="hidden" name="id" value="${p.id}">
@@ -370,10 +401,10 @@ async function editProductForm(id) {
           <label>Code *</label>
           <input type="text" name="code" class="form-control" value="${p.code || ''}" required>
         </div>
-        <div class="form-group">
-          <label>DCI (Nom générique) *</label>
+        <div class="form-group dci-group" style="display:${isPara ? 'none' : ''}">
+          <label>DCI (Nom générique)</label>
           <div style="display:flex;gap:8px">
-            <input type="text" name="dci" class="form-control" value="${p.dci || ''}" required>
+            <input type="text" name="dci" class="form-control" value="${p.dci || ''}">
             <button type="button" class="btn btn-secondary btn-sm" onclick="simulerVidalCloud('edit-product-form')" style="white-space:nowrap;flex-shrink:0" title="Base Médicale — Résumé des Caractéristiques du Produit"><i data-lucide="cloud-lightning"></i> Base RCP</button>
           </div>
         </div>
@@ -394,7 +425,7 @@ async function editProductForm(id) {
           </div>
         </div>
       </div>
-      <div class="form-row">
+      <div class="form-row med-only-section" style="display:${isPara ? 'none' : ''}">
         <div class="form-group">
           <label>Forme galénique</label>
           <input type="text" name="form" class="form-control" value="${p.form || ''}">
@@ -407,11 +438,11 @@ async function editProductForm(id) {
       <div class="form-row">
         <div class="form-group">
           <label>Catégorie *</label>
-          <select name="category" class="form-control" required>
-            ${categories.map(c => `<option value="${c}" ${p.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+          <select name="category" class="form-control" required onchange="_onCategoryChange('edit-product-form')">
+            ${_buildCategoryOptions(p.category)}
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group rx-group" style="display:${isPara ? 'none' : ''}">
           <label>Statut</label>
           <select name="requiresPrescription" class="form-control">
             <option value="0" ${!p.requiresPrescription ? 'selected' : ''}>OTC — Sans ordonnance</option>
@@ -439,7 +470,7 @@ async function editProductForm(id) {
           <input type="text" name="unit" class="form-control" value="${p.unit || 'boîte'}">
         </div>
       </div>
-      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+      <div class="med-only-section" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); display:${isPara ? 'none' : ''}">
         <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="package-open"></i> Déconditionnement (Vente à l'unité)</h4>
         <div class="form-group">
            <label style="display:flex; align-items:center; gap:8px">
@@ -470,7 +501,7 @@ async function editProductForm(id) {
           </div>
         </div>
       </div>
-      <div class="form-row">
+      <div class="form-row med-only-section" style="display:${isPara ? 'none' : ''}">
         <div class="form-group">
           <label>Date de Péremption</label>
           <input type="date" name="expiryDate" class="form-control" value="${p.expiryDate || ''}">
@@ -500,7 +531,7 @@ async function editProductForm(id) {
           </select>
         </div>
       </div>
-      <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+      <div class="med-only-section" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); display:${isPara ? 'none' : ''}">
         <h4 style="margin-bottom:12px; font-size:14px; display:flex; align-items:center; gap:8px"><i data-lucide="file-text"></i> Notice Médicale</h4>
         <div class="form-group">
           <label>Posologie recommandée</label>
@@ -610,6 +641,8 @@ window.editProductForm = editProductForm;
 window.updateProduct = updateProduct;
 window.deleteProduct = deleteProduct;
 window.exportProducts = exportProducts;
+window._onCategoryChange = _onCategoryChange;
+window._buildCategoryOptions = _buildCategoryOptions;
 
 /* ── Bulk Import Logic ── */
 

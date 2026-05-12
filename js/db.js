@@ -1083,9 +1083,9 @@ async function syncToSupabase() {
           // Ces colonnes n'existent pas sur Supabase et causeraient des erreurs 400
           // Audit complet v9.2.2 — pré-enregistrement exhaustif pour 0 erreur 400
           const _localOnlyColumns = {
-            products: ['subUnitsPerBox', 'pricePerSubUnit', 'controlledClass', 'isControlled', 'manufacturer', 'noticePdfUrl', 'notices', 'sideEffects', 'contraindications', 'interactions', 'dosageForm', 'dosage', 'brand', 'form', 'costPrice'],
-            lots: ['productionDate', 'manufactureDate', 'receiptDate', 'initialQuantity', 'supplier'],
-            stock: ['lastUpdate', 'lastUpdated', 'minQuantity', 'reservedQuantity'],
+            products: ['subUnitsPerBox', 'pricePerSubUnit', 'controlledClass', 'isControlled', 'manufacturer', 'noticePdfUrl', 'notices', 'interactions', 'dosageForm', 'costPrice'],
+            lots: ['productionDate', 'manufactureDate', 'supplier'],
+            stock: ['lastUpdate', 'minQuantity'],
             patients: ['createdAt', 'creditLimit', 'notes', 'insurance', 'insuranceNumber', 'bloodType', 'emergencyContact'],
             prescriptions: ['notes', 'patientName', 'dispensedAt', 'dispensedBy', 'saleId', 'archiveDate', 'doctorEstablishment', 'doctorOrderNumber', 'doctorSpecialty', 'note', 'photoData', 'renewCount', 'renewUsed', 'renewable', 'validatedAt', 'validatedBy', 'validityDate'],
             sales: ['assuranceName', 'assuranceRef', 'assuranceAmount', 'paymentDetails', 'paidAt', 'paidDate', 'paidMethod', 'returnStatus', 'lastReturnId', 'lastReturnDate', 'patientName', 'patientPhone', 'patientId', 'discount', 'discountType', 'prescriptionId'],
@@ -1094,7 +1094,7 @@ async function syncToSupabase() {
             movements: ['subType', 'note', 'reference', 'lotNumber'],
             cashRegister: ['reference', 'saleId', 'returnId', 'timestamp', 'sessionId'],
             auditLog: ['action', 'entity', 'entityId', 'details', 'userName'],
-            purchaseOrders: ['sentAt', 'cancelledAt', 'receivedAt', 'receivedBy', 'items', 'notes', 'totalAmount'],
+            purchaseOrders: ['sentAt', 'cancelledAt', 'receivedBy', 'notes'],
             suppliers: ['rating', 'contactName', 'contactPhone', 'contactEmail', 'leadTime', 'notes'],
           };
           const localOnly = _localOnlyColumns[storeName];
