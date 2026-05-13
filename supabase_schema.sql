@@ -917,6 +917,35 @@ ALTER TABLE "cashRegister" ALTER COLUMN "updatedAt" TYPE TEXT USING "updatedAt":
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FIN MIGRATION v9.3.5
--- Après exécution sur Supabase, vider le cache sur chaque appareil :
---   localStorage.removeItem('pharma_bad_columns');
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- GRANTS EXPLICITES — Requis par Supabase à partir du 30 octobre 2026
+-- Sans ces GRANT, l'API REST (supabase-js) ne pourra plus accéder aux tables.
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON products TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON lots TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON stock TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON movements TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON suppliers TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "purchaseOrders" TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON sales TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "saleItems" TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON patients TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON prescriptions TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON alerts TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "cashRegister" TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "auditLog" TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON settings TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON app_users TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON returns TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON push_tracking TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON pull_tracking TO anon, authenticated, service_role;
+
+-- Séquences (auto-increment)
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- FIN — Après exécution, vider le cache : localStorage.removeItem('pharma_bad_columns');
 -- ═══════════════════════════════════════════════════════════════════════════════
