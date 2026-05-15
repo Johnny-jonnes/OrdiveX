@@ -43,7 +43,7 @@ function _posLoadSession(index) {
   posCurrentPatient = s.patient || null;
   posCurrentRx = s.rx || null;
   _posRenderTabs();
-  renderCartUI();
+  refreshCartUI();
   refreshTotals();
   // Mettre à jour le badge patient
   var badge = document.getElementById('client-badge');
@@ -68,7 +68,7 @@ function posAddSession() {
   posCurrentPatient = null;
   posCurrentRx = null;
   _posRenderTabs();
-  renderCartUI();
+  refreshCartUI();
   refreshTotals();
   // Reset patient badge
   var badge = document.getElementById('client-badge');
@@ -369,15 +369,15 @@ function renderFullPOSUI(container) {
 
       <!-- ══ DROITE : Panier ══ -->
       <div class="pos-right" id="pos-cart-panel">
+        <!-- Onglets Multi-Ventes (HAUT DU PANIER) -->
+        <div id="pos-session-tabs" class="pos-session-tabs"></div>
+
         <div class="pos-cart-header" onclick="this.parentElement.classList.toggle('expanded')">
             <div style="display:flex; align-items:center; gap:10px">
                 <i data-lucide="shopping-basket"></i><span style="font-weight:700">Votre Panier</span>
             </div>
             <i data-lucide="chevron-up" class="cart-toggle-icon"></i>
         </div>
-
-        <!-- Onglets Multi-Ventes -->
-        <div id="pos-session-tabs" class="pos-session-tabs"></div>
 
         <!-- CLIENT -->
         <div class="pos-section">

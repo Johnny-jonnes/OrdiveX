@@ -9688,7 +9688,7 @@ body:has(#login-page) #support-chat-fab,
 body:has(#onboarding-container) #support-chat-fab {
   display: none;
 }
-}
+
 
 .complaint-type {
   font-size: 11px;

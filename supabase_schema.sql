@@ -945,6 +945,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON pull_tracking TO anon, authenticated, se
 
 -- Séquences (auto-increment)
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+ALTER TABLE patients ALTER COLUMN "createdAt" TYPE TEXT USING "createdAt"::TEXT;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FIN — Après exécution, vider le cache : localStorage.removeItem('pharma_bad_columns');

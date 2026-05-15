@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>OrdiveX V3.0 — Dépliant Premium Pro Final</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2EAF7D;
+      --primary-dark: #238a62;
+      --secondary: #0F2B46;
+      --text: #2D3748;
+      --light: #F8FAFC;
+      --border: #E2E8F0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; color: var(--text); background: #fff; line-height: 1.4; }
+    @page { size: A4; margin: 0; }
+    
+    .page { 
+      width: 210mm; 
+      height: 297mm; 
+      page-break-after: always; 
+      position: relative; 
+      overflow: hidden; 
+      background: #fff; 
+      margin: 0 auto; 
+    }
+    .page:last-of-type { page-break-after: auto; }
+
+    /* Sidebar V5 */
+    .sidebar {
+      position: absolute;
+      top: 0; left: 0; bottom: 0; width: 15mm;
+      background: #f8fafc;
+      border-right: 1px dashed #cbd5e1;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sidebar-title {
+      transform: rotate(-90deg);
+      white-space: nowrap;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--secondary);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .main-area {
+      margin-left: 15mm;
+      padding: 15mm 10mm;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* COVER - AUCUNE OMBRE */
+    .cover-full { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; padding-top: 60px; text-align: center; position: relative; }
+    .logo-top { font-size: 64px; font-weight: 900; letter-spacing: -3px; color: var(--secondary); margin-bottom: 10px; }
+    .logo-top span { color: var(--primary); }
+    .tagline { font-size: 20px; color: #475569; font-weight: 400; max-width: 500px; line-height: 1.4; margin-bottom: 40px; }
+    
+    .main-mockup { position: relative; width: 600px; height: 400px; margin-top: 20px; }
+    .laptop { 
+        position: absolute; top: 0; left: 30px; width: 540px; height: 320px; 
+        background: #1a202c; border-radius: 10px 10px 0 0; padding: 10px; 
+        box-shadow: none; /* Ombre supprimée */
+    }
+    .laptop-screen { width: 100%; height: 100%; background: url('img/dashboard_desktop.png') top center/cover; border-radius: 4px; }
+    .laptop-base { position: absolute; top: 320px; left: 0; width: 600px; height: 12px; background: #a0aec0; border-radius: 0 0 12px 12px; }
+    
+    .phone-mock { 
+        position: absolute; bottom: 10px; right: 40px; width: 120px; height: 240px; 
+        background: #000; border-radius: 20px; padding: 6px; 
+        border: 2px solid #4a5568; 
+        box-shadow: none; /* Ombre supprimée */
+        z-index: 20; 
+    }
+    .phone-screen { width: 100%; height: 100%; background: url('img/dashboard_pos.png') top center/cover; border-radius: 16px; }
+
+    .cover-footer { position: absolute; bottom: 30px; font-size: 11px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
+
+    /* INNOVATIONS ZIGZAG - AUCUNE OMBRE */
+    .section-header { margin-bottom: 10mm; }
+    .section-title { font-size: 28px; font-weight: 900; color: var(--secondary); margin-bottom: 3mm; }
+    .section-subtitle { font-size: 14px; color: #64748b; max-width: 150mm; }
+
+    .zigzag-flow { position: relative; flex: 1; display: flex; flex-direction: column; gap: 15mm; }
+    .zigzag-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+
+    .step { position: relative; width: 100%; display: flex; z-index: 10; align-items: flex-start; }
+    .step.to-right { padding-left: 50%; }
+    .step.to-left { padding-right: 50%; flex-direction: row-reverse; text-align: right; }
+
+    .step-content { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 85mm; padding: 0 5mm; position: relative; }
+    .step.to-left .step-content { align-items: flex-end; }
+    .step.to-right .step-content { align-items: flex-start; }
+
+    .step-img-box { 
+      width: 32mm; height: 32mm; border-radius: 50%; border: 2px solid var(--border); 
+      background: #fff; overflow: hidden;
+      margin-bottom: 4mm; display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 50;
+      box-shadow: none; /* Ombre supprimée */
+    }
+    .step-img-box img { width: 100%; height: 100%; object-fit: cover; }
+    .step-img-box.icon-bg { background: var(--primary); border: none; }
+    .step-img-box svg { width: 14mm; height: 14mm; stroke: #fff; stroke-width: 2; fill: none; }
+
+    .step-dot { 
+        position: absolute; top: 14mm; width: 6mm; height: 6mm; 
+        background: var(--primary); border: 1.5mm solid #fff; border-radius: 50%; 
+        z-index: 100;
+    }
+    .step.to-right .step-dot { left: -3mm; }
+    .step.to-left .step-dot { right: -3mm; }
+
+    .step-text h3 { font-size: 16px; font-weight: 900; color: var(--primary); text-transform: uppercase; margin-bottom: 3mm; }
+    .step-text p { font-size: 12.5px; color: #475569; line-height: 1.5; }
+
+    /* HUB SECTION - AUCUNE OMBRE */
+    .hub-grid { 
+      position: relative; 
+      height: 180mm; 
+      display: grid; 
+      grid-template-columns: 1fr 1fr 1fr; 
+      grid-template-rows: 1fr 1fr 1fr; 
+      gap: 5mm;
+    }
+    .hub-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; }
+    .hub-center { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: center; z-index: 50; }
+    .center-box { 
+        width: 42mm; height: 42mm; background: #fff; border: 2mm solid var(--secondary); 
+        border-radius: 50%; display: flex; align-items: center; justify-content: center; 
+        box-shadow: none; /* Ombre supprimée */
+    }
+    .center-box h2 { font-size: 22px; font-weight: 900; color: var(--secondary); }
+    .center-box h2 span { color: var(--primary); }
+
+    .hub-cell { display: flex; align-items: center; justify-content: center; z-index: 60; }
+    .hub-card { 
+        background: #fff; padding: 4mm; border-radius: 6mm; border: 1px solid var(--border); 
+        width: 40mm; min-height: 25mm; text-align: center; display: flex; align-items: center; justify-content: center;
+        box-shadow: none; /* Ombre supprimée */
+    }
+    .hub-card span { font-size: 10.5px; font-weight: 800; color: var(--secondary); text-transform: uppercase; line-height: 1.2; }
+
+    /* STATS & FOOTER */
+    .stats-footer-area { background: var(--secondary); color: #fff; padding: 15mm; height: 100%; display: flex; flex-direction: column; }
+    .stats-footer-area h2 { font-size: 32px; font-weight: 900; text-align: center; margin-bottom: 15mm; }
+    
+    .stat-row { display: flex; align-items: center; gap: 10mm; margin-bottom: 12mm; }
+    .stat-bubble { 
+      width: 42mm; height: 42mm; background: #fff; border-radius: 50%; 
+      display: flex; flex-direction: column; align-items: center; justify-content: center; 
+      color: var(--secondary); flex-shrink: 0; 
+      box-shadow: none; /* Ombre supprimée ici aussi par précaution */
+    }
+    .stat-bubble svg { width: 18mm; height: 18mm; fill: var(--primary); margin-bottom: 3mm; }
+    .stat-bubble h4 { font-size: 28px; font-weight: 900; line-height: 1; }
+    .stat-bubble span { font-size: 12px; font-weight: 700; color: var(--primary); margin-top: 1mm; text-transform: uppercase; }
+    
+    .stat-info h3 { font-size: 20px; font-weight: 800; color: var(--primary); margin-bottom: 3mm; }
+    .stat-info p { font-size: 14px; color: #cbd5e1; line-height: 1.6; }
+
+    .final-bar { background: #fff; margin: auto -15mm -15mm; padding: 10mm 15mm; border-radius: 12mm 12mm 0 0; display: flex; justify-content: space-between; align-items: center; color: var(--secondary); }
+    .final-bar h2 { font-size: 32px; font-weight: 900; margin: 0; }
+    .final-bar h2 span { color: var(--primary); }
+    .final-contacts { display: flex; gap: 12mm; font-weight: 800; font-size: 15px; }
+
+  </style>
+</head>
+<body>
+
+<!-- PAGE 1 : COVER -->
+<div class="page">
+  <div class="cover-full">
+    <div class="logo-top">Ordi<span>veX</span></div>
+    <p class="tagline">Le logiciel de gestion officinale le plus innovant d'Afrique francophone</p>
+    <div class="main-mockup">
+      <div class="laptop">
+        <div class="laptop-screen"></div>
+        <div class="laptop-base"></div>
+      </div>
+      <div class="phone-mock">
+        <div class="phone-screen"></div>
+      </div>
+    </div>
+    <div class="cover-footer">Édition Premium 2026 • Technologie TrillionX</div>
+  </div>
+</div>
+
+<!-- PAGE 2 : INNOVATIONS 1 -->
+<div class="page">
+  <div class="sidebar"><div class="sidebar-title">Innovations Révolutionnaires</div></div>
+  <div class="main-area">
+    <div class="section-header">
+      <h2 class="section-title">Le futur de l'officine</h2>
+      <p class="section-subtitle">OrdiveX garantit la performance et la résilience de votre pharmacie.</p>
+    </div>
+
+    <div class="zigzag-flow" id="flow1">
+      <svg class="zigzag-svg" id="svg1"></svg>
+
+      <div class="step to-right">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-img-box"><img src="img/dashboard_pos.png" alt="POS"></div>
+          <div class="step-text">
+            <h3>Vente en Mobilité</h3>
+            <p>Encaissez vos patients partout dans l'officine. Scan caméra rapide et paiements mobiles sécurisés. Fluidité absolue sans attente au comptoir.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="step to-left">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-img-box icon-bg">
+            <svg viewBox="0 0 24 24"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+          </div>
+          <div class="step-text">
+            <h3>Architecture Offline</h3>
+            <p>100% opérationnel sans internet. Synchronisation automatique et invisible dès le retour du réseau. Votre pharmacie ne s'arrête jamais.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="step to-right">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-img-box"><img src="img/pharmacist.png" alt="Pharmacist"></div>
+          <div class="step-text">
+            <h3>Dossier Patient 360</h3>
+            <p>Gérez l'historique médical et les mutuelles avec précision. Un conseil patient expert basé sur des données centralisées.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3 : INNOVATIONS 2 -->
+<div class="page">
+  <div class="sidebar"><div class="sidebar-title">Innovations Révolutionnaires</div></div>
+  <div class="main-area">
+    <div class="zigzag-flow" id="flow2" style="margin-top: 10mm;">
+      <svg class="zigzag-svg" id="svg2"></svg>
+
+      <div class="step to-left">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-img-box icon-bg" style="background: var(--secondary);">
+            <svg viewBox="0 0 24 24"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/></svg>
+          </div>
+          <div class="step-text">
+            <h3>Intelligence Naomie</h3>
+            <p>Assistante IA dédiée. Analyse vos ventes 24/7 pour optimiser vos stocks et sécuriser vos bénéfices grâce à des prévisions intelligentes.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="step to-right">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-img-box"><img src="img/dashboard.png" alt="Dashboard"></div>
+          <div class="step-text">
+            <h3>Pilotage Financier</h3>
+            <p>Marges, dettes et rotation de stock. Prenez des décisions basées sur des données réelles, accessibles via des graphiques intuitifs.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="step to-left">
+        <div class="step-dot"></div>
+        <div class="step-content">
+          <div class="step-img-box icon-bg" style="background: #3b82f6;">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div class="step-text">
+            <h3>Sécurité Maximale</h3>
+            <p>Chiffrement AES-256 et journal d'audit complet. Protection totale de vos données sensibles et du secret médical patient.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 4 : HUB SECTION -->
+<div class="page">
+  <div class="sidebar"><div class="sidebar-title">Nos Engagements</div></div>
+  <div class="main-area">
+    <h2 class="hub-title">Partenaire de votre succès</h2>
+    <div class="hub-grid">
+      <svg class="hub-lines" viewBox="0 0 600 600">
+        <line x1="300" y1="300" x2="300" y2="80" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+        <line x1="300" y1="300" x2="520" y2="80" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+        <line x1="300" y1="300" x2="520" y2="300" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+        <line x1="300" y1="300" x2="520" y2="520" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+        <line x1="300" y1="300" x2="300" y2="520" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+        <line x1="300" y1="300" x2="80" y2="520" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+        <line x1="300" y1="300" x2="80" y2="300" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+        <line x1="300" y1="300" x2="80" y2="80" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6" />
+      </svg>
+      <div class="hub-center"><div class="center-box"><h2>Ordi<span>veX</span></h2></div></div>
+      <div class="hub-cell" style="grid-column: 2; grid-row: 1;"><div class="hub-card"><span>Migration Express</span></div></div>
+      <div class="hub-cell" style="grid-column: 3; grid-row: 1;"><div class="hub-card"><span>Formation terrain</span></div></div>
+      <div class="hub-cell" style="grid-column: 3; grid-row: 2;"><div class="hub-card"><span>Support 24/7</span></div></div>
+      <div class="hub-cell" style="grid-column: 3; grid-row: 3;"><div class="hub-card"><span>Mises à jour</span></div></div>
+      <div class="hub-cell" style="grid-column: 2; grid-row: 3;"><div class="hub-card"><span>Référentiel 330k+</span></div></div>
+      <div class="hub-cell" style="grid-column: 1; grid-row: 3;"><div class="hub-card"><span>Audit financier</span></div></div>
+      <div class="hub-cell" style="grid-column: 1; grid-row: 2;"><div class="hub-card"><span>Performance < 0,3s</span></div></div>
+      <div class="hub-cell" style="grid-column: 1; grid-row: 1;"><div class="hub-card"><span>Zéro engagement</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 5 : STATS & FOOTER -->
+<div class="page">
+  <div class="stats-footer-area">
+    <h2>La référence en Afrique</h2>
+    <div class="stat-row">
+      <div class="stat-bubble">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <div style="font-size: 16px; font-weight: 900; color: var(--secondary);">Ordi<span>veX</span></div>
+      </div>
+      <div class="stat-info">
+        <h3>L'officine nouvelle génération</h3>
+        <p>Le logiciel le plus robuste, conçu pour les pharmaciens africains.</p>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-bubble">
+        <svg viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+        <h4>330K</h4>
+        <span>Produits</span>
+      </div>
+      <div class="stat-info">
+        <h3>Référentiel complet</h3>
+        <p>Base de données massive de médicaments avec notices et RCP intégrés.</p>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-bubble">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <h4>100%</h4>
+        <span>Résilience</span>
+      </div>
+      <div class="stat-info">
+        <h3>Garantie de service</h3>
+        <p>Disponibilité totale, même sans internet. Votre officine ne s'arrête jamais.</p>
+      </div>
+    </div>
+    <div class="final-bar">
+      <h2>Ordi<span>veX</span></h2>
+      <div class="final-contacts">
+        <div>+224 627 17 13 97</div>
+        <div>trillionnx@gmail.com</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function drawZigzag(flowId, svgId) {
+    const flow = document.getElementById(flowId);
+    const svg = document.getElementById(svgId);
+    const dots = flow.querySelectorAll('.step-dot');
+    let pathD = "";
+    dots.forEach((dot, index) => {
+        const rect = dot.getBoundingClientRect();
+        const flowRect = flow.getBoundingClientRect();
+        const x = rect.left - flowRect.left + 3;
+        const y = rect.top - flowRect.top + 3;
+        if (index === 0) { pathD += `M ${x} ${y}`; } else {
+            const prevDot = dots[index-1];
+            const prevRect = prevDot.getBoundingClientRect();
+            const prevX = prevRect.left - flowRect.left + 3;
+            const prevY = prevRect.top - flowRect.top + 3;
+            const midY = prevY + (y - prevY) / 2;
+            pathD += ` C ${prevX} ${midY}, ${x} ${midY}, ${x} ${y}`;
+        }
+    });
+    svg.innerHTML = `<path d="${pathD}" fill="none" stroke="#2EAF7D" stroke-width="3" stroke-dasharray="6 6" opacity="0.6" />`;
+}
+window.onload = () => { drawZigzag('flow1', 'svg1'); drawZigzag('flow2', 'svg2'); };
+</script>
+
+</body>
+</html>

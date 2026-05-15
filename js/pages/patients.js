@@ -227,10 +227,12 @@ async function viewPatient(patientId) {
         <!-- Panel Achats -->
         <div id="p360-purchases" class="p360-panel" style="display:none;">
           ${patientSales.length === 0 ? '<p class="text-muted">Aucun achat enregistré</p>' : `
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">${patientSales.length} achat(s) — Trié par date décroissante</div>
+            <div style="max-height:350px;overflow-y:auto;border-radius:8px;">
             <table class="data-table">
-              <thead><tr><th>Date</th><th>Montant</th><th>Paiement</th><th>Articles</th><th>Vendeur</th></tr></thead>
+              <thead style="position:sticky;top:0;z-index:1;"><tr><th>Date</th><th>Montant</th><th>Paiement</th><th>Articles</th><th>Vendeur</th></tr></thead>
               <tbody>
-                ${patientSales.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 30).map(s => `
+                ${patientSales.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 50).map(s => `
                   <tr>
                     <td>${UI.formatDate(s.date)}</td>
                     <td><strong>${UI.formatCurrency(s.total || 0)}</strong></td>
@@ -240,7 +242,8 @@ async function viewPatient(patientId) {
                   </tr>`).join('')}
               </tbody>
             </table>
-            ${patientSales.length > 30 ? `<p class="text-muted text-sm" style="margin-top:8px">Affichage limité aux 30 derniers achats</p>` : ''}
+            </div>
+            ${patientSales.length > 50 ? `<p class="text-muted text-sm" style="margin-top:8px;text-align:center">Affichage limité aux 50 derniers achats sur ${patientSales.length}</p>` : ''}
           `}
         </div>
 
