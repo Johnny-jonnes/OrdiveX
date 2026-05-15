@@ -115,13 +115,13 @@ function _autoAnimateKPIValues() {
     '  100% { opacity: 1; transform: scale(1) rotate(0deg); }',
     '}',
     'canvas.chart-anim-bar {',
-    '  animation: chartRevealUp 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
+    '  animation: chartRevealUp 3.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
     '}',
     'canvas.chart-anim-line {',
-    '  animation: chartRevealRight 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
+    '  animation: chartRevealRight 4s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
     '}',
     'canvas.chart-anim-donut {',
-    '  animation: chartDonutReveal 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
+    '  animation: chartDonutReveal 3s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
     '}'
   ].join('\n');
   document.head.appendChild(style);
@@ -205,3 +205,4 @@ if (document.readyState === 'loading') {
 window.animateValue = animateValue;
 window.animateAllKPIs = animateAllKPIs;
 window.animateKPI = animateKPI;
+window._autoAnimateKPIValues = _autoAnimateKPIValues;
