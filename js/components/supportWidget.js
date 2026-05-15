@@ -869,7 +869,7 @@ const CONVERSATIONS = [
     {
         triggers: ['version', 'mise a jour', 'update', 'changelog', 'nouveaute'],
         responses: [
-            "Vous utilisez <strong>OrdiveX v4.4</strong>, {name} ! 🆕<br><br>Dernières améliorations :<br>✅ Import massif CSV (50k+ produits)<br>✅ Console propre en production<br>✅ Cartes produit POS compactes<br>✅ Formes pharma (sirop, tube, flacon...)<br>✅ Recherche autocomplete dans les commandes<br>✅ Moi-même : Naomie v3 intelligente ! 🤖💙<br><br>Les mises à jour sont automatiques via GitHub Pages !",
+            "Vous utilisez <strong>OrdiveX v9.4</strong>, {name} ! 🆕<br><br>Dernières améliorations :<br>✅ Multi-onglets POS (ventes parallèles)<br>✅ Vue 360° Patient et Employé<br>✅ Double traçabilité Vendeur/Caissier<br>✅ Dashboard Inventaire avec KPIs financiers<br>✅ 55+ catégories dynamiques avec saisie libre<br>✅ Moi-même : Naomie v4 avec requêtes live ! 🤖💙<br><br>Les mises à jour sont automatiques via GitHub Pages !",
         ]
     },
     // ── Nouvelles conversations v9.2.1 (Bonnes pratiques guide) ──
@@ -918,7 +918,79 @@ const CONVERSATIONS = [
     {
         triggers: ['naomie', 'assistante', 'chatbot', 'ia', 'intelligence artificielle', 'tu peux m aider'],
         responses: [
-            "Je suis <strong>Naomie v3</strong>, votre assistante IA pharmaceutique, {name} ! 🤖💙<br><br>Je maîtrise <strong>30+ sujets</strong> :<br>🛒 Ventes, crédits, assurances<br>📦 Stocks, inventaires, commandes<br>💊 Ordonnances, interactions, allergies<br>📊 KPIs, analyses, statistiques<br>🖨️ Impressions, PV, rapports<br>⚙️ Paramètres, utilisateurs, sync cloud<br><br>Posez-moi n'importe quelle question en <strong>langage naturel</strong> ! Je comprends aussi bien \"Comment je fais un crédit ?\" que \"Gestion du tiers-payant\". 😊",
+            "Je suis <strong>Naomie v4</strong>, votre assistante IA pharmaceutique, {name} ! 🤖💙<br><br>Je maîtrise <strong>30+ sujets</strong> et j'interroge <strong>vos données en temps réel</strong> :<br>🛒 Ventes, crédits, assurances<br>📦 Stocks, inventaires, commandes<br>💊 Ordonnances, interactions, allergies<br>📊 KPIs, analyses, statistiques<br>🖨️ Impressions, PV, rapports<br>⚙️ Paramètres, utilisateurs, sync cloud<br><br>Essayez : <strong>« CA du jour »</strong>, <strong>« combien de produits »</strong> ou <strong>« ruptures »</strong> pour voir mes capacités live ! 😊",
+        ]
+    },
+    // ═══════════════════════════════════════════════════════════════
+    // NAOMIE v4 — REQUÊTES DYNAMIQUES LIVE (IndexedDB)
+    // ═══════════════════════════════════════════════════════════════
+    {
+        triggers: ['ca du jour', 'chiffre du jour', 'vente du jour', 'combien vendu', 'recette du jour', 'total vente'],
+        dynamic: true,
+        responses: [],
+        getResponse: async function() {
+            const sales = await DB.dbGetAll('sales');
+            const today = new Date().toISOString().substring(0, 10);
+            const todaySales = sales.filter(s => s.date && s.date.substring(0, 10) === today);
+            const totalCA = todaySales.reduce((sum, s) => sum + (s.total || 0), 0);
+            return `📊 <strong>Bilan du jour</strong> (${new Date().toLocaleDateString('fr-FR')}) :<br><br>` +
+                `💰 <strong>CA Total</strong> : ${UI.formatCurrency(totalCA)}<br>` +
+                `🛒 <strong>Nombre de ventes</strong> : ${todaySales.length}<br>` +
+                `📈 <strong>Panier moyen</strong> : ${todaySales.length > 0 ? UI.formatCurrency(Math.round(totalCA / todaySales.length)) : '—'}<br><br>` +
+                `Ces données sont extraites <strong>en direct</strong> de votre base locale ! 🔥`;
+        }
+    },
+    {
+        triggers: ['combien de produit', 'nombre de produit', 'total produit', 'catalogue', 'combien de reference'],
+        dynamic: true,
+        responses: [],
+        getResponse: async function() {
+            const products = await DB.dbGetAll('products');
+            const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
+            return `📦 Votre catalogue contient <strong>${products.length.toLocaleString()} produits</strong> répartis dans <strong>${cats.length} catégories</strong>.<br><br>` +
+                `Top catégories : ${cats.slice(0, 5).map(c => `<strong>${c}</strong>`).join(', ')}${cats.length > 5 ? '...' : ''}<br><br>` +
+                `Allez dans le <strong>Catalogue Produits</strong> pour les gérer ! 💊`;
+        }
+    },
+    {
+        triggers: ['rupture', 'en rupture', 'stock zero', 'produit manquant', 'epuise'],
+        dynamic: true,
+        responses: [],
+        getResponse: async function() {
+            const [products, stock] = await Promise.all([DB.dbGetAll('products'), DB.dbGetAll('stock')]);
+            const stockMap = {};
+            stock.forEach(s => { stockMap[s.productId] = s.quantity || 0; });
+            const rupt = products.filter(p => (stockMap[p.id] || 0) <= 0);
+            if (rupt.length === 0) return '✅ <strong>Excellente nouvelle</strong> : Aucun produit en rupture de stock ! Votre inventaire est complet. 🎉';
+            const top5 = rupt.slice(0, 5).map(p => `• ${p.name}`).join('<br>');
+            return `⚠️ <strong>${rupt.length} produit(s) en rupture</strong> :<br><br>${top5}${rupt.length > 5 ? `<br>... et ${rupt.length - 5} autres` : ''}<br><br>` +
+                `Consultez les <strong>Alertes</strong> ou le <strong>Stock</strong> pour agir rapidement ! 🚨`;
+        }
+    },
+    {
+        triggers: ['credit en cours', 'dette totale', 'combien de credit', 'impaye total', 'encours credit'],
+        dynamic: true,
+        responses: [],
+        getResponse: async function() {
+            const sales = await DB.dbGetAll('sales');
+            const credits = sales.filter(s => s.paymentMethod === 'credit' && s.status === 'pending');
+            const totalDebt = credits.reduce((sum, s) => sum + (s.total || 0), 0);
+            return `💳 <strong>Crédits en cours</strong> :<br><br>` +
+                `📋 <strong>${credits.length}</strong> vente(s) à crédit non réglée(s)<br>` +
+                `💰 <strong>Encours total</strong> : ${UI.formatCurrency(totalDebt)}<br><br>` +
+                `Allez dans l'<strong>Historique des Ventes</strong> pour encaisser les dettes. 💵`;
+        }
+    },
+    {
+        triggers: ['multi onglet', 'onglet', 'plusieurs ventes', 'vente parallele', 'tab', 'session'],
+        responses: [
+            "Les <strong>multi-onglets POS</strong> sont une nouveauté de la v9.4 ! 🆕<br><br>" +
+            "En haut du panneau panier, vous voyez une <strong>barre bleue</strong> avec vos onglets de vente :<br>" +
+            "• Cliquez <strong>+</strong> pour ouvrir un nouvel onglet<br>" +
+            "• Basculez entre onglets en un clic<br>" +
+            "• Le panier, le patient et l'ordonnance sont <strong>sauvegardés par onglet</strong><br>" +
+            "• Fermez un onglet avec le bouton ×<br><br>" +
+            "Parfait pour gérer plusieurs clients en même temps à la caisse ! 🛒"
         ]
     },
 ];
