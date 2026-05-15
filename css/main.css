@@ -9728,3 +9728,246 @@ body:has(#onboarding-container) #support-chat-fab {
 .complaint-status.open { background: rgba(232, 145, 58, 0.1); color: var(--warning); }
 .complaint-status.resolved { background: rgba(46, 175, 125, 0.1); color: var(--success); }
 
+
+/* ===============================================================================
+   PHASE 0 — v9.4 Dark Mode Corrections (Textes invisibles)
+   =============================================================================== */
+
+/* Labels de formulaires */
+[data-theme="dark"] label,
+[data-theme="dark"] .form-label,
+[data-theme="dark"] .form-group label,
+[data-theme="dark"] .modal-box label,
+[data-theme="dark"] .modal-box .form-group label,
+[data-theme="dark"] .modal-body label {
+  color: var(--text) !important;
+}
+
+/* Champs de formulaire dans les modals */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .modal-box .form-control,
+[data-theme="dark"] .modal-box input,
+[data-theme="dark"] .modal-box select,
+[data-theme="dark"] .modal-box textarea {
+  background: var(--surface-2) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+/* Placeholders */
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder,
+[data-theme="dark"] .form-control::placeholder {
+  color: var(--text-light) !important;
+}
+
+/* Select options (dropdown natif) */
+[data-theme="dark"] select,
+[data-theme="dark"] select.form-control {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] select option {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* Titres de modals et en-tetes */
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .modal-header h3,
+[data-theme="dark"] .modal-header h4 {
+  color: var(--text) !important;
+}
+
+[data-theme="dark"] .modal-header {
+  background: var(--surface-2) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+/* Sous-textes et helpers dans formulaires */
+[data-theme="dark"] .form-group small,
+[data-theme="dark"] .form-group .help-text,
+[data-theme="dark"] .form-group .form-hint,
+[data-theme="dark"] .modal-box small,
+[data-theme="dark"] .modal-box p {
+  color: var(--text-muted) !important;
+}
+
+/* Switch/Toggle labels */
+[data-theme="dark"] .switch-label,
+[data-theme="dark"] .toggle-label,
+[data-theme="dark"] .checkbox-label {
+  color: var(--text) !important;
+}
+
+/* Section headers dans formulaires */
+[data-theme="dark"] .form-section-title,
+[data-theme="dark"] .section-title,
+[data-theme="dark"] .modal-box h3,
+[data-theme="dark"] .modal-box h4 {
+  color: var(--text) !important;
+}
+
+/* Fieldsets et legendes */
+[data-theme="dark"] fieldset {
+  border-color: var(--border) !important;
+}
+[data-theme="dark"] legend {
+  color: var(--text) !important;
+}
+
+/* Boutons icon dans les formulaires */
+[data-theme="dark"] .btn-icon {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+/* Recherche dans topbar */
+[data-theme="dark"] .topbar-search {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+[data-theme="dark"] .topbar-search input {
+  color: var(--text);
+}
+
+/* Confirm box texte */
+[data-theme="dark"] .confirm-box,
+[data-theme="dark"] .confirm-box h3,
+[data-theme="dark"] .confirm-box p,
+[data-theme="dark"] .confirm-box label {
+  color: var(--text) !important;
+}
+
+/* Cards internes */
+[data-theme="dark"] .card,
+[data-theme="dark"] .chart-card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* Tabs / Onglets */
+[data-theme="dark"] .tab-btn,
+[data-theme="dark"] .tab-item {
+  color: var(--text-muted);
+}
+[data-theme="dark"] .tab-btn.active,
+[data-theme="dark"] .tab-item.active {
+  color: var(--text);
+}
+
+/* Focus ring en dark mode */
+[data-theme="dark"] .form-control:focus {
+  border-color: var(--primary-light) !important;
+  box-shadow: 0 0 0 3px rgba(74, 159, 217, 0.2) !important;
+}
+
+/* ===============================================================================
+   PHASE 0 — v9.4 Mobile Responsive (Formulaires + Modals)
+   =============================================================================== */
+
+@media (max-width: 768px) {
+  /* Modals plein ecran mobile */
+  .modal-box {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    padding: 16px !important;
+    max-height: 90vh;
+    border-radius: 16px !important;
+  }
+
+  .modal-large {
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .modal-body {
+    padding: 16px !important;
+  }
+
+  .modal-header {
+    padding: 12px 16px !important;
+  }
+
+  .modal-footer {
+    padding: 12px 16px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .modal-footer .btn {
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  /* Grilles de formulaire en colonne unique */
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .form-grid {
+    gap: 12px !important;
+  }
+
+  .form-group {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  /* KPI grid responsive */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+
+  .kpi-card {
+    padding: 14px !important;
+  }
+
+  .kpi-value {
+    font-size: 18px !important;
+  }
+
+  /* Charts en colonne */
+  .charts-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Page header en colonne */
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .page-title {
+    font-size: 18px !important;
+  }
+}
+
+/* Anti-zoom iOS (inputs < 16px provoquent un zoom automatique) */
+@media (max-width: 480px) {
+  .modal-box input,
+  .modal-box select,
+  .modal-box textarea,
+  .form-control {
+    font-size: 16px !important;
+  }
+
+  /* KPI sur une colonne sur tres petit ecran */
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Boutons en pleine largeur */
+  .header-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
