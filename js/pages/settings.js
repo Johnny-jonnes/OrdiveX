@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Settings, Users, Login
  */
 
@@ -283,6 +283,7 @@ async function renderSettings(container) {
                   <span class="badge badge-${u.active ? 'success' : 'neutral'}">${u.active ? 'Actif' : 'Inactif'}</span>
                 </div>
               </div>
+              <button class="btn btn-sm btn-primary" onclick="viewEmployee360(${u.id})" style="flex-shrink:0;min-width:70px;justify-content:center"><i data-lucide="bar-chart-3"></i> Profil</button>
               <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})" style="flex-shrink:0;min-width:90px;justify-content:center"><i data-lucide="edit-3"></i> Modifier</button>
             </div>`).join('')}
         </div>
@@ -792,6 +793,114 @@ window.doBackup = doBackup;
 window.restoreBackup = restoreBackup;
 window.repairSync = repairSync;
 window.triggerPull = triggerPull;
+window.viewEmployee360 = viewEmployee360;
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 5 — Vue 360° Employé (Admin uniquement)
+// ═══════════════════════════════════════════════════════════════════
+async function viewEmployee360(userId) {
+  if (DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('Accès réservé à l\'administrateur', 'error');
+    return;
+  }
+  const [user, allSales, auditLog] = await Promise.all([
+    DB.dbGet('users', userId),
+    DB.dbGetAll('sales'),
+    DB.dbGetAll('auditLog'),
+  ]);
+  if (!user) return;
+
+  // Filtrer les ventes de cet employé
+  const empSales = allSales.filter(s => s.userId === userId || s.sellerName === user.name);
+  const totalCA = empSales.reduce((sum, s) => sum + (s.total || 0), 0);
+  const avgTicket = empSales.length > 0 ? Math.round(totalCA / empSales.length) : 0;
+  const lastSale = empSales.length > 0 ? empSales.sort((a,b) => new Date(b.date) - new Date(a.date))[0].date : null;
+
+  // Dernière connexion depuis l'audit
+  const logins = auditLog.filter(l => l.action === 'LOGIN' && (l.userId === userId || l.username === user.username));
+  const lastLogin = logins.length > 0 ? logins.sort((a,b) => b.timestamp - a.timestamp)[0].timestamp : null;
+
+  // Ventes par mois (3 derniers mois)
+  const now = new Date();
+  const months = [];
+  for (let i = 2; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.toISOString().substring(0, 7);
+    const label = d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+    const sales = empSales.filter(s => s.date && s.date.substring(0, 7) === key);
+    months.push({ label, count: sales.length, total: sales.reduce((sum,s) => sum + (s.total||0), 0) });
+  }
+
+  UI.modal(`<i data-lucide="bar-chart-3" class="modal-icon-inline"></i> Profil — ${user.name}`, `
+    <div class="patient-detail">
+      <div class="patient-detail-header">
+        <div class="patient-avatar-lg" style="background:var(--primary-light);color:var(--primary)">${user.name?.charAt(0).toUpperCase() || '?'}</div>
+        <div class="patient-detail-info">
+          <h2>${user.name}</h2>
+          <div class="patient-detail-meta">
+            <span><i data-lucide="user"></i> <code>${user.username}</code></span>
+            <span>${UI.roleBadge(user.role)}</span>
+            <span class="badge badge-${user.active ? 'success' : 'neutral'}">${user.active ? 'Actif' : 'Inactif'}</span>
+          </div>
+          <div style="margin-top:8px;color:var(--text-muted);font-size:12px;">
+            <i data-lucide="clock" style="width:12px;height:12px"></i> Dernière connexion : ${lastLogin ? UI.formatDateTime(lastLogin) : 'Jamais'}
+          </div>
+        </div>
+      </div>
+
+      <div class="patient-stats-row" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+        <div class="patient-stat-card">
+          <div class="patient-stat-val kpi-value">${UI.formatCurrency(totalCA)}</div>
+          <div class="patient-stat-label">CA généré</div>
+        </div>
+        <div class="patient-stat-card">
+          <div class="patient-stat-val kpi-value">${empSales.length}</div>
+          <div class="patient-stat-label">Ventes</div>
+        </div>
+        <div class="patient-stat-card">
+          <div class="patient-stat-val kpi-value">${UI.formatCurrency(avgTicket)}</div>
+          <div class="patient-stat-label">Ticket moyen</div>
+        </div>
+        <div class="patient-stat-card">
+          <div class="patient-stat-val">${lastSale ? UI.formatDate(lastSale) : '—'}</div>
+          <div class="patient-stat-label">Dernière vente</div>
+        </div>
+      </div>
+
+      <!-- Performance 3 mois -->
+      <div style="margin-top:16px;">
+        <h4 style="font-size:14px;margin-bottom:8px;"><i data-lucide="trending-up"></i> Performance (3 derniers mois)</h4>
+        <table class="data-table">
+          <thead><tr><th>Mois</th><th>Nb Ventes</th><th>CA</th></tr></thead>
+          <tbody>
+            ${months.map(m => `<tr><td>${m.label}</td><td><strong>${m.count}</strong></td><td>${UI.formatCurrency(m.total)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Dernières ventes -->
+      <div style="margin-top:16px;">
+        <h4 style="font-size:14px;margin-bottom:8px;"><i data-lucide="receipt"></i> Dernières ventes</h4>
+        ${empSales.length === 0 ? '<p class="text-muted">Aucune vente enregistrée</p>' : `
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Patient</th><th>Montant</th><th>Paiement</th></tr></thead>
+            <tbody>
+              ${empSales.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 15).map(s => `
+                <tr>
+                  <td>${UI.formatDate(s.date)}</td>
+                  <td>${s.patientName || '<span class="text-muted">—</span>'}</td>
+                  <td><strong>${UI.formatCurrency(s.total || 0)}</strong></td>
+                  <td><span class="badge badge-${s.paymentMethod === 'credit' ? 'danger' : 'success'}">${s.paymentMethod || 'Espèces'}</span></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        `}
+      </div>
+    </div>
+  `, { size: 'large' });
+  if (window.lucide) lucide.createIcons();
+  if (window._autoAnimateKPIValues) setTimeout(_autoAnimateKPIValues, 100);
+}
 
 async function saveDeviceName() {
   var input = document.getElementById('device-name-input');
