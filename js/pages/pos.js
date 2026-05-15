@@ -18,6 +18,100 @@ let _posDataTime = 0; // Timestamp du dernier chargement
 let posProductsCache = new Map(); // Cache pour les produits cliqués/ajoutés
 
 // ═══════════════════════════════════════════════════════════════════
+// MULTI-ONGLETS POS (Phase 3 v9.4)
+// ═══════════════════════════════════════════════════════════════════
+let _posSessions = [{ id: 1, label: 'Vente 1', cart: [], patient: null, rx: null }];
+let _posActiveSession = 0; // Index de la session active
+let _posSessionCounter = 1;
+
+function _posGetSession() { return _posSessions[_posActiveSession] || _posSessions[0]; }
+
+function _posSaveCurrentSession() {
+  var s = _posSessions[_posActiveSession];
+  if (!s) return;
+  s.cart = posCart.map(function(c) { return Object.assign({}, c); });
+  s.patient = posCurrentPatient;
+  s.rx = posCurrentRx;
+}
+
+function _posLoadSession(index) {
+  if (index < 0 || index >= _posSessions.length) return;
+  _posSaveCurrentSession();
+  _posActiveSession = index;
+  var s = _posSessions[index];
+  posCart = (s.cart || []).map(function(c) { return Object.assign({}, c); });
+  posCurrentPatient = s.patient || null;
+  posCurrentRx = s.rx || null;
+  _posRenderTabs();
+  renderCartUI();
+  refreshTotals();
+  // Mettre à jour le badge patient
+  var badge = document.getElementById('client-badge');
+  var trigger = document.getElementById('client-search-trigger');
+  if (posCurrentPatient && badge && trigger) {
+    badge.style.display = 'flex';
+    badge.innerHTML = '<i data-lucide="user-check"></i><span>' + posCurrentPatient.name + '</span><button class="btn btn-xs btn-ghost" onclick="clearPatient()"><i data-lucide="x"></i></button>';
+    trigger.style.display = 'none';
+    if (window.lucide) lucide.createIcons({ root: badge });
+  } else if (badge && trigger) {
+    badge.style.display = 'none';
+    trigger.style.display = '';
+  }
+}
+
+function posAddSession() {
+  _posSaveCurrentSession();
+  _posSessionCounter++;
+  _posSessions.push({ id: _posSessionCounter, label: 'Vente ' + _posSessionCounter, cart: [], patient: null, rx: null });
+  _posActiveSession = _posSessions.length - 1;
+  posCart = [];
+  posCurrentPatient = null;
+  posCurrentRx = null;
+  _posRenderTabs();
+  renderCartUI();
+  refreshTotals();
+  // Reset patient badge
+  var badge = document.getElementById('client-badge');
+  var trigger = document.getElementById('client-search-trigger');
+  if (badge) badge.style.display = 'none';
+  if (trigger) trigger.style.display = '';
+}
+
+async function posCloseSession(index) {
+  if (_posSessions.length <= 1) {
+    UI.toast('Impossible de fermer le dernier onglet', 'warning');
+    return;
+  }
+  var s = _posSessions[index];
+  if (s.cart && s.cart.length > 0) {
+    var ok = await UI.confirm('Cet onglet contient ' + s.cart.length + ' article(s). Voulez-vous vraiment l\'annuler ?');
+    if (!ok) return;
+  }
+  _posSessions.splice(index, 1);
+  if (_posActiveSession >= _posSessions.length) _posActiveSession = _posSessions.length - 1;
+  if (_posActiveSession < 0) _posActiveSession = 0;
+  _posLoadSession(_posActiveSession);
+}
+
+function _posRenderTabs() {
+  var container = document.getElementById('pos-session-tabs');
+  if (!container) return;
+  var html = '';
+  _posSessions.forEach(function(s, i) {
+    var isActive = i === _posActiveSession;
+    var count = (s.cart || []).length;
+    html += '<button class="pos-tab-btn' + (isActive ? ' active' : '') + '" onclick="_posLoadSession(' + i + ')" title="' + s.label + '">';
+    html += '<span>' + s.label + '</span>';
+    if (count > 0) html += '<span class="pos-tab-count">' + count + '</span>';
+    if (_posSessions.length > 1) html += '<span class="pos-tab-close" onclick="event.stopPropagation();posCloseSession(' + i + ')">&times;</span>';
+    html += '</button>';
+  });
+  html += '<button class="pos-tab-btn pos-tab-add" onclick="posAddSession()" title="Nouvelle vente"><i data-lucide="plus" style="width:14px;height:14px"></i></button>';
+  container.innerHTML = html;
+  if (window.lucide) lucide.createIcons({ root: container });
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // INTERACTIONS MÉDICAMENTEUSES — Base statique des 30 combinaisons critiques
 // Format: [DCI_A, DCI_B, niveau (grave/modéré), description]
 // ═══════════════════════════════════════════════════════════════════
@@ -282,6 +376,9 @@ function renderFullPOSUI(container) {
             <i data-lucide="chevron-up" class="cart-toggle-icon"></i>
         </div>
 
+        <!-- Onglets Multi-Ventes -->
+        <div id="pos-session-tabs" class="pos-session-tabs"></div>
+
         <!-- CLIENT -->
         <div class="pos-section">
           <div class="pos-section-header">
@@ -495,6 +592,7 @@ function renderFullPOSUI(container) {
     if (posCurrentPatient) renderClientBadge(posCurrentPatient);
   }
   if (window.lucide) lucide.createIcons();
+  _posRenderTabs();
 }
 
 /**
@@ -2735,3 +2833,7 @@ window.mobileInitPOS = mobileInitPOS;
 window.mobileCleanupPOS = mobileCleanupPOS;
 window.mobileUpdateCartBadge = mobileUpdateCartBadge;
 
+// Multi-onglets POS
+window._posLoadSession = _posLoadSession;
+window.posAddSession = posAddSession;
+window.posCloseSession = posCloseSession;

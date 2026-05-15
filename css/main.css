@@ -1,4 +1,4 @@
-﻿/* OrdiveX â€” Design System v5 */
+/* OrdiveX â€” Design System v5 */
 /* Premium Health-Tech Identity Â· Neo-Professional Medical */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -9324,6 +9324,28 @@ kbd {
   transition: border-color var(--transition);
 }
 
+/* ═══ RÉCLAMATIONS FOURNISSEUR ═══ */
+.complaint-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: all var(--transition);
+}
+
+.complaint-card:hover {
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow);
+}
+
+.complaint-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .alerts-filter-select:focus {
   border-color: var(--primary-light);
 }
@@ -9666,27 +9688,6 @@ body:has(#login-page) #support-chat-fab,
 body:has(#onboarding-container) #support-chat-fab {
   display: none;
 }
-
-/* ═══ RÉCLAMATIONS FOURNISSEUR ═══ */
-.complaint-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-  margin-bottom: 10px;
-  transition: all var(--transition);
-}
-
-.complaint-card:hover {
-  border-color: var(--primary-light);
-  box-shadow: var(--shadow);
-}
-
-.complaint-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
 }
 
 .complaint-type {
@@ -9970,4 +9971,81 @@ body:has(#onboarding-container) #support-chat-fab {
     width: 100%;
     justify-content: center;
   }
+}
+
+/* ===============================================================================
+   PHASE 3 - v9.4 Multi-onglets POS
+   =============================================================================== */
+
+.pos-session-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2, #f8fafc);
+}
+.pos-session-tabs::-webkit-scrollbar { display: none; }
+
+.pos-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pos-tab-btn:hover { background: var(--surface); color: var(--text); }
+.pos-tab-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.pos-tab-btn.pos-tab-add {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  padding: 6px 10px;
+}
+.pos-tab-btn.pos-tab-add:hover { background: rgba(46,134,193,0.08); color: var(--primary); border-color: var(--primary); }
+
+.pos-tab-count {
+  background: rgba(255,255,255,0.25);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 800;
+}
+.pos-tab-btn.active .pos-tab-count { background: rgba(255,255,255,0.3); }
+.pos-tab-btn:not(.active) .pos-tab-count { background: var(--primary); color: #fff; }
+
+.pos-tab-close {
+  margin-left: 2px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+.pos-tab-close:hover { opacity: 1; background: rgba(214,59,59,0.15); color: var(--danger); }
+
+[data-theme="dark"] .pos-session-tabs { background: var(--surface-2); }
+[data-theme="dark"] .pos-tab-btn { border-color: var(--border); }
+[data-theme="dark"] .pos-tab-btn:hover { background: var(--surface); }
+
+@media (max-width: 768px) {
+  .pos-session-tabs { padding: 4px 8px; gap: 3px; }
+  .pos-tab-btn { padding: 5px 8px; font-size: 11px; }
 }
