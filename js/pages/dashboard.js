@@ -19,7 +19,6 @@ async function renderDashboard(container) {
     container.innerHTML = _dashCache.html;
     _drawCharts(_dashCache.chartData);
     if (window.lucide) lucide.createIcons();
-    if (window.animateAllKPIs) setTimeout(animateAllKPIs, 100);
 
     // Si le cache est frais (< TTL), on s'arrête là
     if (Date.now() - _dashCache.ts < _dashCache.TTL) return;
@@ -275,8 +274,6 @@ async function _refreshDashboard(container) {
       container.innerHTML = html;
       _drawCharts(chartData);
       if (window.lucide) lucide.createIcons();
-      // Phase 1 v9.4 — Animations KPI count-up
-      if (window.animateAllKPIs) setTimeout(animateAllKPIs, 100);
     }
 
   } catch (err) {

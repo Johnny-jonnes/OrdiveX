@@ -1,14 +1,17 @@
 /**
  * OrdiveX — Animations Utilitaires v9.4
- * Count-up KPIs (global auto-détection) + Charts reveal (CSS clip-path, zéro scintillement)
+ * Count-up KPIs (global) + Charts reveal CSS (lent et fluide)
  */
 
 // ═══════════════════════════════════════════════════════════════════
-// 1. COUNT-UP ANIMATION POUR TOUS LES KPIs (GLOBAL)
+// 1. COUNT-UP POUR KPIs
 // ═══════════════════════════════════════════════════════════════════
 
-function animateValue(element, start, end, duration = 800, prefix = '', suffix = '') {
+function animateValue(element, start, end, duration, prefix, suffix) {
   if (!element) return;
+  duration = duration || 800;
+  prefix = prefix || '';
+  suffix = suffix || '';
   if (isNaN(end) || end === null || end === undefined) {
     element.textContent = prefix + '0' + suffix;
     return;
@@ -17,17 +20,17 @@ function animateValue(element, start, end, duration = 800, prefix = '', suffix =
     element.textContent = prefix + Math.floor(end).toLocaleString('fr-FR') + suffix;
     return;
   }
-  const range = end - start;
+  var range = end - start;
   if (range === 0) {
     element.textContent = prefix + Math.floor(end).toLocaleString('fr-FR') + suffix;
     return;
   }
-  const startTime = performance.now();
+  var startTime = performance.now();
   function step(currentTime) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    const current = Math.floor(start + range * eased);
+    var elapsed = currentTime - startTime;
+    var progress = Math.min(elapsed / duration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3);
+    var current = Math.floor(start + range * eased);
     element.textContent = prefix + current.toLocaleString('fr-FR') + suffix;
     if (progress < 1) requestAnimationFrame(step);
   }
@@ -35,131 +38,121 @@ function animateValue(element, start, end, duration = 800, prefix = '', suffix =
 }
 
 function animateAllKPIs() {
-  const kpis = document.querySelectorAll('[data-animate-value]');
-  kpis.forEach((el, index) => {
-    const end = parseFloat(el.getAttribute('data-animate-value'));
-    const prefix = el.getAttribute('data-prefix') || '';
-    const suffix = el.getAttribute('data-suffix') || '';
-    const duration = 600 + (index * 100);
-    setTimeout(() => animateValue(el, 0, end, duration, prefix, suffix), 150 + (index * 80));
+  var kpis = document.querySelectorAll('[data-animate-value]:not([data-animated])');
+  kpis.forEach(function(el, index) {
+    el.setAttribute('data-animated', 'done');
+    var end = parseFloat(el.getAttribute('data-animate-value'));
+    var prefix = el.getAttribute('data-prefix') || '';
+    var suffix = el.getAttribute('data-suffix') || '';
+    var duration = 600 + (index * 100);
+    setTimeout(function() {
+      animateValue(el, 0, end, duration, prefix, suffix);
+    }, 150 + (index * 80));
   });
 }
 
-function animateKPI(selector, value, suffix = '') {
-  const el = document.querySelector(selector);
-  if (el) animateValue(el, 0, value, 800, '', suffix);
+function animateKPI(selector, value, suffix) {
+  var el = document.querySelector(selector);
+  if (el) animateValue(el, 0, value, 800, '', suffix || '');
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 2. AUTO-DETECT : Anime TOUS les .kpi-value de TOUTE page
+// 2. AUTO-DETECT : Anime les .kpi-value sans data-animate-value
 // ═══════════════════════════════════════════════════════════════════
 
 function _autoAnimateKPIValues() {
-  // Priorité aux data-animate-value explicites
-  if (document.querySelectorAll('[data-animate-value]').length > 0) {
-    animateAllKPIs();
-  }
+  // D'abord les explicites
+  animateAllKPIs();
 
-  // Auto-détection : .kpi-value sans data-animate-value
-  const kpis = document.querySelectorAll('.kpi-value:not([data-animate-value]):not([data-animated])');
+  // Ensuite auto-detect
+  var kpis = document.querySelectorAll('.kpi-value:not([data-animate-value]):not([data-animated])');
   if (!kpis.length) return;
   if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) return;
 
-  kpis.forEach((el, index) => {
-    const raw = el.textContent.trim();
-    // Extraire le nombre (ex: "15 450 000 GNF" → 15450000, "42,5%" → 42)
-    const numMatch = raw.replace(/\u00a0/g, ' ').match(/^([^\d-]*?)([\d\s,.]+)(.*)/);
+  kpis.forEach(function(el, index) {
+    var raw = el.textContent.trim();
+    var numMatch = raw.replace(/\u00a0/g, ' ').match(/^([^\d-]*?)([\d\s,.]+)(.*)/);
     if (!numMatch) return;
 
-    const prefix = numMatch[1] || '';
-    const numStr = numMatch[2].replace(/\s/g, '').replace(/,/g, '.');
-    const suffix = numMatch[3] || '';
-    const numVal = parseFloat(numStr);
+    var prefix = numMatch[1] || '';
+    var numStr = numMatch[2].replace(/\s/g, '').replace(/,/g, '.');
+    var suffix = numMatch[3] || '';
+    var numVal = parseFloat(numStr);
 
     if (isNaN(numVal) || numVal === 0) return;
 
-    el.setAttribute('data-animated', 'true'); // Marquer comme traité
+    el.setAttribute('data-animated', 'done');
     el.textContent = prefix + '0' + suffix;
-    const duration = 600 + (index * 100);
-    setTimeout(() => animateValue(el, 0, numVal, duration, prefix, suffix), 150 + (index * 80));
+    var duration = 600 + (index * 100);
+    setTimeout(function() {
+      animateValue(el, 0, numVal, duration, prefix, suffix);
+    }, 150 + (index * 80));
   });
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 3. ANIMATION DES CHARTS PAR CSS (clip-path reveal)
-//    Zéro redraw Canvas = zéro scintillement
+// 3. ANIMATION DES CHARTS — CSS reveal LENT
 // ═══════════════════════════════════════════════════════════════════
 
-// Inject CSS pour l'animation reveal
-(function _injectChartAnimCSS() {
+(function() {
   if (document.getElementById('ordivex-chart-anim-css')) return;
-  const style = document.createElement('style');
+  var style = document.createElement('style');
   style.id = 'ordivex-chart-anim-css';
-  style.textContent = `
-    @keyframes chartRevealUp {
-      from { clip-path: inset(100% 0 0 0); }
-      to   { clip-path: inset(0 0 0 0); }
-    }
-    @keyframes chartRevealRight {
-      from { clip-path: inset(0 100% 0 0); }
-      to   { clip-path: inset(0 0 0 0); }
-    }
-    @keyframes chartFadeScale {
-      from { opacity: 0; transform: scale(0.92); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-    canvas.chart-animate-bar {
-      animation: chartRevealUp 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-    canvas.chart-animate-line {
-      animation: chartRevealRight 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-    canvas.chart-animate-donut {
-      animation: chartFadeScale 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-  `;
+  style.textContent = [
+    '@keyframes chartRevealUp {',
+    '  0%   { clip-path: inset(100% 0 0 0); opacity: 0.3; }',
+    '  20%  { opacity: 1; }',
+    '  100% { clip-path: inset(0 0 0 0); opacity: 1; }',
+    '}',
+    '@keyframes chartRevealRight {',
+    '  0%   { clip-path: inset(0 100% 0 0); opacity: 0.3; }',
+    '  20%  { opacity: 1; }',
+    '  100% { clip-path: inset(0 0 0 0); opacity: 1; }',
+    '}',
+    '@keyframes chartDonutReveal {',
+    '  0%   { opacity: 0; transform: scale(0.85) rotate(-10deg); }',
+    '  40%  { opacity: 1; transform: scale(1.02) rotate(0deg); }',
+    '  100% { opacity: 1; transform: scale(1) rotate(0deg); }',
+    '}',
+    'canvas.chart-anim-bar {',
+    '  animation: chartRevealUp 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
+    '}',
+    'canvas.chart-anim-line {',
+    '  animation: chartRevealRight 2.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
+    '}',
+    'canvas.chart-anim-donut {',
+    '  animation: chartDonutReveal 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;',
+    '}'
+  ].join('\n');
   document.head.appendChild(style);
 })();
 
-/**
- * Appliquer l'animation CSS à un canvas après le dessin
- */
 function _animateCanvas(canvasId, type) {
-  const canvas = document.getElementById(canvasId);
+  var canvas = document.getElementById(canvasId);
   if (!canvas) return;
   if (navigator.hardwareConcurrency && navigator.hardwareConcurrency < 4) return;
 
-  // Retirer les anciennes classes d'animation
-  canvas.classList.remove('chart-animate-bar', 'chart-animate-line', 'chart-animate-donut');
+  // Retirer les anciennes animations
+  canvas.classList.remove('chart-anim-bar', 'chart-anim-line', 'chart-anim-donut');
+  void canvas.offsetWidth; // Force reflow
 
-  // Force reflow pour relancer l'animation
-  void canvas.offsetWidth;
+  var cls = 'chart-anim-' + (type || 'bar');
+  canvas.classList.add(cls);
 
-  const animClass = {
-    bar: 'chart-animate-bar',
-    line: 'chart-animate-line',
-    donut: 'chart-animate-donut'
-  }[type] || 'chart-animate-bar';
-
-  canvas.classList.add(animClass);
-
-  // Nettoyer après l'animation
-  canvas.addEventListener('animationend', () => {
-    canvas.classList.remove(animClass);
-  }, { once: true });
+  canvas.addEventListener('animationend', function handler() {
+    canvas.classList.remove(cls);
+    canvas.removeEventListener('animationend', handler);
+  });
 }
 
-/**
- * Wrapper : intercepter Charts.bar/line/donut pour ajouter l'animation CSS
- */
 function _wrapChartAnimations() {
   if (!window.Charts) return;
-  if (Charts._animWrapped) return; // Éviter double-wrap
+  if (Charts._animWrapped) return;
   Charts._animWrapped = true;
 
-  const _origBar = Charts.bar;
-  const _origLine = Charts.line;
-  const _origDonut = Charts.donut;
+  var _origBar = Charts.bar;
+  var _origLine = Charts.line;
+  var _origDonut = Charts.donut;
 
   Charts.bar = function(canvasId, labels, datasets, options) {
     _origBar.call(Charts, canvasId, labels, datasets, options);
@@ -178,7 +171,7 @@ function _wrapChartAnimations() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 4. HOOK GLOBAL : Auto-animer à chaque navigation de page
+// 4. HOOK GLOBAL
 // ═══════════════════════════════════════════════════════════════════
 
 function _hookRouterForAnimations() {
@@ -186,24 +179,24 @@ function _hookRouterForAnimations() {
   if (Router._animHooked) return;
   Router._animHooked = true;
 
-  const _origNavigate = Router.navigate.bind(Router);
+  var _origNavigate = Router.navigate.bind(Router);
   Router.navigate = function(page) {
     _origNavigate(page);
-    setTimeout(_autoAnimateKPIValues, 250);
+    setTimeout(_autoAnimateKPIValues, 300);
   };
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// INITIALISATION
+// INIT
 // ═══════════════════════════════════════════════════════════════════
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', function() {
     _wrapChartAnimations();
     _hookRouterForAnimations();
   });
 } else {
-  setTimeout(() => {
+  setTimeout(function() {
     _wrapChartAnimations();
     _hookRouterForAnimations();
   }, 0);
