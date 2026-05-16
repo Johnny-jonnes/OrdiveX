@@ -823,3 +823,178 @@ Charts._addBarTooltip = function(canvas, rects) {
 
 window.UI = UI;
 window.Charts = Charts;
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 10 — AUTO-LOCK PIN SCREEN (Sécurité Caisse)
+// Verrouille automatiquement l'app après inactivité
+// L'utilisateur doit saisir son mot de passe pour déverrouiller
+// ═══════════════════════════════════════════════════════════════════
+(function() {
+  const LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+  let _lockTimer = null;
+  let _isLocked = false;
+
+  function _resetLockTimer() {
+    if (_isLocked) return;
+    if (_lockTimer) clearTimeout(_lockTimer);
+    // Only lock if user is logged in
+    if (!window.DB?.AppState?.currentUser) return;
+    _lockTimer = setTimeout(_showLockScreen, LOCK_TIMEOUT);
+  }
+
+  function _showLockScreen() {
+    if (_isLocked) return;
+    const user = window.DB?.AppState?.currentUser;
+    if (!user) return;
+    _isLocked = true;
+
+    const firstName = (user.name || user.username || 'Utilisateur').split(' ')[0];
+    const initials = firstName.charAt(0).toUpperCase();
+    const overlay = document.createElement('div');
+    overlay.id = 'pin-lock-overlay';
+    overlay.innerHTML = `
+      <div class="pin-lock-container">
+        <div class="pin-lock-avatar">${initials}</div>
+        <div class="pin-lock-name">${firstName}</div>
+        <div class="pin-lock-subtitle">Session verrouillée par inactivité</div>
+        <div class="pin-lock-input-wrap">
+          <input type="password" id="pin-lock-input" class="pin-lock-input" placeholder="Mot de passe" autocomplete="off" />
+        </div>
+        <div id="pin-lock-error" class="pin-lock-error"></div>
+        <button id="pin-lock-btn" class="pin-lock-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Déverrouiller
+        </button>
+        <button id="pin-lock-logout" class="pin-lock-logout">Changer d'utilisateur</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('visible'));
+
+    const inp = document.getElementById('pin-lock-input');
+    const btn = document.getElementById('pin-lock-btn');
+    const err = document.getElementById('pin-lock-error');
+    const logoutBtn = document.getElementById('pin-lock-logout');
+
+    setTimeout(() => inp?.focus(), 400);
+
+    async function _tryUnlock() {
+      const pwd = inp.value.trim();
+      if (!pwd) { err.textContent = 'Veuillez saisir votre mot de passe'; return; }
+      try {
+        const users = await DB.dbGetAll('users');
+        const match = users.find(u => u.id === user.id && u.password === pwd);
+        if (match) {
+          _isLocked = false;
+          overlay.classList.remove('visible');
+          setTimeout(() => overlay.remove(), 300);
+          _resetLockTimer();
+          UI.toast('🔓 Session déverrouillée', 'success');
+        } else {
+          err.textContent = 'Mot de passe incorrect';
+          inp.value = '';
+          inp.focus();
+          inp.classList.add('shake');
+          setTimeout(() => inp.classList.remove('shake'), 500);
+        }
+      } catch (e) {
+        err.textContent = 'Erreur : ' + e.message;
+      }
+    }
+
+    btn.addEventListener('click', _tryUnlock);
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') _tryUnlock(); });
+    logoutBtn.addEventListener('click', () => {
+      _isLocked = false;
+      overlay.remove();
+      if (window.Auth?.logout) window.Auth.logout();
+      else window.location.reload();
+    });
+  }
+
+  // Listen for activity
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
+    document.addEventListener(evt, _resetLockTimer, { passive: true });
+  });
+
+  // Start timer when login succeeds
+  window.addEventListener('ordivex-login', _resetLockTimer);
+  // Also reset on page navigation
+  window.addEventListener('hashchange', _resetLockTimer);
+
+  // Inject CSS
+  const lockCSS = document.createElement('style');
+  lockCSS.textContent = `
+    #pin-lock-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: rgba(9,26,50,0.85);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    #pin-lock-overlay.visible { opacity: 1; }
+    .pin-lock-container {
+      text-align: center; padding: 48px 40px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px; width: 340px; max-width: 90vw;
+    }
+    .pin-lock-avatar {
+      width: 72px; height: 72px; margin: 0 auto 16px;
+      border-radius: 50%; font-size: 28px; font-weight: 800;
+      background: linear-gradient(135deg, #2E86C1, #1a5276);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 20px rgba(46,134,193,0.3);
+    }
+    .pin-lock-name {
+      color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 4px;
+    }
+    .pin-lock-subtitle {
+      color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 28px;
+    }
+    .pin-lock-input-wrap { margin-bottom: 12px; }
+    .pin-lock-input {
+      width: 100%; padding: 14px 18px; border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 14px; background: rgba(255,255,255,0.08);
+      color: #fff; font-size: 16px; text-align: center; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit; letter-spacing: 2px;
+    }
+    .pin-lock-input::placeholder { color: rgba(255,255,255,0.3); letter-spacing: 0; }
+    .pin-lock-input:focus {
+      border-color: #2E86C1; box-shadow: 0 0 0 3px rgba(46,134,193,0.2);
+    }
+    .pin-lock-input.shake {
+      animation: pinShake 0.4s ease-in-out;
+    }
+    @keyframes pinShake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+    .pin-lock-error {
+      color: #f87171; font-size: 13px; min-height: 20px; margin-bottom: 8px;
+    }
+    .pin-lock-btn {
+      width: 100%; padding: 14px; border: none; border-radius: 14px;
+      background: linear-gradient(135deg, #2E86C1, #1a5276);
+      color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: transform 0.15s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .pin-lock-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(46,134,193,0.3); }
+    .pin-lock-btn:active { transform: translateY(0); }
+    .pin-lock-logout {
+      background: none; border: none; color: rgba(255,255,255,0.4);
+      font-size: 13px; cursor: pointer; margin-top: 20px; padding: 8px;
+      transition: color 0.2s; font-family: inherit;
+    }
+    .pin-lock-logout:hover { color: rgba(255,255,255,0.7); }
+  `;
+  document.head.appendChild(lockCSS);
+
+  // Expose for external trigger
+  window._showLockScreen = _showLockScreen;
+  window._resetLockTimer = _resetLockTimer;
+})();

@@ -1000,11 +1000,39 @@ async function trackInstallation() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 9 — SYNC FURTIVE INDICATOR
+// Petit indicateur visuel discret dans la topbar pendant la sync
+// ═══════════════════════════════════════════════════════════════════
+function _showSyncIndicator(active) {
+  let el = document.getElementById('furtive-sync-indicator');
+  if (active) {
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'furtive-sync-indicator';
+      el.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+      el.style.cssText = 'position:fixed;top:12px;right:80px;z-index:9998;color:var(--primary,#2E86C1);opacity:0.7;animation:furtiveSync 1.2s ease-in-out infinite;pointer-events:none;';
+      if (!document.getElementById('furtive-sync-style')) {
+        const s = document.createElement('style');
+        s.id = 'furtive-sync-style';
+        s.textContent = '@keyframes furtiveSync{0%,100%{opacity:0.4;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}';
+        document.head.appendChild(s);
+      }
+      document.body.appendChild(el);
+    }
+    el.style.display = '';
+  } else {
+    if (el) el.style.display = 'none';
+  }
+}
+
 async function syncToSupabase() {
   // Triple garde : empêcher toute tentative réseau si hors-ligne
   if (_syncInProgress) return;
   if (!navigator.onLine || !AppState.isOnline) return;
   _syncInProgress = true;
+  // Phase 9 — Indicateur visuel furtif
+  _showSyncIndicator(true);
 
   try {
     const sb = await getSupabaseClient();
@@ -1281,6 +1309,7 @@ async function syncToSupabase() {
     console.error('[Flash] Critical sync error:', globalError);
   } finally {
     _syncInProgress = false;
+    _showSyncIndicator(false);
   }
 }
 

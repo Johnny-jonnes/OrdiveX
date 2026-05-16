@@ -993,7 +993,19 @@ const CONVERSATIONS = [
             "Parfait pour gérer plusieurs clients en même temps à la caisse ! 🛒"
         ]
     },
+    {
+        triggers: ['verrouillage', 'verrou', 'lock', 'pin', 'inactivite', 'securite caisse', 'ecran verrouille'],
+        responses: [
+            "🔐 <strong>Verrouillage automatique</strong> (v9.4) :<br><br>" +
+            "Après <strong>5 minutes d'inactivité</strong>, l'écran se verrouille automatiquement pour protéger vos données financières.<br><br>" +
+            "Pour déverrouiller :<br>" +
+            "• Saisissez votre <strong>mot de passe</strong><br>" +
+            "• Ou cliquez « Changer d'utilisateur » pour revenir à l'écran de connexion<br><br>" +
+            "Le verrouillage s'active dès qu'il n'y a plus d'activité (souris, clavier, écran tactile). C'est une mesure de sécurité essentielle en officine ! 🏥"
+        ]
+    },
 ];
+
 
 
 function matchConversation(input) {

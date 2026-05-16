@@ -111,6 +111,8 @@ async function handleLogin(event) {
       if (window.initSupportWidget) initSupportWidget();
       Router.navigate('dashboard');
       UI.toast(`Bienvenue, ${user.name} !`, 'success');
+      // Activer le verrouillage automatique par inactivité
+      window.dispatchEvent(new CustomEvent('ordivex-login'));
     } else {
       errEl.textContent = 'Identifiant ou mot de passe incorrect';
       errEl.style.display = 'block';
