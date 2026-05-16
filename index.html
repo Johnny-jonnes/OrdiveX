@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="OrdiveX â€” ERP Pharmaceutique pour la GuinÃ©e">
+  <meta name="description" content="OrdiveX â€” ERP Pharmaceutique pour la Guinée">
   <meta name="theme-color" content="#1B4F72">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -58,7 +58,7 @@
       <div class="sidebar-logo-text">
         <div class="sidebar-logo-title" id="pharmacy-name-display">Ordive<span style="color:var(--accent)">X</span>
         </div>
-        <div class="sidebar-logo-subtitle" id="pharmacy-slogan-display">SantÃ© & Technologie</div>
+        <div class="sidebar-logo-subtitle" id="pharmacy-slogan-display">Santé & Technologie</div>
       </div>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
@@ -70,10 +70,10 @@
       <div class="sidebar-user" id="sidebar-user">
         <div class="sidebar-user-avatar" id="user-avatar">?</div>
         <div class="sidebar-user-info">
-          <div class="sidebar-user-name" id="user-name">Non connectÃ©</div>
+          <div class="sidebar-user-name" id="user-name">Non connecté</div>
           <div class="sidebar-user-role" id="user-role">â€”</div>
         </div>
-        <button class="sidebar-logout" onclick="Auth.logout()" title="DÃ©connecter"><i
+        <button class="sidebar-logout" onclick="Auth.logout()" title="Déconnecter"><i
             data-lucide="log-out"></i></button>
       </div>
       <div style="padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
@@ -84,7 +84,7 @@
             <path d="m17 8 4 4-4 4" />
             <path d="m14 4-4 16" />
           </svg>
-          <span>PropulsÃ© par <strong>TrillionX</strong></span>
+          <span>Propulsé par <strong>TrillionX</strong></span>
         </a>
       </div>
     </div>
@@ -98,12 +98,12 @@
       <button class="topbar-btn" id="pwa-install-btn" onclick="installPWA()" title="Installer l'app"
         style="display:none"><i data-lucide="smartphone"></i></button>
       <button class="topbar-btn" id="device-sync-btn" onclick="if(window.UI && UI.openSyncMonitor) UI.openSyncMonitor()"
-        title="Moniteur de RÃ©seau">
+        title="Moniteur de Réseau">
         <i data-lucide="monitor" id="device-sync-icon"></i>
         <span class="notif-badge" id="device-sync-badge"
           style="display:none; background:var(--warning); color:#fff;">!</span>
       </button>
-      <button class="topbar-btn" onclick="navigatePage('reorder')" title="RÃ©approvisionnement"><i
+      <button class="topbar-btn" onclick="navigatePage('reorder')" title="Réapprovisionnement"><i
           data-lucide="refresh-cw"></i></button>
       <button class="topbar-btn" onclick="navigatePage('print')" title="Impression"><i
           data-lucide="printer"></i></button>
@@ -112,9 +112,9 @@
       </button>
       <button class="topbar-btn" onclick="DB.doBackup ? DB.doBackup() : UI.toast('Backup...','info')"
         title="Sauvegarde"><i data-lucide="save"></i></button>
-      <button class="topbar-btn" id="theme-toggle-btn" onclick="UI.toggleTheme()" title="Changer le thÃ¨me"><i
+      <button class="topbar-btn" id="theme-toggle-btn" onclick="UI.toggleTheme()" title="Changer le thème"><i
           data-lucide="moon"></i></button>
-      <button class="topbar-btn" id="topbar-settings-btn" onclick="navigatePage('settings')" title="ParamÃ¨tres"><i
+      <button class="topbar-btn" id="topbar-settings-btn" onclick="navigatePage('settings')" title="Paramètres"><i
           data-lucide="settings-2"></i></button>
     </div>
   </header>
@@ -122,7 +122,7 @@
   <main id="app-content">
     <div class="loading-state">
       <div class="spinner"></div>
-      <p>DÃ©marrage de OrdiveX...</p>
+      <p>Démarrage de OrdiveX...</p>
     </div>
   </main>
 
@@ -135,10 +135,10 @@
     <div class="modal-content"
       style="background: var(--surface); padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
       <h3 style="margin-top:0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="monitor-speaker"></i> Moniteur de RÃ©seau
+        <i data-lucide="monitor-speaker"></i> Moniteur de Réseau
       </h3>
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
-        Ã‰tat en temps rÃ©el de la synchronisation des diffÃ©rents appareils (PC, Tablettes, Mobiles).
+        État en temps réel de la synchronisation des différents appareils (PC, Tablettes, Mobiles).
       </p>
       <div id="sync-monitor-list"
         style="display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto;">
@@ -217,39 +217,39 @@
       { section: 'Principal' },
       { page: 'dashboard', icon: 'layout-dashboard', label: 'Tableau de Bord', roles: ['admin', 'pharmacien', 'caissier'] },
       { page: 'pos', icon: 'monitor-smartphone', label: 'Point de Vente', roles: ['admin', 'pharmacien', 'caissier'] },
-      { page: 'caisse', icon: 'banknote', label: 'Caisse JournaliÃ¨re', roles: ['admin', 'pharmacien', 'caissier'] },
+      { page: 'caisse', icon: 'banknote', label: 'Caisse Journalière', roles: ['admin', 'pharmacien', 'caissier'] },
       { section: 'Stock & Produits' },
       { page: 'products', icon: 'pill', label: 'Catalogue Produits', roles: ['admin', 'pharmacien'] },
       { page: 'stock', icon: 'package-search', label: 'Gestion des Stocks', roles: ['admin', 'pharmacien'] },
-      { page: 'reorder', icon: 'refresh-ccw-dot', label: 'RÃ©approvisionnement', roles: ['admin', 'pharmacien'] },
+      { page: 'reorder', icon: 'refresh-ccw-dot', label: 'Réapprovisionnement', roles: ['admin', 'pharmacien'] },
       { section: 'Ordonnances & Patients' },
       { page: 'prescriptions', icon: 'file-text', label: 'Ordonnances', roles: ['admin', 'pharmacien'] },
       { page: 'patients', icon: 'users', label: 'Dossiers Patients', roles: ['admin', 'pharmacien'] },
       { section: 'Achats' },
       { page: 'suppliers', icon: 'factory', label: 'Fournisseurs', roles: ['admin', 'pharmacien'] },
       { page: 'purchase-orders', icon: 'clipboard-list', label: 'Bons de Commande', roles: ['admin', 'pharmacien'] },
-      { section: 'TraÃ§abilitÃ©' },
-      { page: 'traceability', icon: 'shield-check', label: 'TraÃ§abilitÃ© & Pharmavig.', roles: ['admin', 'pharmacien'] },
+      { section: 'Traçabilité' },
+      { page: 'traceability', icon: 'shield-check', label: 'Traçabilité & Pharmavig.', roles: ['admin', 'pharmacien'] },
       { section: 'Analytique' },
       { page: 'sales', icon: 'history', label: 'Historique Ventes', roles: ['admin', 'pharmacien', 'caissier'] },
-      { page: 'returns', icon: 'undo-2', label: 'Retours MÃ©dicaments', roles: ['admin', 'pharmacien'] },
+      { page: 'returns', icon: 'undo-2', label: 'Retours Médicaments', roles: ['admin', 'pharmacien'] },
       { page: 'reports', icon: 'bar-chart-3', label: 'Rapports & Analytique', roles: ['admin', 'pharmacien'] },
-      { page: 'metrics', icon: 'bar-chart-2', label: 'MÃ©triques Business', roles: ['admin', 'pharmacien'] },
+      { page: 'metrics', icon: 'bar-chart-2', label: 'Métriques Business', roles: ['admin', 'pharmacien'] },
       { section: 'Administration' },
       { page: 'print', icon: 'printer', label: "Centre d'Impression", roles: ['admin', 'pharmacien'] },
       { page: 'alerts', icon: 'bell', label: 'Alertes', roles: ['admin', 'pharmacien', 'caissier'] },
-      { page: 'settings', icon: 'settings-2', label: 'ParamÃ¨tres', roles: ['admin', 'manager'] },
+      { page: 'settings', icon: 'settings-2', label: 'Paramètres', roles: ['admin', 'manager'] },
     ];
 
     const PAGE_TITLES = {
-      dashboard: 'Tableau de Bord', pos: 'Point de Vente', caisse: 'Caisse JournaliÃ¨re',
-      products: 'Catalogue MÃ©dicaments', stock: 'Gestion des Stocks', reorder: 'RÃ©approvisionnement',
+      dashboard: 'Tableau de Bord', pos: 'Point de Vente', caisse: 'Caisse Journalière',
+      products: 'Catalogue Médicaments', stock: 'Gestion des Stocks', reorder: 'Réapprovisionnement',
       prescriptions: 'Gestion des Ordonnances', patients: 'Dossiers Patients',
       suppliers: 'Fournisseurs', 'purchase-orders': 'Bons de Commande',
-      traceability: 'TraÃ§abilitÃ© & Pharmacovigilance',
-      sales: 'Historique des Ventes', returns: 'Retours de MÃ©dicaments', reports: 'Rapports & Analytique',
-      metrics: 'MÃ©triques Business', onboarding: 'Configuration Initiale',
-      print: "Centre d'Impression", alerts: 'Alertes SystÃ¨me', settings: 'ParamÃ¨tres & Administration',
+      traceability: 'Traçabilité & Pharmacovigilance',
+      sales: 'Historique des Ventes', returns: 'Retours de Médicaments', reports: 'Rapports & Analytique',
+      metrics: 'Métriques Business', onboarding: 'Configuration Initiale',
+      print: "Centre d'Impression", alerts: 'Alertes Système', settings: 'Paramètres & Administration',
     };
 
     function initSidebar() {
@@ -359,8 +359,8 @@
       if (text) text.textContent = online ? 'En ligne' : 'Hors ligne';
       DB.AppState.isOnline = online;
     }
-    window.addEventListener('online', () => { updateNetworkStatus(); UI.toast('Connexion rÃ©tablie', 'success'); });
-    window.addEventListener('offline', () => { updateNetworkStatus(); UI.toast('Mode hors ligne activÃ©', 'warning'); });
+    window.addEventListener('online', () => { updateNetworkStatus(); UI.toast('Connexion rétablie', 'success'); });
+    window.addEventListener('offline', () => { updateNetworkStatus(); UI.toast('Mode hors ligne activé', 'warning'); });
 
     async function updateAlertBadge() {
       try {
@@ -374,12 +374,12 @@
     Router.register('metrics', (container) => renderMetrics(container));
     Router.register('onboarding', (container) => renderOnboarding(container));
 
-    // Route 'alerts' enregistrÃ©e dans js/pages/alerts.js
+    // Route 'alerts' enregistrée dans js/pages/alerts.js
 
     async function clearAllAlerts() {
       const all = await DB.dbGetAll('alerts');
       for (const a of all.filter(a => a.status === 'unread')) await DB.dbPut('alerts', { ...a, status: 'read' });
-      UI.toast('Toutes les alertes marquÃ©es comme lues', 'success');
+      UI.toast('Toutes les alertes marquées comme lues', 'success');
       await updateAlertBadge();
       Router.navigate('alerts');
     }
@@ -410,7 +410,7 @@
       const banner = document.createElement('div');
       banner.id = 'pwa-install-banner';
       banner.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2001;background:linear-gradient(135deg,#1B6FAE,#2EAF7D);color:white;padding:14px 20px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.25);display:flex;align-items:center;gap:14px;max-width:460px;width:calc(100% - 40px);font-family:Inter,system-ui,sans-serif;animation:slideUp 0.4s ease';
-      banner.innerHTML = '<div style="flex:1"><strong style="font-size:14px;display:block;margin-bottom:2px">ðŸ“² Installer OrdiveX</strong><span style="font-size:12px;opacity:0.9">Installez l\'app pour une expÃ©rience native sans barre du navigateur</span></div><button onclick="installPWA()" style="background:white;color:#1B6FAE;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">Installer</button><button onclick="dismissPWABanner()" style="background:none;border:none;color:white;opacity:0.7;cursor:pointer;font-size:18px;padding:4px">âœ•</button>';
+      banner.innerHTML = '<div style="flex:1"><strong style="font-size:14px;display:block;margin-bottom:2px">Installer OrdiveX</strong><span style="font-size:12px;opacity:0.9">Installez l\'app pour une experience native sans barre du navigateur</span></div><button onclick="installPWA()" style="background:white;color:#1B6FAE;border:none;padding:8px 16px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">Installer</button><button onclick="dismissPWABanner()" style="background:none;border:none;color:white;opacity:0.7;cursor:pointer;font-size:18px;padding:4px">&#x2715;</button>';
       document.body.appendChild(banner);
     }
 
@@ -422,11 +422,11 @@
     window.dismissPWABanner = dismissPWABanner;
 
     async function installPWA() {
-      if (!_pwaPrompt) { UI.toast('Application dÃ©jÃ  installÃ©e ou non disponible', 'info'); return; }
+      if (!_pwaPrompt) { UI.toast('Application déjÃ  installée ou non disponible', 'info'); return; }
       _pwaPrompt.prompt();
       const r = await _pwaPrompt.userChoice;
       if (r.outcome === 'accepted') {
-        UI.toast('OrdiveX installÃ© ! L\'app se lancera sans barre du navigateur.', 'success', 5000);
+        UI.toast('OrdiveX installé ! L\'app se lancera sans barre du navigateur.', 'success', 5000);
         document.getElementById('pwa-install-btn').style.display = 'none';
         dismissPWABanner();
       }
@@ -510,7 +510,7 @@
         if (DB.startAutoBackup) DB.startAutoBackup();
         if (DB.startAutoPull) DB.startAutoPull();
 
-        // â”€â”€ RafraÃ®chir le dashboard quand l'utilisateur revient aprÃ¨s une longue absence â”€â”€
+        // â”€â”€ Rafraîchir le dashboard quand l'utilisateur revient après une longue absence â”€â”€
         let _lastVisible = Date.now();
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
@@ -525,7 +525,7 @@
       } catch (err) {
         console.error('Init failed:', err);
         document.getElementById('app-content').innerHTML =
-          '<div class="error-state"><div style="font-size:48px"><i data-lucide="alert-triangle"></i></div><h2>Erreur de dÃ©marrage</h2>'
+          '<div class="error-state"><div style="font-size:48px"><i data-lucide="alert-triangle"></i></div><h2>Erreur de démarrage</h2>'
           + '<p>' + err.message + '</p><button class="btn btn-primary" style="margin-top:16px" onclick="location.reload()">Recharger</button></div>';
         if (window.lucide) lucide.createIcons();
       }

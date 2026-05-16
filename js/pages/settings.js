@@ -109,10 +109,9 @@ async function handleLogin(event) {
       updateTopbar();
       if (window.updatePharmacyDisplay) await updatePharmacyDisplay();
       if (window.initSupportWidget) initSupportWidget();
-      Router.navigate('dashboard');
-      UI.toast(`Bienvenue, ${user.name} !`, 'success');
-      // Activer le verrouillage automatique par inactivité
-      window.dispatchEvent(new CustomEvent('ordivex-login'));
+
+      // --- PIN POST-LOGIN ---
+      await _showPinGate(user);
     } else {
       errEl.textContent = 'Identifiant ou mot de passe incorrect';
       errEl.style.display = 'block';
@@ -126,6 +125,278 @@ async function handleLogin(event) {
     if (window.lucide) lucide.createIcons();
   }
 }
+// ═══════════════════════════════════════════════════════════════════
+// PIN POST-LOGIN GATE
+// After username+password, user must enter a 4-digit PIN
+// If no PIN is set, user is prompted to create one
+// ═══════════════════════════════════════════════════════════════════
+async function _showPinGate(user) {
+  const pinKey = 'pin_user_' + user.id;
+  const settings = await DB.dbGetAll('settings');
+  const savedPin = settings.find(s => s.key === pinKey)?.value;
+
+  // If no PIN set yet, go straight to dashboard (first time) then prompt to set one
+  if (!savedPin) {
+    _finishLogin(user);
+    setTimeout(() => _promptSetPin(user), 1500);
+    return;
+  }
+
+  // Show PIN verification screen
+  return new Promise((resolve) => {
+    const firstName = (user.name || user.username || 'U').split(' ')[0];
+    const initials = firstName.charAt(0).toUpperCase();
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
+    let currentPin = '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'pin-gate-overlay';
+    overlay.innerHTML = `
+      <div class="pin-gate-box">
+        <div class="pin-gate-avatar">${initials}</div>
+        <div class="pin-gate-name">${firstName}</div>
+        <div class="pin-gate-subtitle">Entrez votre code PIN</div>
+        <div class="pin-gate-dots" id="pin-gate-dots">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+        <div id="pin-gate-error" class="pin-gate-error"></div>
+        <div class="pin-gate-numpad" id="pin-gate-numpad">
+          <button class="pin-num" data-n="1">1</button>
+          <button class="pin-num" data-n="2">2</button>
+          <button class="pin-num" data-n="3">3</button>
+          <button class="pin-num" data-n="4">4</button>
+          <button class="pin-num" data-n="5">5</button>
+          <button class="pin-num" data-n="6">6</button>
+          <button class="pin-num" data-n="7">7</button>
+          <button class="pin-num" data-n="8">8</button>
+          <button class="pin-num" data-n="9">9</button>
+          <button class="pin-num pin-clear" data-n="clear">C</button>
+          <button class="pin-num" data-n="0">0</button>
+          <button class="pin-num pin-back" data-n="back">&larr;</button>
+        </div>
+        <button id="pin-gate-logout" class="pin-gate-logout">Changer d'utilisateur</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('visible'));
+
+    const dots = overlay.querySelectorAll('.pin-dot');
+    const errEl = overlay.querySelector('#pin-gate-error');
+    const numpad = overlay.querySelector('#pin-gate-numpad');
+    const logoutBtn = overlay.querySelector('#pin-gate-logout');
+
+    function updateDots() {
+      dots.forEach((d, i) => d.classList.toggle('filled', i < currentPin.length));
+    }
+
+    function shakeDots() {
+      const dotsWrap = overlay.querySelector('.pin-gate-dots');
+      dotsWrap.classList.add('shake');
+      setTimeout(() => dotsWrap.classList.remove('shake'), 500);
+    }
+
+    async function checkPin() {
+      if (currentPin === savedPin) {
+        // Success
+        dots.forEach(d => d.classList.add('success'));
+        setTimeout(() => {
+          overlay.classList.remove('visible');
+          setTimeout(() => overlay.remove(), 300);
+          _finishLogin(user);
+          resolve();
+        }, 400);
+      } else {
+        attempts++;
+        if (attempts >= MAX_ATTEMPTS) {
+          errEl.textContent = 'Trop de tentatives. Reconnectez-vous.';
+          setTimeout(() => {
+            overlay.remove();
+            if (window.Auth?.logout) Auth.logout();
+          }, 1500);
+          return;
+        }
+        errEl.textContent = 'Code PIN incorrect (' + (MAX_ATTEMPTS - attempts) + ' essais restants)';
+        shakeDots();
+        currentPin = '';
+        setTimeout(updateDots, 500);
+      }
+    }
+
+    numpad.addEventListener('click', (e) => {
+      const btn = e.target.closest('.pin-num');
+      if (!btn) return;
+      const n = btn.dataset.n;
+      errEl.textContent = '';
+
+      if (n === 'clear') {
+        currentPin = '';
+        updateDots();
+      } else if (n === 'back') {
+        currentPin = currentPin.slice(0, -1);
+        updateDots();
+      } else {
+        if (currentPin.length < 4) {
+          currentPin += n;
+          updateDots();
+          if (currentPin.length === 4) {
+            setTimeout(checkPin, 200);
+          }
+        }
+      }
+    });
+
+    // Keyboard support
+    document.addEventListener('keydown', function _pinKeyHandler(e) {
+      if (!document.getElementById('pin-gate-overlay')) {
+        document.removeEventListener('keydown', _pinKeyHandler);
+        return;
+      }
+      if (e.key >= '0' && e.key <= '9' && currentPin.length < 4) {
+        currentPin += e.key;
+        updateDots();
+        errEl.textContent = '';
+        if (currentPin.length === 4) setTimeout(checkPin, 200);
+      } else if (e.key === 'Backspace') {
+        currentPin = currentPin.slice(0, -1);
+        updateDots();
+      } else if (e.key === 'Escape') {
+        currentPin = '';
+        updateDots();
+      }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      overlay.remove();
+      if (window.Auth?.logout) Auth.logout();
+      else window.location.reload();
+    });
+  });
+}
+
+function _finishLogin(user) {
+  Router.navigate('dashboard');
+  UI.toast('Bienvenue, ' + (user.name || user.username) + ' !', 'success');
+  window.dispatchEvent(new CustomEvent('ordivex-login'));
+}
+
+function _promptSetPin(user) {
+  const pinKey = 'pin_user_' + user.id;
+  UI.showModal('Configurer votre code PIN',
+    '<p style="margin-bottom:16px;color:var(--text-muted)">Pour renforcer la securite, definissez un code PIN a 4 chiffres. Il sera demande apres chaque connexion.</p>' +
+    '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">' +
+    '<input type="password" id="new-pin-1" maxlength="1" style="width:50px;height:56px;text-align:center;font-size:24px;border-radius:12px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:700" inputmode="numeric" pattern="[0-9]">' +
+    '<input type="password" id="new-pin-2" maxlength="1" style="width:50px;height:56px;text-align:center;font-size:24px;border-radius:12px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:700" inputmode="numeric" pattern="[0-9]">' +
+    '<input type="password" id="new-pin-3" maxlength="1" style="width:50px;height:56px;text-align:center;font-size:24px;border-radius:12px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:700" inputmode="numeric" pattern="[0-9]">' +
+    '<input type="password" id="new-pin-4" maxlength="1" style="width:50px;height:56px;text-align:center;font-size:24px;border-radius:12px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:700" inputmode="numeric" pattern="[0-9]">' +
+    '</div>' +
+    '<div id="set-pin-error" style="color:#e74c3c;font-size:13px;text-align:center;min-height:20px;margin-bottom:8px"></div>' +
+    '<div style="display:flex;gap:8px;justify-content:center">' +
+    '<button class="btn btn-secondary" onclick="UI.closeModal()">Plus tard</button>' +
+    '<button class="btn btn-primary" id="save-pin-btn">Enregistrer le PIN</button>' +
+    '</div>'
+  );
+
+  // Auto-focus and auto-advance
+  setTimeout(() => {
+    const inputs = [1,2,3,4].map(i => document.getElementById('new-pin-' + i));
+    if (inputs[0]) inputs[0].focus();
+    inputs.forEach((inp, idx) => {
+      if (!inp) return;
+      inp.addEventListener('input', () => {
+        inp.value = inp.value.replace(/[^0-9]/g, '');
+        if (inp.value && idx < 3) inputs[idx + 1]?.focus();
+      });
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !inp.value && idx > 0) inputs[idx - 1]?.focus();
+      });
+    });
+
+    const saveBtn = document.getElementById('save-pin-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        const pin = inputs.map(i => i?.value || '').join('');
+        const errEl = document.getElementById('set-pin-error');
+        if (pin.length !== 4) {
+          if (errEl) errEl.textContent = 'Le PIN doit contenir 4 chiffres';
+          return;
+        }
+        await DB.dbPut('settings', { key: pinKey, value: pin, updatedAt: Date.now() });
+        UI.closeModal();
+        UI.toast('Code PIN enregistre avec succes', 'success');
+      });
+    }
+  }, 300);
+}
+
+// Inject PIN gate CSS
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `
+    #pin-gate-overlay {
+      position:fixed; inset:0; z-index:99998;
+      background:rgba(9,26,50,0.92);
+      backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+      display:flex; align-items:center; justify-content:center;
+      opacity:0; transition:opacity 0.3s;
+    }
+    #pin-gate-overlay.visible { opacity:1; }
+    .pin-gate-box {
+      text-align:center; padding:40px 36px; width:340px; max-width:92vw;
+      background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+      border-radius:24px;
+    }
+    .pin-gate-avatar {
+      width:68px; height:68px; margin:0 auto 14px; border-radius:50%;
+      font-size:26px; font-weight:800;
+      background:linear-gradient(135deg,#2E86C1,#1a5276);
+      color:#fff; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 4px 20px rgba(46,134,193,0.3);
+    }
+    .pin-gate-name { color:#fff; font-size:18px; font-weight:700; margin-bottom:2px; }
+    .pin-gate-subtitle { color:rgba(255,255,255,0.45); font-size:13px; margin-bottom:24px; }
+    .pin-gate-dots {
+      display:flex; gap:14px; justify-content:center; margin-bottom:16px;
+    }
+    .pin-gate-dots.shake { animation:pinShake 0.4s ease-in-out; }
+    .pin-dot {
+      width:16px; height:16px; border-radius:50%;
+      border:2px solid rgba(255,255,255,0.25);
+      transition:background 0.15s, border-color 0.15s;
+    }
+    .pin-dot.filled {
+      background:#2E86C1; border-color:#2E86C1;
+    }
+    .pin-dot.success {
+      background:#2ecc71; border-color:#2ecc71;
+    }
+    .pin-gate-error { color:#f87171; font-size:12px; min-height:18px; margin-bottom:10px; }
+    .pin-gate-numpad {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+      max-width:240px; margin:0 auto 16px;
+    }
+    .pin-num {
+      width:100%; aspect-ratio:1.5; border:none; border-radius:14px;
+      background:rgba(255,255,255,0.08); color:#fff; font-size:22px; font-weight:600;
+      cursor:pointer; transition:background 0.15s, transform 0.1s;
+      font-family:inherit; display:flex; align-items:center; justify-content:center;
+    }
+    .pin-num:hover { background:rgba(255,255,255,0.15); }
+    .pin-num:active { transform:scale(0.93); background:rgba(46,134,193,0.3); }
+    .pin-clear { font-size:16px; color:rgba(255,255,255,0.5); }
+    .pin-back { font-size:20px; }
+    .pin-gate-logout {
+      background:none; border:none; color:rgba(255,255,255,0.35);
+      font-size:12px; cursor:pointer; margin-top:12px; padding:6px;
+      transition:color 0.2s; font-family:inherit;
+    }
+    .pin-gate-logout:hover { color:rgba(255,255,255,0.6); }
+  `;
+  document.head.appendChild(s);
+})();
 
 async function renderSettings(container) {
   if (DB.AppState.currentUser?.role !== 'admin') {
