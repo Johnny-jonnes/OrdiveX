@@ -575,6 +575,7 @@ async function renderSettings(container) {
               </div>
               <button class="btn btn-sm btn-primary" onclick="viewEmployee360(${u.id})" style="flex-shrink:0;min-width:70px;justify-content:center"><i data-lucide="bar-chart-3"></i> Profil</button>
               <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})" style="flex-shrink:0;min-width:90px;justify-content:center"><i data-lucide="edit-3"></i> Modifier</button>
+              <button class="btn btn-sm btn-ghost" onclick="resetUserPin(${u.id}, '${(u.name||'').replace(/'/g,'')}')" style="flex-shrink:0;min-width:80px;justify-content:center" title="Reinitialiser le PIN a 0000"><i data-lucide="key-round"></i> PIN</button>
             </div>`).join('')}
         </div>
       </div>` : ''}
@@ -1084,6 +1085,15 @@ window.restoreBackup = restoreBackup;
 window.repairSync = repairSync;
 window.triggerPull = triggerPull;
 window.viewEmployee360 = viewEmployee360;
+window.resetUserPin = resetUserPin;
+
+async function resetUserPin(userId, userName) {
+  const ok = await UI.confirm('Reinitialiser le PIN de ' + userName + ' a 0000 ?');
+  if (!ok) return;
+  const pinKey = 'pin_user_' + userId;
+  await DB.dbPut('settings', { key: pinKey, value: '0000', updatedAt: Date.now() });
+  UI.toast('PIN de ' + userName + ' reinitialise a 0000', 'success');
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // PHASE 5 — Vue 360° Employé (Admin uniquement)
