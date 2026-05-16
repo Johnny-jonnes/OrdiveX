@@ -133,13 +133,12 @@ async function handleLogin(event) {
 async function _showPinGate(user) {
   const pinKey = 'pin_user_' + user.id;
   const settings = await DB.dbGetAll('settings');
-  const savedPin = settings.find(s => s.key === pinKey)?.value;
+  let savedPin = settings.find(s => s.key === pinKey)?.value;
 
-  // If no PIN set yet, go straight to dashboard (first time) then prompt to set one
+  // If no PIN set yet, auto-create default 0000
   if (!savedPin) {
-    _finishLogin(user);
-    setTimeout(() => _promptSetPin(user), 1500);
-    return;
+    savedPin = '0000';
+    await DB.dbPut('settings', { key: pinKey, value: '0000', updatedAt: Date.now() });
   }
 
   // Show PIN verification screen
@@ -207,6 +206,10 @@ async function _showPinGate(user) {
           overlay.classList.remove('visible');
           setTimeout(() => overlay.remove(), 300);
           _finishLogin(user);
+          // If default PIN 0000, force user to change it
+          if (savedPin === '0000') {
+            setTimeout(() => _promptSetPin(user, true), 800);
+          }
           resolve();
         }, 400);
       } else {
@@ -283,10 +286,14 @@ function _finishLogin(user) {
   window.dispatchEvent(new CustomEvent('ordivex-login'));
 }
 
-function _promptSetPin(user) {
+function _promptSetPin(user, mandatory) {
   const pinKey = 'pin_user_' + user.id;
-  UI.showModal('Configurer votre code PIN',
-    '<p style="margin-bottom:16px;color:var(--text-muted)">Pour renforcer la securite, definissez un code PIN a 4 chiffres. Il sera demande apres chaque connexion.</p>' +
+  const titleText = mandatory ? 'Changez votre code PIN par defaut' : 'Configurer votre code PIN';
+  const descText = mandatory
+    ? 'Votre PIN est actuellement 0000. Pour la securite de votre pharmacie, vous devez le changer maintenant.'
+    : 'Pour renforcer la securite, definissez un code PIN a 4 chiffres. Il sera demande apres chaque connexion.';
+  const modalEl = UI.modal(titleText,
+    '<p style="margin-bottom:16px;color:var(--text-muted)">' + descText + '</p>' +
     '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:16px">' +
     '<input type="password" id="new-pin-1" maxlength="1" style="width:50px;height:56px;text-align:center;font-size:24px;border-radius:12px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:700" inputmode="numeric" pattern="[0-9]">' +
     '<input type="password" id="new-pin-2" maxlength="1" style="width:50px;height:56px;text-align:center;font-size:24px;border-radius:12px;border:2px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:700" inputmode="numeric" pattern="[0-9]">' +
@@ -295,10 +302,16 @@ function _promptSetPin(user) {
     '</div>' +
     '<div id="set-pin-error" style="color:#e74c3c;font-size:13px;text-align:center;min-height:20px;margin-bottom:8px"></div>' +
     '<div style="display:flex;gap:8px;justify-content:center">' +
-    '<button class="btn btn-secondary" onclick="UI.closeModal()">Plus tard</button>' +
+    (mandatory ? '' : '<button class="btn btn-secondary" onclick="UI.closeModal()">Plus tard</button>') +
     '<button class="btn btn-primary" id="save-pin-btn">Enregistrer le PIN</button>' +
     '</div>'
   );
+  // If mandatory, hide close button and prevent clicking outside to close
+  if (mandatory && modalEl) {
+    const closeBtn = modalEl.querySelector('#modal-close-btn');
+    if (closeBtn) closeBtn.style.display = 'none';
+    modalEl.onclick = null; // Prevent closing by clicking overlay
+  }
 
   // Auto-focus and auto-advance
   setTimeout(() => {
@@ -322,6 +335,10 @@ function _promptSetPin(user) {
         const errEl = document.getElementById('set-pin-error');
         if (pin.length !== 4) {
           if (errEl) errEl.textContent = 'Le PIN doit contenir 4 chiffres';
+          return;
+        }
+        if (pin === '0000') {
+          if (errEl) errEl.textContent = 'Le code 0000 n\'est pas autorise. Choisissez un autre PIN.';
           return;
         }
         await DB.dbPut('settings', { key: pinKey, value: pin, updatedAt: Date.now() });
