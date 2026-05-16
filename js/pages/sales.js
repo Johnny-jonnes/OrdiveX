@@ -332,6 +332,7 @@ function exportSales() {
   a.download = 'ventes_' + new Date().toISOString().split('T')[0] + '.csv';
   a.click();
   UI.toast('Export CSV téléchargé', 'success');
+  DB.writeAudit('EXPORT_CSV', 'sales', null, { count: data.length, filename: a.download });
 }
 
 async function renderReports(container) {

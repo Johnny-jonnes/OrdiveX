@@ -688,6 +688,7 @@ function exportProducts() {
   a.download = 'produits_pharma_' + new Date().toISOString().split('T')[0] + '.csv';
   a.click();
   UI.toast('Export CSV téléchargé', 'success');
+  DB.writeAudit('EXPORT_CSV', 'products', null, { count: data.length, filename: a.download });
 }
 
 window.filterProducts = filterProducts;

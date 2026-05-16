@@ -521,6 +521,7 @@ function exportPatients() {
   a.download = `patients_anonymises_${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
   UI.toast('Export anonymisé téléchargé', 'success');
+  DB.writeAudit('EXPORT_CSV', 'patients', null, { count: data.length, filename: a.download, anonymized: true });
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Module Caisse Journalière
  * Journal caisse, clôture, réconciliation, Mobile Money
  */
@@ -710,6 +710,8 @@ async function exportDayTransactions(date) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `caisse_${date}.csv`;
   a.click();
+  UI.toast('Export caisse téléchargé', 'success');
+  DB.writeAudit('EXPORT_CSV', 'cashRegister', null, { count: daySales.length, date, filename: a.download });
 }
 
 window.switchCaisseTab = switchCaisseTab;

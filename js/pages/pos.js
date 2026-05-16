@@ -582,16 +582,33 @@ function renderFullPOSUI(container) {
   if (typeof mobileInitPOS === 'function') mobileInitPOS();
   document.getElementById('pos-search').focus();
 
-  // Restore held cart
-  if (window._heldCart) {
-    posCart = window._heldCart.items;
-    posCurrentPatient = window._heldCart.patient;
-    posCurrentRx = window._heldCart.rx;
+  // Restore held cart (RAM ou localStorage si changement d'utilisateur)
+  var heldSource = window._heldCart;
+  if (!heldSource) {
+    try {
+      var stored = localStorage.getItem('ordivex_held_cart');
+      if (stored) {
+        var parsed = JSON.parse(stored);
+        // Expirer après 24h
+        if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp) < 86400000) {
+          heldSource = parsed;
+        } else {
+          localStorage.removeItem('ordivex_held_cart');
+        }
+      }
+    } catch(e) {}
+  }
+  if (heldSource && heldSource.items && heldSource.items.length > 0) {
+    posCart = heldSource.items.map(function(c) { return Object.assign({}, c); });
+    posCurrentPatient = heldSource.patient || null;
+    posCurrentRx = heldSource.rx || null;
     // Double traçabilité : sauvegarder le préparateur original
-    if (window._heldCart.preparerId && window._heldCart.preparerId !== DB.AppState.currentUser?.id) {
-      window._heldCartPreparer = { id: window._heldCart.preparerId, name: window._heldCart.preparerName };
+    if (heldSource.preparerId && heldSource.preparerId !== DB.AppState.currentUser?.id) {
+      window._heldCartPreparer = { id: heldSource.preparerId, name: heldSource.preparerName };
+      UI.toast('Panier restauré — Préparé par ' + (heldSource.preparerName || 'un collègue'), 'info', 5000);
     }
     window._heldCart = null;
+    try { localStorage.removeItem('ordivex_held_cart'); } catch(e) {}
     refreshCartUI();
     if (posCurrentPatient) renderClientBadge(posCurrentPatient);
   }
@@ -1655,15 +1672,19 @@ async function attachRx(rxId) {
 
 function mettreEnAttente() {
   if (!posCart.length) { UI.toast('Panier vide', 'warning'); return; }
-  window._heldCart = {
-    items: [...posCart],
+  var heldData = {
+    items: posCart.map(function(c) { return Object.assign({}, c); }),
     patient: posCurrentPatient,
     rx: posCurrentRx,
     preparerId: DB.AppState.currentUser?.id || null,
-    preparerName: DB.AppState.currentUser?.name || null
+    preparerName: DB.AppState.currentUser?.name || null,
+    timestamp: Date.now()
   };
+  window._heldCart = heldData;
+  // Persister dans localStorage pour survivre au changement d'utilisateur
+  try { localStorage.setItem('ordivex_held_cart', JSON.stringify(heldData)); } catch(e) {}
   viderPanier();
-  UI.toast('Panier mis en attente — Il sera restauré à votre retour', 'info', 5000);
+  UI.toast('Panier mis en attente — Il sera restauré au prochain accès au POS', 'info', 5000);
 }
 
 // ═══════════════════════════════════════════════════════════════════

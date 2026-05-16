@@ -1131,6 +1131,7 @@ async function syncToSupabase() {
             products: ['notices', 'interactions', 'dosageForm', 'costPrice'],
             lots: ['productionDate', 'manufactureDate', 'supplier'],
             stock: ['lastUpdate', 'minQuantity'],
+            prescriptions: ['note'],  // Supabase a 'notes' (avec s), pas 'note'
           };
           const localOnly = _localOnlyColumns[storeName];
           if (localOnly) {
@@ -1580,7 +1581,7 @@ async function pullFromSupabase(isManual = false) {
     if (hasChanges) {
       try {
         const page = window.Router?.currentPage;
-        if (page && page !== 'login' && page !== 'onboarding' && page !== 'pos') {
+        if (page && page !== 'login' && page !== 'onboarding' && page !== 'pos' && page !== 'settings') {
           if (window._invalidateDashCache) window._invalidateDashCache();
           const container = document.getElementById('app-content');
           if (container && window.Router?.routes?.[page]) {
@@ -1737,7 +1738,8 @@ async function doBackup() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    if (window.UI) UI.toast('💾 Sauvegarde téléchargée avec succès', 'success');
+    if (window.UI) UI.toast('Sauvegarde téléchargée avec succès', 'success');
+    writeAudit('BACKUP_DOWNLOADED', 'system', null, { filename: a.download, size: json.length });
     return true;
   } catch (e) {
     console.error('[Backup] Erreur export manuel:', e);

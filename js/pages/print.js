@@ -85,7 +85,7 @@ const PrintEngine = {
     const pPhone = get('pharmacy_phone') || this.pharmacyInfo.phone;
     const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
     const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
-    const payLabels = { cash: 'Especes', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Credit', transfer: 'Virement' };
+    const payLabels = { cash: 'Especes', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Credit', transfer: 'Virement', assurance: 'Assurance', combined: 'Paiement Mixte' };
     const subtotal = items.reduce((a, i) => a + (i.total || 0), 0);
     const discount = sale.discount || 0;
     const total = sale.total || subtotal - discount;
@@ -104,11 +104,19 @@ const PrintEngine = {
           <div class="ticket-row"><span>N Vente</span><span>#${String(saleId).padStart(6, '0')}</span></div>
           <div class="ticket-row"><span>Date</span><span>${saleDate.toLocaleDateString('fr-FR')} ${saleDate.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</span></div>
           <div class="ticket-row"><span>Vendeur</span><span>${sale.sellerName || DB.AppState.currentUser?.name || '---'}</span></div>
-          ${sale.preparerName ? '<div class="ticket-row"><span>Preparateur</span><span>' + sale.preparerName + '</span></div>' : ''}
+          ${sale.preparerName && sale.preparerName !== sale.sellerName ? '<div class="ticket-row"><span>Preparateur</span><span>' + sale.preparerName + '</span></div>' : ''}
           ${sale.patientName && sale.patientName !== 'Client comptoir' ? '<div class="ticket-row"><span>Patient</span><span>' + sale.patientName + '</span></div>' : ''}
+          ${sale.patientPhone ? '<div class="ticket-row"><span>Tel Patient</span><span>' + sale.patientPhone + '</span></div>' : ''}
           ${sale.prescriptionRef ? '<div class="ticket-row"><span>Ordonnance</span><span>' + sale.prescriptionRef + '</span></div>' : ''}
           ${sale.doctorName ? '<div class="ticket-row"><span>Medecin</span><span>Dr. ' + sale.doctorName + '</span></div>' : ''}
         </div>
+        ${sale.paymentMethod === 'assurance' && sale.insuranceDetails ? `
+        <div class="ticket-divider">--------ASSURANCE---------</div>
+        <div class="ticket-row"><span>Organisme</span><span>${sale.insuranceDetails.name || sale.assuranceName || '---'}</span></div>
+        <div class="ticket-row"><span>N Prise en ch.</span><span>${sale.insuranceDetails.ref || sale.assuranceRef || '---'}</span></div>
+        <div class="ticket-row"><span>Part Entreprise</span><span>${UI.formatCurrency(sale.insuranceDetails.amount || 0)}</span></div>
+        <div class="ticket-row"><span>Part Patient</span><span>${UI.formatCurrency(total - (sale.insuranceDetails.amount || 0))}</span></div>
+        ` : ''}
         <div class="ticket-divider">================================</div>
         <table class="ticket-items">
           ${items.map(i => `
@@ -125,6 +133,7 @@ const PrintEngine = {
         <div class="ticket-total"><span>TOTAL</span><span>${UI.formatCurrency(total)}</span></div>
         <div class="ticket-row"><span>Paiement</span><span>${payLabels[sale.paymentMethod] || sale.paymentMethod}</span></div>
         ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div class="ticket-row"><span>Recu</span><span>' + UI.formatCurrency(sale.cashReceived) + '</span></div><div class="ticket-row"><span>Monnaie</span><span>' + UI.formatCurrency(sale.cashReceived - total) + '</span></div>' : ''}
+        ${sale.paymentMethod === 'combined' && sale.paymentDetails ? '<div class="ticket-row"><span>' + (sale.paymentDetails.method1 || 'Mode 1') + '</span><span>' + UI.formatCurrency(sale.paymentDetails.amount1 || 0) + '</span></div><div class="ticket-row"><span>' + (sale.paymentDetails.method2 || 'Mode 2') + '</span><span>' + UI.formatCurrency(sale.paymentDetails.amount2 || 0) + '</span></div>' : ''}
         ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div class="ticket-row" style="color:#c00"><span>Echeance</span><span>' + UI.formatDate(sale.creditDueDate) + '</span></div>' : ''}
         <div class="ticket-divider">================================</div>
         <p class="ticket-thanks">Merci pour votre confiance</p>
@@ -155,7 +164,7 @@ const PrintEngine = {
     const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
     const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
 
-    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement' };
+    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement', assurance: 'Assurance', combined: 'Paiement Mixte' };
     const subtotal = items.reduce((a, i) => a + (i.total || 0), 0);
     const discount = sale.discount || 0;
     const total = sale.total || subtotal - discount;
@@ -255,13 +264,15 @@ const PrintEngine = {
         </div></div>
         <div class="inv-pb">Mode de paiement : ${payLabels[sale.paymentMethod] || sale.paymentMethod || '—'}</div>
         ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">Reçu: ' + UI.formatCurrency(sale.cashReceived) + ' · Monnaie: ' + UI.formatCurrency(sale.cashReceived - total) + '</div>' : ''}
+        ${sale.paymentMethod === 'combined' && sale.paymentDetails ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">' + (sale.paymentDetails.method1 || 'Mode 1') + ': ' + UI.formatCurrency(sale.paymentDetails.amount1 || 0) + ' · ' + (sale.paymentDetails.method2 || 'Mode 2') + ': ' + UI.formatCurrency(sale.paymentDetails.amount2 || 0) + '</div>' : ''}
+        ${sale.paymentMethod === 'assurance' && sale.insuranceDetails ? '<div style="font-size:11px;color:#1B4F72;margin-bottom:4px;">Assurance: ' + (sale.insuranceDetails.name || sale.assuranceName || '') + ' · N° ' + (sale.insuranceDetails.ref || sale.assuranceRef || '') + '<br>Part Entreprise: ' + UI.formatCurrency(sale.insuranceDetails.amount || 0) + ' · Part Patient: ' + UI.formatCurrency(total - (sale.insuranceDetails.amount || 0)) + '</div>' : ''}
         ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div style="font-size:11px;color:#e74c3c;margin-bottom:4px;">Échéance: ' + UI.formatDate(sale.creditDueDate) + '</div>' : ''}
         <div class="inv-ft">
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">${pResp}</div><div class="inv-sr">Pharmacien responsable</div></div>
           <div style="text-align:center"><div style="font-size:10px;color:#888">Ce document tient lieu de facture officielle.</div><div style="font-size:10px;color:#888">Conservez-le comme preuve d'achat.</div></div>
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Cachet</div><div class="inv-sr">& Signature</div></div>
         </div>
-        <div class="inv-lg">Document généré par OrdiveX v9.4.0 · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
+        <div class="inv-lg">Document généré par OrdiveX v9.4.1 · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
       </div>
     `);
     win.document.close();
@@ -707,6 +718,132 @@ Router.register('print', (container) => {
         <p>Procès-verbal réglementaire de destruction</p>
         <button class="btn btn-secondary">Aller à la traçabilité <i data-lucide="arrow-right"></i></button>
       </div>
+      <div class="print-card" onclick="Router.navigate('suppliers')">
+        <div class="print-card-icon"><i data-lucide="clipboard-list"></i></div>
+        <h3>Bon de Commande Fournisseur</h3>
+        <p>Imprimer un bon de commande depuis les fournisseurs</p>
+        <button class="btn btn-secondary">Aller aux fournisseurs <i data-lucide="arrow-right"></i></button>
+      </div>
     </div>`;
   if (window.lucide) lucide.createIcons();
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// IMPRESSION BON DE COMMANDE FOURNISSEUR
+// ═══════════════════════════════════════════════════════════════════
+PrintService.printPurchaseOrder = async function(orderId) {
+  await this.loadSettings();
+  const [order, allSettings, suppliers] = await Promise.all([
+    DB.dbGet('purchaseOrders', orderId),
+    DB.dbGetAll('settings'),
+    DB.dbGetAll('suppliers'),
+  ]);
+  if (!order) { UI.toast('Commande introuvable', 'error'); return; }
+
+  const get = (key) => allSettings.find(s => s.key === key)?.value || '';
+  const pName = get('pharmacy_name') || this.pharmacyInfo.name;
+  const pAddr = get('pharmacy_address') || this.pharmacyInfo.address;
+  const pPhone = get('pharmacy_phone') || this.pharmacyInfo.phone;
+  const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
+  const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
+
+  const supplier = suppliers.find(s => s.id === order.supplierId) || {};
+  const orderDate = order.date ? new Date(order.date) : new Date();
+  const orderRef = 'BC-' + String(orderId).padStart(6, '0');
+  const orderItems = order.items || [];
+  const totalHT = orderItems.reduce((a, i) => a + ((i.unitPrice || 0) * (i.quantity || 0)), 0);
+
+  const statusLabels = { draft: 'Brouillon', sent: 'Envoyée', partial: 'Partielle', received: 'Réceptionnée', cancelled: 'Annulée' };
+
+  const win = this._openPrintWindow('Bon de Commande ' + orderRef);
+  win.document.write(`
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #222; background: white; }
+      .bc { max-width:210mm; margin:0 auto; padding:24px 28px; }
+      .bc-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+      .bc-pn { font-size:20px; font-weight:800; color:#1B4F72; margin-bottom:2px; }
+      .bc-pi { font-size:10px; color:#666; line-height:1.5; }
+      .bc-rt { font-size:22px; font-weight:800; color:#1B4F72; letter-spacing:2px; }
+      .bc-rn { font-size:13px; font-weight:700; color:#2E86C1; margin-top:4px; }
+      .bc-rd { font-size:11px; color:#888; margin-top:2px; }
+      .bc-sep { height:3px; background:linear-gradient(to right,#1B4F72,#2E86C1,transparent); margin:16px 0; border-radius:2px; }
+      .bc-parties { display:flex; gap:20px; margin-bottom:20px; }
+      .bc-pbox { flex:1; background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:14px 16px; }
+      .bc-plbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#2E86C1; font-weight:700; margin-bottom:8px; }
+      .bc-pnm { font-size:14px; font-weight:700; color:#1B4F72; }
+      .bc-pd { font-size:11px; color:#555; margin-top:2px; }
+      .bc-tbl { width:100%; border-collapse:collapse; margin-bottom:16px; }
+      .bc-tbl thead th { background:#1B4F72; color:#fff; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+      .bc-tbl thead th:first-child { border-radius:6px 0 0 0; }
+      .bc-tbl thead th:last-child { border-radius:0 6px 0 0; text-align:right; }
+      .bc-tbl tbody td { padding:10px 12px; border-bottom:1px solid #eee; font-size:11px; }
+      .bc-tbl tbody tr:nth-child(even) { background:#f8f9fa; }
+      .bc-ar { text-align:right; } .bc-ac { text-align:center; }
+      .bc-tot { display:flex; justify-content:flex-end; margin-bottom:20px; }
+      .bc-tb { width:260px; }
+      .bc-tr { display:flex; justify-content:space-between; padding:6px 12px; font-size:12px; }
+      .bc-tr.gt { background:#1B4F72; color:#fff; font-size:15px; font-weight:800; border-radius:6px; padding:10px 14px; margin-top:4px; }
+      .bc-status { display:inline-block; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:16px; }
+      .bc-ft { display:flex; justify-content:space-between; margin-top:40px; padding-top:16px; border-top:1px solid #ddd; }
+      .bc-sig { text-align:center; }
+      .bc-sl { width:150px; border-bottom:1px solid #333; margin:30px auto 6px; }
+      .bc-sn { font-size:11px; font-weight:700; }
+      .bc-sr { font-size:10px; color:#888; }
+      .bc-lg { text-align:center; font-size:9px; color:#aaa; margin-top:16px; padding-top:8px; border-top:1px dashed #ddd; }
+      @media print { .bc { padding:0; } }
+    </style>
+    <div class="bc">
+      <div class="bc-hdr">
+        <div>
+          <div class="bc-pn">${pName}</div>
+          <div class="bc-pi">${pAddr}<br>Tél: ${pPhone}${pDnpm ? '<br>DNPM: ' + pDnpm : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="bc-rt">BON DE COMMANDE</div>
+          <div class="bc-rn">${orderRef}</div>
+          <div class="bc-rd">${orderDate.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}</div>
+        </div>
+      </div>
+      <div class="bc-sep"></div>
+      <div class="bc-parties">
+        <div class="bc-pbox">
+          <div class="bc-plbl">Pharmacie (Commanditaire)</div>
+          <div class="bc-pnm">${pName}</div>
+          <div class="bc-pd">${pAddr}</div>
+          <div class="bc-pd">Tél: ${pPhone}</div>
+        </div>
+        <div class="bc-pbox">
+          <div class="bc-plbl">Fournisseur</div>
+          <div class="bc-pnm">${supplier.name || order.supplierName || '---'}</div>
+          ${supplier.phone ? '<div class="bc-pd">Tél: ' + supplier.phone + '</div>' : ''}
+          ${supplier.email ? '<div class="bc-pd">Email: ' + supplier.email + '</div>' : ''}
+          ${supplier.address ? '<div class="bc-pd">' + supplier.address + '</div>' : ''}
+        </div>
+      </div>
+      <div class="bc-status" style="background:${order.status === 'received' ? '#d4edda;color:#155724' : order.status === 'sent' ? '#cce5ff;color:#004085' : '#fff3cd;color:#856404'}">
+        Statut : ${statusLabels[order.status] || order.status || 'Brouillon'}
+      </div>
+      <table class="bc-tbl">
+        <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="bc-ac">Qté</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total</th></tr></thead>
+        <tbody>
+          ${orderItems.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><strong>' + (it.productName || it.name || '—') + '</strong></td><td class="bc-ac">' + (it.quantity || 0) + '</td><td class="bc-ar">' + UI.formatCurrency(it.unitPrice || 0) + '</td><td class="bc-ar"><strong>' + UI.formatCurrency((it.unitPrice || 0) * (it.quantity || 0)) + '</strong></td></tr>').join('')}
+        </tbody>
+      </table>
+      <div class="bc-tot"><div class="bc-tb">
+        <div class="bc-tr"><span>Nombre d'articles</span><span>${orderItems.length}</span></div>
+        <div class="bc-tr gt"><span>TOTAL HT</span><span>${UI.formatCurrency(totalHT)}</span></div>
+      </div></div>
+      ${order.note || order.notes ? '<div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px;font-size:11px;"><strong>Notes :</strong> ' + (order.note || order.notes) + '</div>' : ''}
+      <div class="bc-ft">
+        <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">${pResp}</div><div class="bc-sr">Pharmacien responsable</div></div>
+        <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">Fournisseur</div><div class="bc-sr">Signature & Cachet</div></div>
+      </div>
+      <div class="bc-lg">Document généré par OrdiveX v9.4.1 · ${new Date().toLocaleDateString('fr-FR')} · ${pName}</div>
+    </div>
+  `);
+  win.document.close();
+  win.onload = () => win.print();
+};
+
+window.printPurchaseOrder = function(id) { PrintService.printPurchaseOrder(id); };
