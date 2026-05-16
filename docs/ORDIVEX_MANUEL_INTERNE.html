@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OrdiveX - Manuel Interne v9.4.2</title>
+<title>OrdiveX - Manuel Interne v9.4.4</title>
 <style>
 :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#242837;--border:#2e3348;--text:#e4e6f0;--muted:#8b8fa8;--accent:#4f8cff;--accent2:#6c5ce7;--success:#00b894;--warn:#fdcb6e;--danger:#e17055;--code-bg:#1e2235;--font:'Segoe UI',system-ui,-apple-system,sans-serif;--mono:'Cascadia Code','Fira Code','JetBrains Mono',monospace}
 *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
@@ -470,7 +470,51 @@ git push origin main
 <li>Option "Changer d'utilisateur" pour revenir à l'écran de login</li>
 <li><strong>Le panier POS n'est PAS perdu</strong> (conservé en mémoire)</li>
 </ul>
-<h3 id="44-rles-et-permissions">4.4 Rôles et Permissions</h3>
+<h3 id="45-recuperation-pin-mot-de-passe-perdu">4.5 Recuperation de PIN / Mot de passe perdu (Support)</h3>
+<p>Le PIN et le mot de passe sont hashes en <strong>SHA-256</strong> dans IndexedDB. Ils ne peuvent pas etre lus, mais peuvent etre <strong>reinitialises</strong>.</p>
+<h4>Methode 1 : Client devant son PC (support par telephone/WhatsApp)</h4>
+<p>Demandez au client d'ouvrir la <strong>console du navigateur</strong> (<code>F12</code> &gt; onglet <code>Console</code>) et de coller cette commande :</p>
+<pre><code class="language-javascript">
+// Reinitialiser le PIN admin a "1234"
+(async () => {
+  const users = await DB.dbGetAll('users');
+  const admin = users.find(u => u.role === 'admin');
+  if (!admin) return console.log('Aucun admin trouve');
+  const encoder = new TextEncoder();
+  const hash = await crypto.subtle.digest('SHA-256', encoder.encode('1234'));
+  const newPin = Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+  await DB.dbPut('users', { ...admin, pin: newPin });
+  console.log('PIN admin reinitialise a 1234');
+})();
+</code></pre>
+<p>Le client se reconnecte avec le PIN <strong>1234</strong>, puis le change immediatement dans Parametres.</p>
+<h4>Methode 2 : Cloud Sync active (intervention TrillionX a distance)</h4>
+<p class="step">Allez sur le <strong>dashboard Supabase</strong> du projet</p>
+<p class="step">Ouvrez la table <code>users</code></p>
+<p class="step">Trouvez l'utilisateur admin</p>
+<p class="step">Remplacez le champ <code>pin</code> par le hash SHA-256 de "1234" :</p>
+<pre><code class="language-text">
+03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4
+</code></pre>
+<p class="step">Demandez au client de faire un <strong>Pull</strong> dans Parametres &gt; Cloud</p>
+<h4>Methode 3 : Mot de passe aussi perdu</h4>
+<p>Meme procedure mais avec le champ <code>password</code>. Commande console pour reinitialiser a "admin123" :</p>
+<pre><code class="language-javascript">
+(async () => {
+  const users = await DB.dbGetAll('users');
+  const admin = users.find(u => u.role === 'admin');
+  if (!admin) return console.log('Aucun admin trouve');
+  const encoder = new TextEncoder();
+  const hash = await crypto.subtle.digest('SHA-256', encoder.encode('admin123'));
+  const newPwd = Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2,'0')).join('');
+  await DB.dbPut('users', { ...admin, password: newPwd });
+  console.log('Mot de passe admin reinitialise a admin123');
+})();
+</code></pre>
+<blockquote>IMPORTANT : Demandez toujours au client de changer son PIN et mot de passe immediatement apres la reinitialisation.</blockquote>
+<h3 id="44-rles-et-permissions">4.4 Roles et Permissions</h3>
 <div class="table-wrap"><table><thead><tr>
 <th>Permission</th>
 <th>Admin</th>
@@ -1565,6 +1609,21 @@ Voulez-vous quand même ajouter ce produit ?
 <td><strong>Lenteur POS</strong></td>
 <td>Trop de produits en RAM</td>
 <td>Utiliser la recherche, limiter la pagination.</td>
+</tr>
+<tr>
+<td><strong>ERR_NETWORK_CHANGED</strong></td>
+<td>Coupure reseau pendant une requete Supabase (WiFi perdu, passage 4G, VPN)</td>
+<td>Normal et inoffensif. Le navigateur annule les requetes en cours quand le reseau change. Le pull reprend automatiquement a la prochaine tentative. Aucune perte de donnees.</td>
+</tr>
+<tr>
+<td><strong>Erreur 400/404 Supabase</strong></td>
+<td>Colonne locale inconnue de Supabase (ex: <code>complaints</code>, <code>notices</code>)</td>
+<td>Verifier <code>_localOnlyColumns</code> dans <code>db.js</code>. Ajouter la colonne inconnue a la liste pour l'exclure du push.</td>
+</tr>
+<tr>
+<td><strong>PIN/Mot de passe oublie</strong></td>
+<td>Utilisateur admin bloque</td>
+<td>Voir section 4.5 du Chapitre 4 : Recuperation via console F12 ou Supabase dashboard.</td>
 </tr>
 </tbody></table></div>
 <hr>
