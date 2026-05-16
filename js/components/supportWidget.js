@@ -1201,3 +1201,4 @@ window.askQuestion = askQuestion;
 // Exposer les fonctions globales
 window.initSupportWidget = initSupportWidget;
 window.hideSupportWidget = hideSupportWidget;
+window.CONVERSATIONS = CONVERSATIONS;
