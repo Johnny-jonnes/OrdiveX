@@ -1004,6 +1004,52 @@ const CONVERSATIONS = [
             "Le verrouillage s'active dès qu'il n'y a plus d'activité (souris, clavier, écran tactile). C'est une mesure de sécurité essentielle en officine ! 🏥"
         ]
     },
+    {
+        triggers: ['etat', 'resume', 'bilan', 'info pharmacie', 'donnees pharmacie', 'tout savoir', 'situation', 'recap', 'synthese', 'combien de medicament', 'chiffre d affaires', 'ca'],
+        dynamic: true,
+        responses: [],
+        getResponse: async function() {
+            try {
+                const [products, patients, stock, sales, settings] = await Promise.all([
+                    DB.dbGetAll('products'),
+                    DB.dbGetAll('patients'),
+                    DB.dbGetAll('stock'),
+                    DB.dbGetAll('sales'),
+                    DB.dbGetAll('settings'),
+                ]);
+                const stockMap = {};
+                stock.forEach(s => { stockMap[s.productId] = s.quantity || 0; });
+                const totalUnits = stock.reduce((s, e) => s + (e.quantity || 0), 0);
+                let valAchat = 0, valVente = 0, ruptures = 0;
+                products.forEach(p => {
+                    const qty = stockMap[p.id] || 0;
+                    valAchat += (parseFloat(p.purchasePrice || 0)) * qty;
+                    valVente += (parseFloat(p.salePrice || 0)) * qty;
+                    if (qty <= 0) ruptures++;
+                });
+                const today = new Date().toISOString().substring(0, 10);
+                const todaySales = sales.filter(s => s.date && s.date.substring(0, 10) === today);
+                const todayCA = todaySales.reduce((a, s) => a + (s.total || 0), 0);
+                const totalCA = sales.filter(s => ['completed','paid'].includes(s.status)).reduce((a, s) => a + (s.total || 0), 0);
+                const credits = sales.filter(s => s.paymentMethod === 'credit' && s.status === 'pending');
+                const totalDebt = credits.reduce((a, s) => a + (s.total || 0), 0);
+                const pName = settings.find(s => s.key === 'pharmacy_name')?.value || 'Votre pharmacie';
+
+                return `<strong>Synthese ${pName}</strong> 📋<br><br>` +
+                    `💊 <strong>${products.length.toLocaleString()}</strong> medicaments au catalogue<br>` +
+                    `👤 <strong>${patients.length.toLocaleString()}</strong> patients enregistres<br>` +
+                    `📦 <strong>${totalUnits.toLocaleString()}</strong> unites en stock<br>` +
+                    `💰 Valeur stock (achat) : <strong>${UI.formatCurrency(valAchat)}</strong><br>` +
+                    `💵 Valeur stock (vente) : <strong>${UI.formatCurrency(valVente)}</strong><br>` +
+                    `${ruptures > 0 ? '🔴' : '✅'} <strong>${ruptures}</strong> produit(s) en rupture<br><br>` +
+                    `📊 <strong>Aujourd'hui</strong> :<br>` +
+                    `🛒 ${todaySales.length} vente(s) — CA : <strong>${UI.formatCurrency(todayCA)}</strong><br>` +
+                    `📈 CA cumule total : <strong>${UI.formatCurrency(totalCA)}</strong><br>` +
+                    `${credits.length > 0 ? '💳 ' + credits.length + ' credit(s) en cours : <strong>' + UI.formatCurrency(totalDebt) + '</strong><br>' : ''}` +
+                    `<br>Donnees extraites <strong>en direct</strong> de votre base ! 🔥`;
+            } catch(e) { return "Erreur lors de la lecture des donnees. Reessayez ! 🔄"; }
+        }
+    },
 ];
 
 
