@@ -199,7 +199,7 @@ const _pageStoreMap = {
   caisse: ['cashRegister', 'sales'],
   traceability: ['movements', 'lots', 'products'],
   returns: ['returns', 'sales'],
-  settings: ['settings', 'users'],
+  settings: ['users'],
   metrics: ['sales', 'saleItems', 'products', 'stock'],
 };
 
