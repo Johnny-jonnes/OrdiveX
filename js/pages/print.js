@@ -54,7 +54,7 @@ const PrintEngine = {
           </div>
         </div>
         <div class="print-footer-center">
-          <p class="print-legal">Document généré par OrdiveX v1.0</p>
+          <p class="print-legal">Document généré par OrdiveX v9.4.0</p>
           <p class="print-legal">Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
         </div>
         <div class="print-footer-right">
@@ -117,36 +117,129 @@ const PrintEngine = {
 
   async printInvoice(saleId) {
     await this.loadSettings();
-    const [sale, items] = await Promise.all([
+    const [sale, items, allSettings] = await Promise.all([
       DB.dbGet('sales', saleId),
       DB.dbGetAll('saleItems', 'saleId', saleId),
+      DB.dbGetAll('settings'),
     ]);
     if (!sale) return;
 
-    const win = this._openPrintWindow('Facture');
+    const get = (key) => allSettings.find(s => s.key === key)?.value || '';
+    const pharmacyLogo = get('pharmacy_logo');
+    const pName = get('pharmacy_name') || this.pharmacyInfo.name;
+    const pAddr = get('pharmacy_address') || this.pharmacyInfo.address;
+    const pPhone = get('pharmacy_phone') || this.pharmacyInfo.phone;
+    const pEmail = get('pharmacy_email') || this.pharmacyInfo.email;
+    const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
+    const pResp = get('pharmacy_responsable') || this.pharmacyInfo.responsable;
+
+    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement' };
+    const subtotal = items.reduce((a, i) => a + (i.total || 0), 0);
+    const discount = sale.discount || 0;
+    const total = sale.total || subtotal - discount;
+    const saleDate = sale.date ? new Date(sale.date) : new Date();
+    const invoiceRef = 'FAC-' + String(saleId).padStart(8, '0');
+
+    const win = this._openPrintWindow('Facture ' + invoiceRef);
     win.document.write(`
-      ${this._printStyles()}
-      <div class="invoice-container">
-        ${this.header('FACTURE')}
-        <div class="invoice-ref">N° FAC-${String(saleId).padStart(8, '0')}</div>
-        <table class="invoice-table">
-          <thead>
-            <tr><th>Désignation</th><th>Qté</th><th>Prix unitaire</th><th>Total</th></tr>
-          </thead>
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #222; background: white; }
+        .inv { max-width:210mm; margin:0 auto; padding:24px 28px; }
+        .inv-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+        .inv-brand { display:flex; align-items:center; gap:14px; }
+        .inv-logo { width:56px; height:56px; border-radius:12px; object-fit:contain; }
+        .inv-lp { width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,#1B4F72,#2E86C1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:26px; font-weight:800; }
+        .inv-pn { font-size:20px; font-weight:800; color:#1B4F72; margin-bottom:2px; }
+        .inv-pi { font-size:10px; color:#666; line-height:1.5; }
+        .inv-rb { text-align:right; }
+        .inv-rt { font-size:22px; font-weight:800; color:#1B4F72; letter-spacing:2px; }
+        .inv-rn { font-size:13px; font-weight:700; color:#2E86C1; margin-top:4px; }
+        .inv-rd { font-size:11px; color:#888; margin-top:2px; }
+        .inv-sep { height:3px; background:linear-gradient(to right,#1B4F72,#2E86C1,transparent); margin:16px 0; border-radius:2px; }
+        .inv-parties { display:flex; gap:20px; margin-bottom:20px; }
+        .inv-pbox { flex:1; background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:14px 16px; }
+        .inv-plbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#2E86C1; font-weight:700; margin-bottom:8px; }
+        .inv-pnm { font-size:14px; font-weight:700; color:#1B4F72; }
+        .inv-pd { font-size:11px; color:#555; margin-top:2px; }
+        .inv-tbl { width:100%; border-collapse:collapse; margin-bottom:16px; }
+        .inv-tbl thead th { background:#1B4F72; color:#fff; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+        .inv-tbl thead th:first-child { border-radius:6px 0 0 0; }
+        .inv-tbl thead th:last-child { border-radius:0 6px 0 0; text-align:right; }
+        .inv-tbl tbody td { padding:10px 12px; border-bottom:1px solid #eee; font-size:11px; vertical-align:top; }
+        .inv-tbl tbody tr:nth-child(even) { background:#f8f9fa; }
+        .inv-im { font-weight:700; color:#222; }
+        .inv-is { font-size:10px; color:#777; margin-top:1px; }
+        .inv-ar { text-align:right; }
+        .inv-ac { text-align:center; }
+        .inv-tots { display:flex; justify-content:flex-end; margin-bottom:20px; }
+        .inv-tb { width:260px; }
+        .inv-tr { display:flex; justify-content:space-between; padding:6px 12px; font-size:12px; }
+        .inv-tr.disc { color:#e74c3c; }
+        .inv-tr.gt { background:#1B4F72; color:#fff; font-size:15px; font-weight:800; border-radius:6px; padding:10px 14px; margin-top:4px; }
+        .inv-pb { display:inline-block; background:#e8f4fd; color:#1B4F72; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:16px; }
+        .inv-ft { display:flex; justify-content:space-between; align-items:flex-end; margin-top:40px; padding-top:16px; border-top:1px solid #ddd; }
+        .inv-sig { text-align:center; }
+        .inv-sl { width:150px; border-bottom:1px solid #333; margin:30px auto 6px; }
+        .inv-sn { font-size:11px; font-weight:700; }
+        .inv-sr { font-size:10px; color:#888; }
+        .inv-lg { text-align:center; font-size:9px; color:#aaa; margin-top:16px; padding-top:8px; border-top:1px dashed #ddd; }
+        @media print { .inv { padding:0; } }
+      </style>
+      <div class="inv">
+        <div class="inv-hdr">
+          <div class="inv-brand">
+            ${pharmacyLogo
+              ? '<img src="' + pharmacyLogo + '" class="inv-logo" alt="Logo"/>'
+              : '<div class="inv-lp">' + pName.charAt(0) + '</div>'}
+            <div>
+              <div class="inv-pn">${pName}</div>
+              <div class="inv-pi">${pAddr}<br>Tél: ${pPhone}${pEmail ? ' · ' + pEmail : ''}<br>${pDnpm ? 'Licence DNPM: ' + pDnpm : ''}</div>
+            </div>
+          </div>
+          <div class="inv-rb">
+            <div class="inv-rt">FACTURE</div>
+            <div class="inv-rn">${invoiceRef}</div>
+            <div class="inv-rd">${saleDate.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}</div>
+            <div class="inv-rd">${saleDate.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}</div>
+          </div>
+        </div>
+        <div class="inv-sep"></div>
+        <div class="inv-parties">
+          <div class="inv-pbox">
+            <div class="inv-plbl">Patient / Client</div>
+            <div class="inv-pnm">${sale.patientName || 'Client comptoir'}</div>
+            ${sale.patientPhone ? '<div class="inv-pd">Tél: ' + sale.patientPhone + '</div>' : ''}
+            ${sale.patientId ? '<div class="inv-pd">ID: P-' + String(sale.patientId).padStart(4, '0') + '</div>' : ''}
+          </div>
+          <div class="inv-pbox">
+            <div class="inv-plbl">Vendeur / Dispensation</div>
+            <div class="inv-pnm">${sale.sellerName || DB.AppState.currentUser?.name || '—'}</div>
+            ${sale.preparerName ? '<div class="inv-pd">Préparateur: ' + sale.preparerName + '</div>' : ''}
+            ${sale.prescriptionRef ? '<div class="inv-pd">Ordonnance: ' + sale.prescriptionRef + '</div>' : ''}
+            ${sale.doctorName ? '<div class="inv-pd">Médecin: Dr. ' + sale.doctorName + '</div>' : ''}
+          </div>
+        </div>
+        <table class="inv-tbl">
+          <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="inv-ac">Qté</th><th class="inv-ar">Prix unit.</th><th class="inv-ar">Total</th></tr></thead>
           <tbody>
-            ${items.map(i => `<tr>
-              <td>${i.productName}</td>
-              <td>${i.quantity}</td>
-              <td>${UI.formatCurrency(i.unitPrice)}</td>
-              <td><strong>${UI.formatCurrency(i.total)}</strong></td>
-            </tr>`).join('')}
+            ${items.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><div class="inv-im">' + (it.productName || '—') + '</div>' + (it.dci || it.dosage ? '<div class="inv-is">' + [it.dci, it.dosage].filter(Boolean).join(' · ') + '</div>' : '') + '</td><td class="inv-ac">' + it.quantity + '</td><td class="inv-ar">' + UI.formatCurrency(it.unitPrice) + '</td><td class="inv-ar"><strong>' + UI.formatCurrency(it.total) + '</strong></td></tr>').join('')}
           </tbody>
-          <tfoot>
-            ${sale.discount > 0 ? `<tr><td colspan="3">Remise accordée</td><td>-${UI.formatCurrency(sale.discount)}</td></tr>` : ''}
-            <tr class="invoice-total-row"><td colspan="3"><strong>TOTAL TTC</strong></td><td><strong>${UI.formatCurrency(sale.total)}</strong></td></tr>
-          </tfoot>
         </table>
-        ${this.footer()}
+        <div class="inv-tots"><div class="inv-tb">
+          <div class="inv-tr"><span>Sous-total (${items.length} article${items.length > 1 ? 's' : ''})</span><span>${UI.formatCurrency(subtotal)}</span></div>
+          ${discount > 0 ? '<div class="inv-tr disc"><span>Remise accordée</span><span>-' + UI.formatCurrency(discount) + '</span></div>' : ''}
+          <div class="inv-tr gt"><span>TOTAL TTC</span><span>${UI.formatCurrency(total)}</span></div>
+        </div></div>
+        <div class="inv-pb">Mode de paiement : ${payLabels[sale.paymentMethod] || sale.paymentMethod || '—'}</div>
+        ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">Reçu: ' + UI.formatCurrency(sale.cashReceived) + ' · Monnaie: ' + UI.formatCurrency(sale.cashReceived - total) + '</div>' : ''}
+        ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div style="font-size:11px;color:#e74c3c;margin-bottom:4px;">Échéance: ' + UI.formatDate(sale.creditDueDate) + '</div>' : ''}
+        <div class="inv-ft">
+          <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">${pResp}</div><div class="inv-sr">Pharmacien responsable</div></div>
+          <div style="text-align:center"><div style="font-size:10px;color:#888">Ce document tient lieu de facture officielle.</div><div style="font-size:10px;color:#888">Conservez-le comme preuve d'achat.</div></div>
+          <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Cachet</div><div class="inv-sr">& Signature</div></div>
+        </div>
+        <div class="inv-lg">Document généré par OrdiveX v9.4.0 · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
       </div>
     `);
     win.document.close();

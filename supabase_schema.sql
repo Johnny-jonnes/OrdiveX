@@ -950,3 +950,31 @@ ALTER TABLE patients ALTER COLUMN "createdAt" TYPE TEXT USING "createdAt"::TEXT;
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- FIN — Après exécution, vider le cache : localStorage.removeItem('pharma_bad_columns');
 -- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- MIGRATION v9.4.0 — Double traçabilité Vendeur/Préparateur + colonnes manquantes
+-- Exécuter dans le SQL Editor de Supabase
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- ── SALES : Double traçabilité vendeur/préparateur ──
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "preparerId" BIGINT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "preparerName" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "sellerName" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "prescriptionRef" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "doctorName" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "mmPhone" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "creditDueDate" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "cashReceived" NUMERIC;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "itemCount" INTEGER DEFAULT 0;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "insuranceDetails" JSONB;
+
+-- ── SALEITEMS : colonnes produit embarquées ──
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS dci TEXT;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS dosage TEXT;
+ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "requiresPrescription" BOOLEAN DEFAULT false;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- IMPORTANT : Après exécution de cette migration, VIDER le cache navigateur :
+-- Dans la console du navigateur : localStorage.removeItem('pharma_bad_columns');
+-- Puis recharger la page (Ctrl+Shift+R)
+-- ═══════════════════════════════════════════════════════════════════════════════
