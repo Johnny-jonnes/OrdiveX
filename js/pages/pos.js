@@ -2246,25 +2246,25 @@ async function afficherRecu(saleId, items, saleData) {
       <!-- PIED DE PAGE -->
       <div class="recu-footer">
         <div class="recu-footer-conseils">
-          <p>📋 <em>Respectez scrupuleusement vos prescriptions médicales</em></p>
-          <p>💊 <em>Conservez les médicaments hors de portée des enfants</em></p>
-          <p>☎️ <em>Pour toute question : ${telPharma}</em></p>
+          <p><em>Respectez scrupuleusement vos prescriptions medicales</em></p>
+          <p><em>Conservez les medicaments hors de portee des enfants</em></p>
+          <p><em>Pour toute question : ${telPharma}</em></p>
         </div>
         <div class="recu-footer-legal">
-          <p>Établi par : ${respPharma}</p>
-          <p>Document officiel — Réf. ${refNum} — ${dnpmPharma}</p>
-          <p>Imprimé le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
-          <p class="recu-merci">✨ Merci pour votre confiance</p>
+          <p>Etabli par : ${respPharma}</p>
+          <p>Document officiel — Ref. ${refNum} — ${dnpmPharma}</p>
+          <p>Imprime le ${now.toLocaleDateString('fr-FR')} a ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+          <p class="recu-merci">Merci pour votre confiance</p>
         </div>
       </div>
 
     </div>
 
     <div class="recu-actions" id="recu-actions">
-      <button class="btn btn-primary" onclick="PrintEngine ? PrintEngine.printInvoice(${saleId}) : UI.toast('Module impression non chargé','warning')">📄 Imprimer Facture A4</button>
-      <button class="btn btn-ghost" onclick="imprimerTicket()">🖨️ Ticket thermique</button>
-      ${saleData.mmPhone ? `<button class="btn btn-info" onclick="MobileMoneyGateway.sendSMSReceipt('${saleData.mmPhone}','${saleData.paymentMethod}',${saleData.total},${saleId}).then(()=>UI.toast('📱 SMS envoyé','success'))">📱 Renvoyer SMS</button>` : ''}
-      <button class="btn btn-primary" onclick="UI.closeModal()">✓ Fermer</button>
+      <button class="btn btn-primary" onclick="PrintEngine ? PrintEngine.printInvoice(${saleId}) : UI.toast('Module impression non charge','warning')"><i data-lucide="file-text" style="width:16px;height:16px;display:inline-block;vertical-align:-2px;margin-right:4px"></i> Imprimer Facture A4</button>
+      <button class="btn btn-ghost" onclick="imprimerTicket()"><i data-lucide="printer" style="width:16px;height:16px;display:inline-block;vertical-align:-2px;margin-right:4px"></i> Ticket thermique</button>
+      ${saleData.mmPhone ? `<button class="btn btn-info" onclick="MobileMoneyGateway.sendSMSReceipt('${saleData.mmPhone}','${saleData.paymentMethod}',${saleData.total},${saleId}).then(()=>UI.toast('SMS envoye','success'))"><i data-lucide="smartphone" style="width:16px;height:16px;display:inline-block;vertical-align:-2px;margin-right:4px"></i> Renvoyer SMS</button>` : ''}
+      <button class="btn btn-primary" onclick="UI.closeModal()"><i data-lucide="check" style="width:16px;height:16px;display:inline-block;vertical-align:-2px;margin-right:4px"></i> Fermer</button>
     </div>
   `, { size: 'large' });
 }
