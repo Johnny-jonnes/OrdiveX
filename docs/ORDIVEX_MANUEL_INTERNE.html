@@ -45,7 +45,7 @@ Telecharger PDF
 Retour
 </button>
 <div class="container">
-<h1 id="ordivex-manuel-interne-v941">OrdiveX - MANUEL Interne v9.4.1</h1>
+<h1 id="ordivex-manuel-interne-v941">OrdiveX - MANUEL Interne v9</h1>
 <p><strong>Document confidentiel - Usage interne TrillionX uniquement</strong></p>
 <p>Dernière mise à jour : 16 Mai 2026 | Version : 9</p>
 <hr>
@@ -252,26 +252,26 @@ Retour
 <h3 id="21-structure-des-fichiers">2.1 Structure des Fichiers</h3>
 <pre><code class="language-text">
 pharma_projet_v4/
-â”œâ”€â”€ index.html              # Point d'entrée unique (SPA)
-â”œâ”€â”€ version.json            # Manifest de version pour auto-update
-â”œâ”€â”€ css/
-â”‚   â””â”€â”€ main.css            # 10 000+ lignes - design system complet
-â”œâ”€â”€ js/
-â”‚   â”œâ”€â”€ db.js               # Moteur IndexedDB + Supabase sync (82 Ko)
-â”‚   â”œâ”€â”€ auth.js             # Authentification, PIN, verrouillage
-â”‚   â”œâ”€â”€ ui.js               # Composants UI (modals, toasts, charts)
-â”‚   â”œâ”€â”€ mobile-money.js     # Gateway Orange Money / MTN MoMo
-â”‚   â”œâ”€â”€ sms.js              # Service SMS AfricasTalking
-â”‚   â”œâ”€â”€ pages/              # 17 modules de pages
-â”‚   â”œâ”€â”€ ui/                 # Palette de commandes, feedback
-â”‚   â”œâ”€â”€ utils/              # Animations, stabilité
-â”‚   â”œâ”€â”€ components/         # Widget Naomie AI
-â”‚   â””â”€â”€ vendor/             # Supabase SDK, Lucide
-â””â”€â”€ docs/                   # Documentation interne
+|-- index.html              # Point d'entrée unique (SPA)
+|-- version.json            # Manifest de version pour auto-update
+|-- css/
+|   -- main.css            # 10 000+ lignes - design system complet
+|-- js/
+|   |-- db.js               # Moteur IndexedDB + Supabase sync (82 Ko)
+|   |-- auth.js             # Authentification, PIN, verrouillage
+|   |-- ui.js               # Composants UI (modals, toasts, charts)
+|   |-- mobile-money.js     # Gateway Orange Money / MTN MoMo
+|   |-- sms.js              # Service SMS AfricasTalking
+|   |-- pages/              # 17 modules de pages
+|   |-- ui/                 # Palette de commandes, feedback
+|   |-- utils/              # Animations, stabilité
+|   |-- components/         # Widget Naomie AI
+|   -- vendor/             # Supabase SDK, Lucide
+-- docs/                   # Documentation interne
 </code></pre>
 <h3 id="22-flux-de-donnes">2.2 Flux de Données</h3>
 <pre><code class="language-text">
-Utilisateur â†’ UI (ui.js) â†’ Page Module (pos.js, etc.)
+Utilisateur -> UI (ui.js) -> Page Module (pos.js, etc.)
                                     â†“
                               DB.dbPut/dbAdd (db.js)
                                     â†“
@@ -413,12 +413,12 @@ Utilisateur â†’ UI (ui.js) â†’ Page Module (pos.js, etc.)
 </ul>
 <h3 id="32-installation-sur-pc-pwa">3.2 Installation sur PC (PWA)</h3>
 <p class="step">Ouvrir <code>https://johnnyjonnes78-tech.github.io/Xpharma/</code> dans Chrome</p>
-<p class="step">Cliquer sur l'icône âŠ• "Installer" dans la barre d'adresse</p>
+<p class="step">Cliquer sur l'icône + "Installer" dans la barre d'adresse</p>
 <p class="step">Confirmer l'installation</p>
 <p class="step">L'app apparaît comme une application native sur le bureau</p>
 <h3 id="33-installation-sur-mobile">3.3 Installation sur Mobile</h3>
 <p class="step">Ouvrir l'URL dans Chrome Android / Safari iOS</p>
-<p class="step">Menu â‰¡ â†’ "Ajouter à l'écran d'accueil"</p>
+<p class="step">Menu Menu -> "Ajouter à l'écran d'accueil"</p>
 <p class="step">L'app s'installe avec son icône</p>
 <h3 id="34-dploiement-github-pages">3.4 Déploiement GitHub Pages</h3>
 <pre><code class="language-bash">
@@ -437,7 +437,7 @@ git push origin main
 <h3 id="36-configuration-supabase-cloud-sync">3.6 Configuration Supabase (Cloud Sync)</h3>
 <p class="step">Créer un projet sur [supabase.com](https://supabase.com)</p>
 <p class="step">Exécuter <code>supabase_schema.sql</code> dans l'éditeur SQL</p>
-<p class="step">Dans OrdiveX â†’ Paramètres â†’ Cloud : entrer l'URL et la clé <code>anon</code></p>
+<p class="step">Dans OrdiveX -> Paramètres -> Cloud : entrer l'URL et la clé <code>anon</code></p>
 <p class="step">Cliquer "Tester la connexion"</p>
 <p class="step">Activer "Push automatique"</p>
 <hr>
@@ -463,7 +463,7 @@ git push origin main
 </tr>
 <tr>
 <td><strong>Par défaut</strong></td>
-<td>Les utilisateurs créés avant v9.4.1 n'ont pas de PIN â†’ ils sont forcés d'en créer un</td>
+<td>Les utilisateurs créés avant v9.4.1 n'ont pas de PIN -> ils sont forcés d'en créer un</td>
 </tr>
 <tr>
 <td><strong>Format</strong></td>
@@ -538,91 +538,91 @@ git push origin main
 </tr></thead><tbody>
 <tr>
 <td>Point de Vente</td>
-<td>âœ…</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
+<td>Oui</td>
 </tr>
 <tr>
 <td>Voir le tableau de bord</td>
-<td>âœ…</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
+<td>Oui</td>
 </tr>
 <tr>
 <td>Historique ventes</td>
-<td>âœ…</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
+<td>Oui</td>
 </tr>
 <tr>
 <td>Alertes</td>
-<td>âœ…</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
+<td>Oui</td>
 </tr>
 <tr>
 <td>Catalogue produits</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Gestion des stocks</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Ordonnances</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Patients</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Fournisseurs</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Retours</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Métriques</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Impression</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td>Traçabilité</td>
-<td>âœ…</td>
-<td>âœ…</td>
+<td>Oui</td>
+<td>Oui</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td><strong>Paramètres</strong></td>
-<td>âœ…</td>
+<td>Oui</td>
 <td>âŒ</td>
 <td>âŒ</td>
 </tr>
 <tr>
 <td><strong>Créer/supprimer utilisateurs</strong></td>
-<td>âœ…</td>
+<td>Oui</td>
 <td>âŒ</td>
 <td>âŒ</td>
 </tr>
@@ -663,7 +663,7 @@ git push origin main
 <h3 id="53-catgories-et-tri">5.3 Catégories et Tri</h3>
 <ul>
 <li><strong>Catégories</strong> : Pilules filtrantes en haut (Toutes, Antibiotiques, Antalgiques, etc.)</li>
-<li><strong>Tri</strong> : Nom Aâ†’Z, Nom Zâ†’A, Prix â†‘, Prix â†“, Stock â†‘, Stock â†“</li>
+<li><strong>Tri</strong> : Nom A->Z, Nom Z->A, Prix â†‘, Prix â†“, Stock â†‘, Stock â†“</li>
 <li>Les produits en <strong>rupture</strong> sont toujours affichés en dernier, quelle que soit le tri</li>
 </ul>
 <h3 id="54-carte-produit">5.4 Carte Produit</h3>
@@ -684,7 +684,7 @@ git push origin main
 <p class="step"><strong>Vérification des allergies</strong> si un patient est sélectionné</p>
 <p class="step">Sélection automatique du lot FEFO (First Expired, First Out)</p>
 <p class="step">Ajout au panier avec prix calculé selon l'unité choisie</p>
-<p class="step">Si produit déjà dans le panier â†’ incrémentation de la quantité</p>
+<p class="step">Si produit déjà dans le panier -> incrémentation de la quantité</p>
 <h3 id="56-gestion-du-panier">5.6 Gestion du Panier</h3>
 <p>Pour chaque article du panier :</p>
 <ul>
@@ -701,8 +701,8 @@ git push origin main
 </ul>
 <h3 id="57-slection-patient">5.7 Sélection Patient</h3>
 <ul>
-<li>Cliquer "Choisir un patient..." â†’ Répertoire avec recherche</li>
-<li>Ou cliquer "+ Nouveau" â†’ Formulaire rapide (nom, téléphone, allergies)</li>
+<li>Cliquer "Choisir un patient..." -> Répertoire avec recherche</li>
+<li>Ou cliquer "+ Nouveau" -> Formulaire rapide (nom, téléphone, allergies)</li>
 <li>Le patient sélectionné active :</li>
 <li>Vérification des allergies à chaque ajout au panier</li>
 <li>Possibilité de vente à crédit</li>
@@ -710,13 +710,13 @@ git push origin main
 </ul>
 <h3 id="58-flux-de-validation">5.8 Flux de Validation</h3>
 <pre><code class="language-text">
-Panier rempli â†’ Choisir mode de paiement â†’ Valider (F5)
+Panier rempli -> Choisir mode de paiement -> Valider (F5)
      â†“
 Vérification : Panier non vide ?
      â†“
-Vérification : Caisse clôturée aujourd'hui ? â†’ Si oui : BLOQUÉ
+Vérification : Caisse clôturée aujourd'hui ? -> Si oui : BLOQUÉ
      â†“
-Vérification : Crédit sans patient ? â†’ Si oui : BLOQUÉ
+Vérification : Crédit sans patient ? -> Si oui : BLOQUÉ
      â†“
 Vérification : Montant encaissé suffisant ? (pour espèces)
      â†“
@@ -728,7 +728,7 @@ Déstockage automatique FEFO (store 'stock')
      â†“
 Enregistrement mouvement (store 'movements')
      â†“
-Si ordonnance liée â†’ mise à jour statut (store 'prescriptions')
+Si ordonnance liée -> mise à jour statut (store 'prescriptions')
      â†“
 Affichage du reçu (modal avec boutons Imprimer / Fermer)
      â†“
@@ -745,11 +745,11 @@ Reset du panier
 <p>OrdiveX trace les deux rôles séparément.</p>
 <h3 id="62-scnario-type">6.2 Scénario Type</h3>
 <pre><code class="language-text">
-1. Pharmacien A se connecte â†’ prépare un panier (ordonnance du Dr. Camara)
-2. Pharmacien A clique "â¸ Attente" â†’ le panier est sauvegardé avec son ID
+1. Pharmacien A se connecte -> prépare un panier (ordonnance du Dr. Camara)
+2. Pharmacien A clique "â¸ Attente" -> le panier est sauvegardé avec son ID
 3. Pharmacien A se déconnecte (ou le caissier prend le relais)
-4. Caissier B se connecte â†’ le panier est automatiquement restauré
-5. Caissier B encaisse â†’ la vente est enregistrée avec :
+4. Caissier B se connecte -> le panier est automatiquement restauré
+5. Caissier B encaisse -> la vente est enregistrée avec :
    - sellerName = "Caissier B" (celui qui a cliqué Valider)
    - preparerName = "Pharmacien A" (celui qui a préparé le panier)
 </code></pre>
@@ -770,7 +770,7 @@ if (window._heldCart) {
   posCart = window._heldCart.items;
   posCurrentPatient = window._heldCart.patient;
   posCurrentRx = window._heldCart.rx;
-  // Si le préparateur est différent du vendeur actuel â†’ sauvegarder
+  // Si le préparateur est différent du vendeur actuel -> sauvegarder
   if (window._heldCart.preparerId !== DB.AppState.currentUser?.id) {
     window._heldCartPreparer = {
       id: window._heldCart.preparerId,
@@ -842,11 +842,11 @@ Préparateur : Pharmacien A    â† affiché UNIQUEMENT si différent du vend
 <h3 id="74-scnario-multi-clients">7.4 Scénario Multi-Clients</h3>
 <pre><code class="language-text">
 Onglet 1 : Client A achète du Doliprane (en attente de la monnaie)
-    â†’ Cliquer "+"
+    -> Cliquer "+"
 Onglet 2 : Client B arrive, urgent, achète de l'Amoxicilline
-    â†’ Valider la vente du client B
-    â†’ Revenir à l'onglet 1
-    â†’ Continuer la vente du client A
+    -> Valider la vente du client B
+    -> Revenir à l'onglet 1
+    -> Continuer la vente du client A
 </code></pre>
 <h3 id="75-rgles-importantes">7.5 Règles Importantes</h3>
 <ul>
@@ -868,7 +868,7 @@ Onglet 2 : Client B arrive, urgent, achète de l'Amoxicilline
 <tr>
 <td><code>name</code></td>
 <td>Texte</td>
-<td>âœ…</td>
+<td>Oui</td>
 <td>Nom commercial (ex: Doliprane 500mg)</td>
 </tr>
 <tr>
@@ -898,13 +898,13 @@ Onglet 2 : Client B arrive, urgent, achète de l'Amoxicilline
 <tr>
 <td><code>purchasePrice</code></td>
 <td>Nombre</td>
-<td>âœ…</td>
+<td>Oui</td>
 <td>Prix d'achat HT</td>
 </tr>
 <tr>
 <td><code>salePrice</code></td>
 <td>Nombre</td>
-<td>âœ…</td>
+<td>Oui</td>
 <td>Prix de vente</td>
 </tr>
 <tr>
@@ -970,7 +970,7 @@ Onglet 2 : Client B arrive, urgent, achète de l'Amoxicilline
 </tbody></table></div>
 <h3 id="82-import-csv-massif">8.2 Import CSV Massif</h3>
 <p>OrdiveX supporte l'importation de <strong>50 000+ produits</strong> via CSV :</p>
-<p class="step">Aller dans Catalogue â†’ bouton "Importer CSV"</p>
+<p class="step">Aller dans Catalogue -> bouton "Importer CSV"</p>
 <p class="step">Sélectionner le fichier (colonnes : name, dci, brand, form, buyPrice, sellPrice, minStock...)</p>
 <p class="step">Le système traite par <strong>lots de 100</strong> pour éviter les blocages</p>
 <p class="step">Rapport d'import affiché à la fin (succès, doublons, erreurs)</p>
@@ -1020,7 +1020,7 @@ Lot A : Expire le 2026-08-15 - 20 unités
 Lot B : Expire le 2027-01-10 - 50 unités
 Lot C : Expire le 2026-06-01 - 5 unités   â† Vendu en premier !
 
-Vente de 8 unités â†’ 5 du Lot C + 3 du Lot A
+Vente de 8 unités -> 5 du Lot C + 3 du Lot A
 </code></pre>
 <h3 id="92-mouvements-de-stock">9.2 Mouvements de Stock</h3>
 <p>Chaque modification de stock crée un mouvement traçable :</p>
@@ -1106,9 +1106,9 @@ Vente de 8 unités â†’ 5 du Lot C + 3 du Lot A
 <p class="step">Le système calcule l'<strong>écart de caisse</strong> :</p>
 <ul>
 <li>Écart = Montant compté - Total théorique espèces</li>
-<li>Écart = 0 â†’ âœ… Caisse juste</li>
-<li>Écart > 0 â†’ âš ï¸ Excédent</li>
-<li>Écart < 0 â†’ ðŸ”´ Manquant</li>
+<li>Écart = 0 -> Oui Caisse juste</li>
+<li>Écart > 0 -> âš ï¸ Excédent</li>
+<li>Écart < 0 -> ðŸ”´ Manquant</li>
 </ul>
 <p><strong>Après clôture :</strong></p>
 <ul>
@@ -1127,11 +1127,11 @@ Vente de 8 unités â†’ 5 du Lot C + 3 du Lot A
 <li><strong>Patient</strong> (lié depuis les dossiers)</li>
 <li><strong>Date de prescription</strong></li>
 <li><strong>Liste des médicaments</strong> avec posologie et durée</li>
-<li><strong>Statut</strong> : en attente â†’ validée â†’ dispensée</li>
+<li><strong>Statut</strong> : en attente -> validée -> dispensée</li>
 </ul>
 <h3 id="112-liaison-au-pos">11.2 Liaison au POS</h3>
 <p>Au POS, activer le toggle "Ordonnance" puis :</p>
-<p class="step">"Lier une ordonnance" â†’ sélectionner dans la liste</p>
+<p class="step">"Lier une ordonnance" -> sélectionner dans la liste</p>
 <p class="step">Les produits de l'ordonnance sont <strong>automatiquement ajoutés</strong> au panier</p>
 <p class="step">Les produits en rupture sont signalés</p>
 <p class="step">Le pharmacien peut valider pharmaceutiquement l'ordonnance</p>
@@ -1225,13 +1225,13 @@ Voulez-vous quand même ajouter ce produit ?
 </ul>
 <h3 id="132-flux-de-commande">13.2 Flux de Commande</h3>
 <pre><code class="language-text">
-1. Créer un bon de commande â†’ Statut : "Brouillon"
+1. Créer un bon de commande -> Statut : "Brouillon"
 2. Ajouter les produits et quantités souhaitées
-3. Envoyer la commande â†’ Statut : "Envoyée"
+3. Envoyer la commande -> Statut : "Envoyée"
 4. Réceptionner la livraison :
    - Vérifier les quantités reçues vs commandées
    - Saisir les numéros de lot et dates de péremption
-   - Valider â†’ Statut : "Réceptionnée"
+   - Valider -> Statut : "Réceptionnée"
 5. Le stock est automatiquement mis à jour (+entrées)
 6. Les mouvements de stock sont créés
 </code></pre>
@@ -1251,7 +1251,7 @@ Voulez-vous quand même ajouter ce produit ?
 <li>Patient (si identifié)</li>
 <li>Montant total</li>
 <li>Mode de paiement (badge couleur)</li>
-<li>Statut : âœ… Payée, â³ Crédit en cours, ðŸ”„ Retournée</li>
+<li>Statut : Oui Payée, â³ Crédit en cours, ðŸ”„ Retournée</li>
 </ul>
 <h3 id="142-dtail-dune-vente">14.2 Détail d'une Vente</h3>
 <p>En cliquant sur une vente :</p>
@@ -1269,11 +1269,11 @@ Voulez-vous quand même ajouter ce produit ?
 <p class="step">Saisir le mode de paiement</p>
 <p class="step">La vente passe en <code>status: 'completed'</code></p>
 <h3 id="144-export-csv">14.4 Export CSV</h3>
-<p>Bouton "Exporter" â†’ télécharge un CSV avec toutes les ventes filtrées, compatible Excel.</p>
+<p>Bouton "Exporter" -> télécharge un CSV avec toutes les ventes filtrées, compatible Excel.</p>
 <hr>
 <h2 id="chapitre-15-retours-de-mdicaments">Chapitre 15 - Retours de Médicaments</h2>
 <h3 id="151-procdure">15.1 Procédure</h3>
-<p class="step">Aller dans Historique des Ventes â†’ trouver la vente</p>
+<p class="step">Aller dans Historique des Ventes -> trouver la vente</p>
 <p class="step">Cliquer "Retour" ðŸ”„</p>
 <p class="step">Sélectionner les articles à retourner (tout ou partie)</p>
 <p class="step">Choisir le motif : erreur, péremption, contre-indication, autre</p>
@@ -1308,7 +1308,7 @@ Voulez-vous quand même ajouter ce produit ?
 <p class="step">Cliquer "Envoyer la demande de paiement".</p>
 <p class="step">Le client reçoit un <strong>USSD Push</strong> (popup sur son téléphone) pour entrer son code PIN.</p>
 <p class="step">Le système interroge l'API en boucle (polling) jusqu'à validation ou échec.</p>
-<p class="step">Si succès â†’ La vente est validée.</p>
+<p class="step">Si succès -> La vente est validée.</p>
 <h3 id="163-paiement-mixte-combin">16.3 Paiement Mixte (Combiné)</h3>
 <p>Utile quand le client n'a pas assez d'espèces et complète par Mobile Money.</p>
 <ul>
@@ -1513,7 +1513,7 @@ Voulez-vous quand même ajouter ce produit ?
 </ul>
 <h3 id="273-realtime-multi-appareils">27.3 Realtime (Multi-appareils)</h3>
 <ul>
-<li>Supabase Broadcast et PostgreSQL CDC informent les autres appareils des modifications (ex: Vente sur la Caisse 1 â†’ Le stock baisse instantanément sur la Caisse 2).</li>
+<li>Supabase Broadcast et PostgreSQL CDC informent les autres appareils des modifications (ex: Vente sur la Caisse 1 -> Le stock baisse instantanément sur la Caisse 2).</li>
 </ul>
 <hr>
 <h2 id="chapitre-28-sauvegarde-restauration">Chapitre 28 - Sauvegarde & Restauration</h2>
@@ -1575,7 +1575,7 @@ Voulez-vous quand même ajouter ce produit ?
 <li>L'app tourne sur le navigateur. Les mises à jour sont déployées sur le web (GitHub Pages).</li>
 <li>Le navigateur met en cache (<code>ServiceWorker</code>) pour le fonctionnement hors-ligne.</li>
 <li><code>stability.js</code> poll <code>version.json</code> toutes les 4 heures.</li>
-<li>Si mise à jour dispo â†’ Toast non intrusif "Nouvelle version dispo, rechargez avec Ctrl+Shift+R".</li>
+<li>Si mise à jour dispo -> Toast non intrusif "Nouvelle version dispo, rechargez avec Ctrl+Shift+R".</li>
 </ul>
 <hr>
 <h1 id="partie-v-exploitation">PARTIE V - EXPLOITATION</h1>
