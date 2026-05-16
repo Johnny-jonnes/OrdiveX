@@ -731,7 +731,7 @@ Router.register('print', (container) => {
 // ═══════════════════════════════════════════════════════════════════
 // IMPRESSION BON DE COMMANDE FOURNISSEUR
 // ═══════════════════════════════════════════════════════════════════
-PrintService.printPurchaseOrder = async function(orderId) {
+PrintEngine.printPurchaseOrder = async function(orderId) {
   await this.loadSettings();
   const [order, allSettings, suppliers] = await Promise.all([
     DB.dbGet('purchaseOrders', orderId),
@@ -846,4 +846,4 @@ PrintService.printPurchaseOrder = async function(orderId) {
   win.onload = () => win.print();
 };
 
-window.printPurchaseOrder = function(id) { PrintService.printPurchaseOrder(id); };
+window.printPurchaseOrder = function(id) { PrintEngine.printPurchaseOrder(id); };
