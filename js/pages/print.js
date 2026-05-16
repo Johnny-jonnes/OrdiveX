@@ -20,6 +20,9 @@ const PrintEngine = {
       this.pharmacyInfo.name = get('pharmacy_name') || this.pharmacyInfo.name;
       this.pharmacyInfo.address = get('pharmacy_address') || this.pharmacyInfo.address;
       this.pharmacyInfo.phone = get('pharmacy_phone') || this.pharmacyInfo.phone;
+      this.pharmacyInfo.email = get('pharmacy_email') || this.pharmacyInfo.email;
+      this.pharmacyInfo.dnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
+      this.pharmacyInfo.responsable = get('pharmacy_resp') || this.pharmacyInfo.responsable;
     } catch (e) { }
   },
 
@@ -131,7 +134,7 @@ const PrintEngine = {
     const pPhone = get('pharmacy_phone') || this.pharmacyInfo.phone;
     const pEmail = get('pharmacy_email') || this.pharmacyInfo.email;
     const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
-    const pResp = get('pharmacy_responsable') || this.pharmacyInfo.responsable;
+    const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
 
     const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement' };
     const subtotal = items.reduce((a, i) => a + (i.total || 0), 0);
