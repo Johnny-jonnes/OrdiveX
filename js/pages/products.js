@@ -16,7 +16,7 @@ async function renderProducts(container) {
   products.forEach(p => {
     const qty = stockMap[p.id] || 0;
     const pa = parseFloat(p.purchasePrice || p.prixAchat || 0);
-    const pv = parseFloat(p.price || p.prixVente || 0);
+    const pv = parseFloat(p.salePrice || p.price || p.prixVente || 0);
     valAchat += pa * qty;
     valVente += pv * qty;
     if (qty <= 0) rupture++;

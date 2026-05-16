@@ -72,46 +72,65 @@ const PrintEngine = {
 
   async printSaleReceipt(saleId) {
     await this.loadSettings();
-    const [sale, items] = await Promise.all([
+    const [sale, items, allSettings] = await Promise.all([
       DB.dbGet('sales', saleId),
       DB.dbGetAll('saleItems', 'saleId', saleId),
+      DB.dbGetAll('settings'),
     ]);
     if (!sale) return;
 
-    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement' };
+    const get = (key) => allSettings.find(s => s.key === key)?.value || '';
+    const pName = get('pharmacy_name') || this.pharmacyInfo.name;
+    const pAddr = get('pharmacy_address') || this.pharmacyInfo.address;
+    const pPhone = get('pharmacy_phone') || this.pharmacyInfo.phone;
+    const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
+    const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
+    const payLabels = { cash: 'Especes', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Credit', transfer: 'Virement' };
+    const subtotal = items.reduce((a, i) => a + (i.total || 0), 0);
+    const discount = sale.discount || 0;
+    const total = sale.total || subtotal - discount;
+    const saleDate = sale.date ? new Date(sale.date) : new Date();
 
     const win = this._openPrintWindow('Ticket de Caisse');
     win.document.write(`
       ${this._printStyles()}
       <div class="ticket-container">
-        <div class="ticket-logo">💊</div>
-        <h2 class="ticket-name">${this.pharmacyInfo.name}</h2>
-        <p class="ticket-addr">${this.pharmacyInfo.address}</p>
-        <p class="ticket-phone">${this.pharmacyInfo.phone}</p>
-        <div class="ticket-divider">════════════════════</div>
+        <h2 class="ticket-name">${pName}</h2>
+        <p class="ticket-addr">${pAddr}</p>
+        <p class="ticket-phone">${pPhone}</p>
+        ${pDnpm ? '<p class="ticket-phone">DNPM: ' + pDnpm + '</p>' : ''}
+        <div class="ticket-divider">================================</div>
         <div class="ticket-meta">
-          <div class="ticket-row"><span>N° Vente</span><span>#${String(saleId).padStart(6, '0')}</span></div>
-          <div class="ticket-row"><span>Date</span><span>${UI.formatDateTime(new Date(sale.date).getTime())}</span></div>
-          <div class="ticket-row"><span>Caissier</span><span>${DB.AppState.currentUser?.name || '—'}</span></div>
-          <div class="ticket-row"><span>Paiement</span><span>${payLabels[sale.paymentMethod] || sale.paymentMethod}</span></div>
+          <div class="ticket-row"><span>N Vente</span><span>#${String(saleId).padStart(6, '0')}</span></div>
+          <div class="ticket-row"><span>Date</span><span>${saleDate.toLocaleDateString('fr-FR')} ${saleDate.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})}</span></div>
+          <div class="ticket-row"><span>Vendeur</span><span>${sale.sellerName || DB.AppState.currentUser?.name || '---'}</span></div>
+          ${sale.preparerName ? '<div class="ticket-row"><span>Preparateur</span><span>' + sale.preparerName + '</span></div>' : ''}
+          ${sale.patientName && sale.patientName !== 'Client comptoir' ? '<div class="ticket-row"><span>Patient</span><span>' + sale.patientName + '</span></div>' : ''}
+          ${sale.prescriptionRef ? '<div class="ticket-row"><span>Ordonnance</span><span>' + sale.prescriptionRef + '</span></div>' : ''}
+          ${sale.doctorName ? '<div class="ticket-row"><span>Medecin</span><span>Dr. ' + sale.doctorName + '</span></div>' : ''}
         </div>
-        <div class="ticket-divider">════════════════════</div>
+        <div class="ticket-divider">================================</div>
         <table class="ticket-items">
           ${items.map(i => `
             <tr>
-              <td class="item-name">${i.productName}</td>
+              <td class="item-name">${i.productName}${i.dci ? '<br><span style="font-size:9px;color:#777">' + [i.dci, i.dosage].filter(Boolean).join(' ') + '</span>' : ''}</td>
               <td class="item-qty">${i.quantity}x</td>
               <td class="item-price">${UI.formatCurrency(i.unitPrice)}</td>
               <td class="item-total">${UI.formatCurrency(i.total)}</td>
             </tr>`).join('')}
         </table>
-        <div class="ticket-divider">════════════════════</div>
-        ${sale.discount > 0 ? `<div class="ticket-row"><span>Remise</span><span>-${UI.formatCurrency(sale.discount)}</span></div>` : ''}
-        <div class="ticket-total"><span>TOTAL</span><span>${UI.formatCurrency(sale.total)}</span></div>
-        <div class="ticket-divider">════════════════════</div>
+        <div class="ticket-divider">================================</div>
+        <div class="ticket-row"><span>Sous-total</span><span>${UI.formatCurrency(subtotal)}</span></div>
+        ${discount > 0 ? '<div class="ticket-row"><span>Remise</span><span>-' + UI.formatCurrency(discount) + '</span></div>' : ''}
+        <div class="ticket-total"><span>TOTAL</span><span>${UI.formatCurrency(total)}</span></div>
+        <div class="ticket-row"><span>Paiement</span><span>${payLabels[sale.paymentMethod] || sale.paymentMethod}</span></div>
+        ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div class="ticket-row"><span>Recu</span><span>' + UI.formatCurrency(sale.cashReceived) + '</span></div><div class="ticket-row"><span>Monnaie</span><span>' + UI.formatCurrency(sale.cashReceived - total) + '</span></div>' : ''}
+        ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div class="ticket-row" style="color:#c00"><span>Echeance</span><span>' + UI.formatDate(sale.creditDueDate) + '</span></div>' : ''}
+        <div class="ticket-divider">================================</div>
         <p class="ticket-thanks">Merci pour votre confiance</p>
-        <p class="ticket-advice">Respectez les prescriptions médicales</p>
-        <p class="ticket-legal">Conservez ce ticket comme preuve d'achat</p>
+        <p class="ticket-advice">Respectez les prescriptions medicales</p>
+        <p class="ticket-legal">${pResp} - Pharmacien responsable</p>
+        <p class="ticket-legal">OrdiveX v9.4.1 - ${saleDate.toLocaleDateString('fr-FR')}</p>
       </div>
     `);
     win.document.close();
