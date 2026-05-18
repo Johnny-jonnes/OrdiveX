@@ -1152,6 +1152,10 @@ async function syncToSupabase() {
             prescriptions: ['note'],  // Supabase a 'notes' (avec s), pas 'note'
             suppliers: ['complaints'],  // complaints stockées localement uniquement
           };
+          // Exclure les clés settings qui contiennent du JSON complexe non-compatible Supabase
+          if (storeName === 'settings' && payload.key === 'held_carts') {
+            continue;
+          }
           const localOnly = _localOnlyColumns[storeName];
           if (localOnly) {
             localOnly.forEach(c => delete payload[c]);
@@ -2002,13 +2006,15 @@ function _handleConnectivityChange(isOnline) {
       }, delay);
 
     } else {
-      // ── DÉCONNEXION ──
+      // ── DÉCONNEXION IMMÉDIATE ──
       AppState.isOnline = false;
+      // Annuler tout sync/pull en cours
+      _syncInProgress = false;
+      _isPulling = false;
+      if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
       _logOnce('log', '[App] Mode hors-ligne activé');
 
       // DESTRUCTION TOTALE de l'instance Supabase pour tuer TOUS ses timers internes
-      // (token refresh retry, realtime reconnect, etc.)
-      // L'instance sera recréée automatiquement au retour en ligne
       if (_supabaseInstance) {
         try {
           _supabaseInstance.auth?.stopAutoRefresh?.();
@@ -2023,10 +2029,10 @@ function _handleConnectivityChange(isOnline) {
           _supabaseInstance.realtime?.disconnect?.();
           _realtimeCooldown = false;
         } catch (e) { }
-        _supabaseInstance = null; // Tuer l'instance → plus aucun timer
+        _supabaseInstance = null;
       }
     }
-  }, 5000); // 5 secondes de debounce
+  }, isOnline ? 5000 : 500); // Offline: réaction rapide 500ms, Online: debounce 5s
 }
 
 window.addEventListener('online', () => _handleConnectivityChange(true));

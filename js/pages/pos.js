@@ -552,8 +552,11 @@ function renderFullPOSUI(container) {
           <button class="btn btn-ghost pos-btn-cancel" onclick="viderPanier()" title="Vider le panier (Échap)">
             <i data-lucide="trash-2"></i>
           </button>
-          <button class="btn btn-secondary pos-btn-hold" onclick="mettreEnAttente()">
+          <button class="btn btn-secondary pos-btn-hold" onclick="mettreEnAttente()" title="Mettre le panier en attente">
             <i data-lucide="pause"></i><span>Attente</span>
+          </button>
+          <button class="btn btn-ghost pos-btn-hold" onclick="voirPaniersEnAttente()" title="Voir les paniers en attente">
+            <i data-lucide="list"></i>
           </button>
           <button id="btn-valider" class="btn btn-success pos-btn-validate" onclick="validerVente()">
             <i data-lucide="check-circle"></i><span>Valider (F5)</span>
@@ -582,36 +585,31 @@ function renderFullPOSUI(container) {
   if (typeof mobileInitPOS === 'function') mobileInitPOS();
   document.getElementById('pos-search').focus();
 
-  // Restore held cart (RAM ou localStorage si changement d'utilisateur)
-  var heldSource = window._heldCart;
-  if (!heldSource) {
+  // Restore held carts: vérifier s'il y a des paniers en attente
+  (async function() {
     try {
-      var stored = localStorage.getItem('ordivex_held_cart');
-      if (stored) {
-        var parsed = JSON.parse(stored);
-        // Expirer après 24h
-        if (parsed && parsed.timestamp && (Date.now() - parsed.timestamp) < 86400000) {
-          heldSource = parsed;
-        } else {
-          localStorage.removeItem('ordivex_held_cart');
-        }
+      var carts = await _getHeldCarts();
+      if (carts.length > 0) {
+        UI.toast(carts.length + ' panier(s) en attente — Cliquez sur le bouton Attente pour les voir', 'info', 6000);
       }
     } catch(e) {}
-  }
-  if (heldSource && heldSource.items && heldSource.items.length > 0) {
-    posCart = heldSource.items.map(function(c) { return Object.assign({}, c); });
-    posCurrentPatient = heldSource.patient || null;
-    posCurrentRx = heldSource.rx || null;
-    // Double traçabilité : sauvegarder le préparateur original
-    if (heldSource.preparerId && heldSource.preparerId !== DB.AppState.currentUser?.id) {
-      window._heldCartPreparer = { id: heldSource.preparerId, name: heldSource.preparerName };
-      UI.toast('Panier restauré — Préparé par ' + (heldSource.preparerName || 'un collègue'), 'info', 5000);
-    }
-    window._heldCart = null;
-    try { localStorage.removeItem('ordivex_held_cart'); } catch(e) {}
-    refreshCartUI();
-    if (posCurrentPatient) renderClientBadge(posCurrentPatient);
-  }
+    // Migration: nettoyer l'ancien format single cart
+    try {
+      var oldHeld = localStorage.getItem('ordivex_held_cart');
+      if (oldHeld) {
+        var parsed = JSON.parse(oldHeld);
+        if (parsed && parsed.items && parsed.items.length > 0) {
+          parsed.id = parsed.timestamp || Date.now();
+          parsed.itemCount = parsed.items.length;
+          parsed.total = parsed.items.reduce(function(a, c) { return a + (c.total || 0); }, 0);
+          await _saveHeldCartToDB(parsed);
+          UI.toast('Ancien panier en attente migre — retrouvez-le via le bouton Attente', 'info', 5000);
+        }
+        localStorage.removeItem('ordivex_held_cart');
+      }
+    } catch(e) {}
+  })();
+  window._heldCartPreparer = null;
   if (window.lucide) lucide.createIcons();
   _posRenderTabs();
 }
@@ -1673,18 +1671,146 @@ async function attachRx(rxId) {
 function mettreEnAttente() {
   if (!posCart.length) { UI.toast('Panier vide', 'warning'); return; }
   var heldData = {
+    id: Date.now(),
+    label: 'Panier #' + (Date.now() % 10000),
     items: posCart.map(function(c) { return Object.assign({}, c); }),
     patient: posCurrentPatient,
     rx: posCurrentRx,
     preparerId: DB.AppState.currentUser?.id || null,
     preparerName: DB.AppState.currentUser?.name || null,
+    deviceId: DB.AppState.deviceId || null,
+    itemCount: posCart.length,
+    total: posCart.reduce(function(a, c) { return a + (c.total || 0); }, 0),
     timestamp: Date.now()
   };
-  window._heldCart = heldData;
-  // Persister dans localStorage pour survivre au changement d'utilisateur
-  try { localStorage.setItem('ordivex_held_cart', JSON.stringify(heldData)); } catch(e) {}
+
+  // Sauvegarder dans IndexedDB (persist + sync possible)
+  _saveHeldCartToDB(heldData);
+
+  // Aussi dans localStorage pour acces rapide
+  try {
+    var existing = JSON.parse(localStorage.getItem('ordivex_held_carts') || '[]');
+    existing.push(heldData);
+    localStorage.setItem('ordivex_held_carts', JSON.stringify(existing));
+  } catch(e) {}
+
   viderPanier();
-  UI.toast('Panier mis en attente — Il sera restauré au prochain accès au POS', 'info', 5000);
+  UI.toast('Panier mis en attente (' + heldData.items.length + ' articles)', 'info', 4000);
+}
+
+async function _saveHeldCartToDB(heldData) {
+  try {
+    var existing = await DB.dbGet('settings', 'held_carts');
+    var carts = [];
+    if (existing && existing.value) {
+      try { carts = JSON.parse(existing.value); } catch(e) { carts = []; }
+    }
+    carts.push(heldData);
+    // Nettoyer les paniers de plus de 48h
+    var now = Date.now();
+    carts = carts.filter(function(c) { return (now - c.timestamp) < 172800000; });
+    if (existing) {
+      await DB.dbPut('settings', { key: 'held_carts', value: JSON.stringify(carts), updatedAt: now });
+    } else {
+      await DB.dbAdd('settings', { key: 'held_carts', value: JSON.stringify(carts), updatedAt: now });
+    }
+  } catch(e) { console.warn('[POS] Erreur sauvegarde panier en attente:', e); }
+}
+
+async function _getHeldCarts() {
+  var carts = [];
+  // Source 1: IndexedDB (plus fiable, survit au refresh)
+  try {
+    var dbEntry = await DB.dbGet('settings', 'held_carts');
+    if (dbEntry && dbEntry.value) {
+      var parsed = JSON.parse(dbEntry.value);
+      if (Array.isArray(parsed)) carts = parsed;
+    }
+  } catch(e) {}
+  // Source 2: localStorage (fallback rapide)
+  if (carts.length === 0) {
+    try {
+      var stored = JSON.parse(localStorage.getItem('ordivex_held_carts') || '[]');
+      if (Array.isArray(stored)) carts = stored;
+    } catch(e) {}
+  }
+  // Nettoyer les paniers expires (>48h)
+  var now = Date.now();
+  carts = carts.filter(function(c) { return c && c.items && c.items.length > 0 && (now - c.timestamp) < 172800000; });
+  return carts;
+}
+
+async function voirPaniersEnAttente() {
+  var carts = await _getHeldCarts();
+  if (carts.length === 0) {
+    UI.toast('Aucun panier en attente', 'info');
+    return;
+  }
+  var html = carts.map(function(c, idx) {
+    var dateStr = new Date(c.timestamp).toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+    return '<div class="held-cart-card" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background=\'var(--bg)\'" onmouseout="this.style.background=\'transparent\'">' +
+      '<div onclick="restaurerPanier(' + c.id + ')" style="flex:1">' +
+        '<div style="font-weight:600;font-size:14px">' + (c.patient ? c.patient.name : 'Client comptoir') + '</div>' +
+        '<div style="font-size:12px;color:var(--text-muted)">' + c.itemCount + ' article(s) - ' + UI.formatCurrency(c.total) + ' - ' + dateStr + '</div>' +
+        (c.preparerName ? '<div style="font-size:11px;color:var(--text-muted)">Prepare par ' + c.preparerName + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:6px">' +
+        '<button class="btn btn-xs btn-primary" onclick="restaurerPanier(' + c.id + ')"><i data-lucide="play"></i></button>' +
+        '<button class="btn btn-xs btn-danger" onclick="supprimerPanierAttente(' + c.id + ')"><i data-lucide="trash-2"></i></button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  UI.modal('<i data-lucide="pause-circle" class="modal-icon-inline"></i> Paniers en attente (' + carts.length + ')', '<div>' + html + '</div>');
+  if (window.lucide) lucide.createIcons();
+}
+
+async function restaurerPanier(cartId) {
+  var carts = await _getHeldCarts();
+  var found = carts.find(function(c) { return c.id === cartId; });
+  if (!found) { UI.toast('Panier introuvable', 'error'); return; }
+
+  // Restaurer le panier
+  posCart = found.items.map(function(c) { return Object.assign({}, c); });
+  posCurrentPatient = found.patient || null;
+  posCurrentRx = found.rx || null;
+  if (found.preparerId && found.preparerId !== DB.AppState.currentUser?.id) {
+    window._heldCartPreparer = { id: found.preparerId, name: found.preparerName };
+  }
+
+  // Supprimer ce panier de la liste
+  await _removeHeldCart(cartId);
+
+  UI.closeModal();
+  refreshCartUI();
+  if (posCurrentPatient) renderClientBadge(posCurrentPatient);
+  UI.toast('Panier restaure (' + found.items.length + ' articles)', 'success', 4000);
+}
+
+async function supprimerPanierAttente(cartId) {
+  await _removeHeldCart(cartId);
+  UI.closeModal();
+  UI.toast('Panier supprime', 'info');
+  // Rouvrir la liste mise a jour
+  setTimeout(function() { voirPaniersEnAttente(); }, 300);
+}
+
+async function _removeHeldCart(cartId) {
+  // Supprimer de IndexedDB
+  try {
+    var dbEntry = await DB.dbGet('settings', 'held_carts');
+    if (dbEntry && dbEntry.value) {
+      var carts = JSON.parse(dbEntry.value);
+      carts = carts.filter(function(c) { return c.id !== cartId; });
+      await DB.dbPut('settings', { key: 'held_carts', value: JSON.stringify(carts), updatedAt: Date.now() });
+    }
+  } catch(e) {}
+  // Supprimer de localStorage
+  try {
+    var stored = JSON.parse(localStorage.getItem('ordivex_held_carts') || '[]');
+    stored = stored.filter(function(c) { return c.id !== cartId; });
+    localStorage.setItem('ordivex_held_carts', JSON.stringify(stored));
+  } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2538,6 +2664,9 @@ window.setQtyDirect = setQtyDirect;
 window.removeItem = removeItem;
 window.viderPanier = viderPanier;
 window.mettreEnAttente = mettreEnAttente;
+window.voirPaniersEnAttente = voirPaniersEnAttente;
+window.restaurerPanier = restaurerPanier;
+window.supprimerPanierAttente = supprimerPanierAttente;
 window.validerVente = validerVente;
 window.selectPay = selectPay;
 window.setCashIn = setCashIn;
