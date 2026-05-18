@@ -1154,7 +1154,7 @@ async function syncToSupabase() {
           };
           // Exclure les clés settings qui contiennent du JSON complexe non-compatible Supabase
           if (storeName === 'settings' && payload.key === 'held_carts') {
-            continue;
+            return null;
           }
           const localOnly = _localOnlyColumns[storeName];
           if (localOnly) {
@@ -1172,7 +1172,7 @@ async function syncToSupabase() {
           return payload;
         });
 
-        var currentPayloads = payloads;
+        var currentPayloads = payloads.filter(Boolean);
 
         let retries = 0;
         const maxRetries = 10;
