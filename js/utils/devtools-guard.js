@@ -2,9 +2,12 @@
  * OrdiveX — DevTools Guard v9.4.6
  * Bloque l'acces aux outils developpeur pour les utilisateurs finaux
  * 
- * ACTIVATION : localStorage.setItem('ordivex_production_mode', 'true')
- * DESACTIVATION : localStorage.setItem('ordivex_production_mode', 'false')
+ * ACTIVATION LOCALE : localStorage.setItem('ordivex_production_mode', 'true')
+ * ACTIVATION DISTANCE : Dans Supabase > table "settings" > inserer :
+ *   key = 'production_mode', value = 'true'
+ *   Tous les appareils l'activeront au prochain pull automatique.
  * 
+ * DESACTIVATION : Meme procedure avec value = 'false'
  * Par defaut : DESACTIVE (mode developpement/test)
  * Ce fichier est 100% autonome — il ne modifie AUCUNE variable/fonction existante
  */
@@ -14,26 +17,66 @@
   // ── SECURITE : tout est wrappe pour ne JAMAIS crasher l'app ──
   try {
 
-    // Verifier si le mode production est active
+    // Cache local du mode production (evite les lectures IndexedDB repetees)
+    var _prodModeCache = null;
+    var _prodModeCacheTime = 0;
+
+    // Verifier si le mode production est active (localStorage OU IndexedDB)
     function _isProductionMode() {
       try {
-        return localStorage.getItem('ordivex_production_mode') === 'true';
+        // Source 1 : localStorage (reponse instantanee)
+        var local = localStorage.getItem('ordivex_production_mode');
+        if (local === 'true') return true;
+        if (local === 'false') return false;
+
+        // Source 2 : Cache IndexedDB (mis a jour toutes les 30s)
+        if (_prodModeCache !== null) return _prodModeCache;
+
+        return false; // Par defaut : desactive
       } catch (e) {
-        return false; // Si localStorage est inaccessible, ne rien bloquer
+        return false;
       }
     }
 
-    // Ne rien faire si le mode production n'est pas active
-    if (!_isProductionMode()) return;
+    // Lire le setting depuis IndexedDB (async, met a jour le cache)
+    function _refreshFromIndexedDB() {
+      try {
+        var request = indexedDB.open('OrdiveXDB');
+        request.onsuccess = function (e) {
+          try {
+            var db = e.target.result;
+            if (!db.objectStoreNames.contains('settings')) { db.close(); return; }
+            var tx = db.transaction('settings', 'readonly');
+            var store = tx.objectStore('settings');
+            var get = store.get('production_mode');
+            get.onsuccess = function () {
+              if (get.result && get.result.value) {
+                var val = String(get.result.value).toLowerCase();
+                _prodModeCache = (val === 'true' || val === '1');
+                _prodModeCacheTime = Date.now();
+                // Synchroniser avec localStorage pour les prochains checks rapides
+                if (_prodModeCache) {
+                  try { localStorage.setItem('ordivex_production_mode', 'true'); } catch (e) { }
+                }
+              }
+              db.close();
+            };
+            get.onerror = function () { db.close(); };
+          } catch (e) { }
+        };
+        request.onerror = function () { };
+      } catch (e) { }
+    }
+
+    // Rafraichir depuis IndexedDB au demarrage puis toutes les 30s
+    _refreshFromIndexedDB();
+    setInterval(_refreshFromIndexedDB, 30000);
 
     // ═══════════════════════════════════════════════════════════════
     // 1. BLOQUER LES RACCOURCIS CLAVIER DevTools
     // ═══════════════════════════════════════════════════════════════
-    // Liste des raccourcis OrdiveX a NE PAS bloquer :
-    // Ctrl+1-5 (navigation), Ctrl+P (print), Ctrl+B (backup),
-    // Ctrl+K (command palette), Escape (fermer modal), F5 (valider vente)
     document.addEventListener('keydown', function (e) {
-      if (!_isProductionMode()) return; // Re-verifier a chaque frappe
+      if (!_isProductionMode()) return;
 
       // F12 — Ouvrir DevTools
       if (e.key === 'F12') {
@@ -69,7 +112,7 @@
         e.stopPropagation();
         return false;
       }
-    }, true); // 'true' = capture phase, intercepte AVANT les autres handlers
+    }, true);
 
     // ═══════════════════════════════════════════════════════════════
     // 2. DESACTIVER LE CLIC DROIT (menu "Inspecter")
@@ -83,27 +126,20 @@
     // ═══════════════════════════════════════════════════════════════
     // 3. DETECTION DevTools OUVERT (fallback si contournement)
     // ═══════════════════════════════════════════════════════════════
-    // Technique : mesurer le temps d'execution de debugger
-    // Si DevTools est ouvert, debugger pause l'execution → temps > seuil
     var _devtoolsWarned = false;
     function _checkDevTools() {
       if (!_isProductionMode()) return;
       var t0 = performance.now();
-      // Cette ligne ne fait rien sauf si DevTools est ouvert
-      // (debugger est ignore quand DevTools est ferme)
       (function () {}).constructor('debugger')();
       var t1 = performance.now();
       if (t1 - t0 > 100 && !_devtoolsWarned) {
         _devtoolsWarned = true;
-        // Avertissement discret — pas de crash, pas de redirect
         if (window.UI && UI.toast) {
           UI.toast('Acces non autorise aux outils developpeur', 'warning', 5000);
         }
-        // Reset apres 30s pour permettre une nouvelle detection
         setTimeout(function () { _devtoolsWarned = false; }, 30000);
       }
     }
-    // Verifier toutes les 3 secondes (leger, pas de surcharge CPU)
     setInterval(_checkDevTools, 3000);
 
     // ═══════════════════════════════════════════════════════════════
@@ -116,6 +152,5 @@
 
   } catch (e) {
     // Si QUOI QUE CE SOIT echoue, on ne fait RIEN
-    // L'app continue de fonctionner normalement
   }
 })();
