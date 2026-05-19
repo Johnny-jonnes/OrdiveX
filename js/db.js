@@ -45,6 +45,27 @@
   });
 })();
 
+// ═══════════════════════════════════════════════════════════════════
+// FETCH INTERCEPTOR — Bloque les requêtes Supabase quand offline
+// Empêche les "Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+// qui sont des logs Chrome impossibles à supprimer autrement
+// ═══════════════════════════════════════════════════════════════════
+(function () {
+  var _origFetch = window.fetch;
+  window.fetch = function (url, opts) {
+    // Si offline ET la requête va vers Supabase → retourner une réponse vide silencieuse
+    if (!navigator.onLine) {
+      var urlStr = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
+      if (urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('iapvppgdqewgqnpisvwq') !== -1) {
+        return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
+          status: 200, headers: { 'Content-Type': 'application/json' }
+        }));
+      }
+    }
+    return _origFetch.apply(this, arguments);
+  };
+})();
+
 const DB_NAME = 'OrdiveXDB';
 const DB_VERSION = 2;
 
@@ -1634,8 +1655,9 @@ async function pullFromSupabase(isManual = false) {
       await window.updatePharmacyDisplay();
     }
 
-    // Si le Point de Vente (POS) est ouvert, on rafraîchit les données localement
-    if (window.location.hash === '#pos' && typeof refreshPOSData === 'function') {
+    // Si le POS est ouvert ET pull MANUEL uniquement → rafraîchir les données produits
+    // JAMAIS en auto-pull : le rechargement perturbe le travail du caissier
+    if (isManual && window.location.hash === '#pos' && typeof refreshPOSData === 'function') {
       await refreshPOSData();
     }
 

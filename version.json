@@ -1,1 +1,1 @@
-{"version":"9.4.5","date":"2026-05-18","changelog":"Fix multi-paniers en attente, offline resilience, held carts en IndexedDB"}
+{"version":"9.4.6","date":"2026-05-19","changelog":"Fix POS no-reload pendant pull, fetch interceptor offline, multi-paniers attente"}
