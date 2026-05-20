@@ -501,7 +501,7 @@
     setTimeout(_memoryWatchdog, 60000); // 1 min apres le chargement
     setInterval(_memoryWatchdog, 30 * 60 * 1000);
 
-    console.log('[Stability] Bouclier de stabilite v9.4.7 active — ' + new Date().toLocaleTimeString('fr-FR'));
+    console.log('[Stability] Bouclier de stabilite v9.4.8 active — ' + new Date().toLocaleTimeString('fr-FR'));
   }
 
   // Demarrer une fois le DOM pret
