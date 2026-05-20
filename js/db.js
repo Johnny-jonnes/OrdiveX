@@ -1172,6 +1172,7 @@ async function syncToSupabase() {
             stock: ['lastUpdate', 'minQuantity'],
             prescriptions: ['note'],  // Supabase a 'notes' (avec s), pas 'note'
             suppliers: ['complaints'],  // complaints stockées localement uniquement
+            purchaseOrders: ['importedAt'],  // champ d'import CSV local uniquement
           };
           // Exclure les clés settings qui contiennent du JSON complexe non-compatible Supabase
           if (storeName === 'settings' && payload.key === 'held_carts') {
