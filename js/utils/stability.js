@@ -1,5 +1,5 @@
 /**
- * OrdiveX — Module de Stabilite v9.4.7
+ * OrdiveX — Module de Stabilite v9.4.8
  * Bouclier d'erreurs global + Verification de version + Auto-recovery
  * Ce fichier DOIT etre charge en DERNIER pour wrapper tous les modules
  */

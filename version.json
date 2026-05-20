@@ -1,1 +1,1 @@
-{"version":"9.4.7","date":"2026-05-20","changelog":"Import/export commandes avec stock auto, CORS fix, guide utilisateur complet"}
+{"version":"9.4.8","date":"2026-05-20","changelog":"Fix sync Supabase: importedAt exclu, export/import CSV commandes"}
