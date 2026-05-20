@@ -1098,9 +1098,19 @@ async function syncToSupabase() {
       }
     }
 
-    // --- PROBE MÉTIER (via client Supabase — utilise le token auth correct) ---
+    // --- PROBE MÉTIER (avec pré-vérification réseau) ---
     if (!navigator.onLine) { AppState.isOnline = false; return; }
     try {
+      // Pré-test réseau ultra-léger (évite les erreurs rouges fetch)
+      try {
+        await Promise.race([
+          fetch(sb.supabaseUrl + '/rest/v1/', { method: 'HEAD', mode: 'no-cors' }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
+        ]);
+      } catch (netErr) {
+        AppState.isOnline = false;
+        return;
+      }
       const probeReq = await sb.from('settings').select('key').limit(1);
       if (probeReq.error) {
         // Si 401 → re-auth et retry
@@ -1383,8 +1393,19 @@ async function pullFromSupabase(isManual = false) {
       'cashRegister', 'auditLog', 'returns'
     ];
 
-    // --- PROBE MÉTIER ---
+    // --- PROBE MÉTIER (avec pré-vérification réseau) ---
+    if (!navigator.onLine) { AppState.isOnline = false; return; }
     try {
+      // Pré-test réseau ultra-léger (évite les erreurs rouges fetch)
+      try {
+        await Promise.race([
+          fetch(sb.supabaseUrl + '/rest/v1/', { method: 'HEAD', mode: 'no-cors' }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
+        ]);
+      } catch (netErr) {
+        AppState.isOnline = false;
+        return;
+      }
       const probeReq = await sb.from('settings').select('key').limit(1);
       if (probeReq.error) throw probeReq.error;
       AppState.isOnline = true;
