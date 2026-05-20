@@ -1604,7 +1604,7 @@ async function pullFromSupabase(isManual = false) {
         }
       } catch (storeErr) {
         const errMsg = storeErr?.message || String(storeErr || '');
-        const isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_INTERNET_DISCONNECTED') || errMsg.includes('ERR_QUIC_PROTOCOL_ERROR') || errMsg.includes('ERR_NAME_NOT_RESOLVED');
+        const isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_INTERNET_DISCONNECTED') || errMsg.includes('ERR_QUIC_PROTOCOL_ERROR') || errMsg.includes('ERR_NAME_NOT_RESOLVED') || errMsg.includes('CORS') || errMsg.includes('Access-Control') || errMsg.includes('ERR_CONNECTION_RESET') || errMsg.includes('preflight');
         if (isNetworkError) {
           AppState.isOnline = false;
           console.log('[Flash] ⚠️ Pull interrompu: erreur réseau détectée');
