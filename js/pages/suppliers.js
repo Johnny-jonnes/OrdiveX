@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OrdiveX — Module Achats & Fournisseurs
  * Commandes, réceptions, litiges, évaluation fournisseurs
  */
@@ -1002,452 +1002,282 @@ Router.register('suppliers', renderSuppliers);
 Router.register('purchase-orders', renderPurchaseOrders);
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT DE COMMANDES
+// EXPORT / IMPORT DE COMMANDES — FORMAT CSV
 // Gestion complète des erreurs pour robustesse production
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Exporte TOUTES les commandes en JSON
+ * Helper: escape CSV value
+ */
+function _csvEscape(val) {
+  if (val === null || val === undefined) return '';
+  var s = String(val);
+  if (s.indexOf(';') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+/**
+ * Helper: generate CSV content from an order
+ */
+function _orderToCSVRows(order, supplierName) {
+  var rows = [];
+  (order.items || []).forEach(function(item) {
+    rows.push([
+      _csvEscape(order.orderNumber || ''),
+      _csvEscape(order.date || ''),
+      _csvEscape(supplierName || ''),
+      _csvEscape(order.status || 'pending'),
+      _csvEscape(order.expectedDate || ''),
+      _csvEscape(item.productName || ''),
+      item.quantity || 0,
+      item.unitPrice || 0,
+      item.receivedQty || 0,
+      _csvEscape(item.lotNumber || ''),
+      _csvEscape(item.expiryDate || ''),
+      _csvEscape(order.note || '')
+    ].join(';'));
+  });
+  return rows;
+}
+
+var CSV_HEADER = 'N_BC;Date;Fournisseur;Statut;Date_Livraison;Produit;Quantite;Prix_Unitaire;Qte_Recue;Lot;Peremption;Note';
+
+/**
+ * Exporte TOUTES les commandes en CSV
  */
 async function exportAllOrders() {
   try {
-    const [orders, suppliers] = await Promise.all([
-      DB.dbGetAll('purchaseOrders'),
-      DB.dbGetAll('suppliers'),
-    ]);
-    if (!orders || orders.length === 0) {
-      UI.toast('Aucune commande à exporter', 'warning');
-      return;
-    }
-    const supplierMap = {};
-    (suppliers || []).forEach(s => { supplierMap[s.id] = s.name; });
-
-    const exportData = {
-      _format: 'OrdiveX_PurchaseOrders',
-      _version: '9.4.6',
-      _exportDate: new Date().toISOString(),
-      _pharmacyName: (await DB.dbGetAll('settings')).find(s => s.key === 'pharmacy_name')?.value || '',
-      _count: orders.length,
-      orders: orders.map(o => ({
-        orderNumber: o.orderNumber || '',
-        date: o.date || '',
-        expectedDate: o.expectedDate || '',
-        status: o.status || 'pending',
-        supplierName: supplierMap[o.supplierId] || 'Inconnu',
-        supplierId: o.supplierId,
-        totalAmount: o.totalAmount || 0,
-        note: o.note || '',
-        items: (o.items || []).map(i => ({
-          productName: i.productName || '',
-          productId: i.productId,
-          quantity: i.quantity || 0,
-          unitPrice: i.unitPrice || 0,
-          receivedQty: i.receivedQty || 0,
-          lotNumber: i.lotNumber || '',
-          expiryDate: i.expiryDate || '',
-        })),
-      })),
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    var orders = await DB.dbGetAll('purchaseOrders');
+    var suppliers = await DB.dbGetAll('suppliers');
+    if (!orders || orders.length === 0) { UI.toast('Aucune commande à exporter', 'warning'); return; }
+    var supMap = {};
+    (suppliers || []).forEach(function(s) { supMap[s.id] = s.name; });
+    var lines = [CSV_HEADER];
+    orders.forEach(function(o) {
+      var rows = _orderToCSVRows(o, supMap[o.supplierId] || 'Inconnu');
+      rows.forEach(function(r) { lines.push(r); });
+    });
+    var blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
     a.href = url;
-    a.download = `OrdiveX_Commandes_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.download = 'OrdiveX_Commandes_' + new Date().toISOString().split('T')[0] + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    UI.toast(`${orders.length} commande(s) exportée(s)`, 'success');
+    UI.toast(orders.length + ' commande(s) exportée(s) en CSV', 'success');
   } catch (err) {
     console.warn('[Export] Erreur:', err);
-    UI.toast('Erreur lors de l\'export : ' + (err.message || err), 'error');
+    UI.toast('Erreur export : ' + (err.message || err), 'error');
   }
 }
 
 /**
- * Exporte UNE commande spécifique
+ * Exporte UNE commande spécifique en CSV
  */
 async function exportSingleOrder(orderId) {
   try {
-    const order = await DB.dbGet('purchaseOrders', orderId);
+    var order = await DB.dbGet('purchaseOrders', orderId);
     if (!order) { UI.toast('Commande introuvable', 'error'); return; }
-    const suppliers = await DB.dbGetAll('suppliers');
-    const sup = suppliers.find(s => s.id === order.supplierId);
-
-    const exportData = {
-      _format: 'OrdiveX_PurchaseOrders',
-      _version: '9.4.6',
-      _exportDate: new Date().toISOString(),
-      _count: 1,
-      orders: [{
-        orderNumber: order.orderNumber || '',
-        date: order.date || '',
-        expectedDate: order.expectedDate || '',
-        status: order.status || 'pending',
-        supplierName: sup?.name || 'Inconnu',
-        supplierId: order.supplierId,
-        totalAmount: order.totalAmount || 0,
-        note: order.note || '',
-        items: (order.items || []).map(i => ({
-          productName: i.productName || '',
-          productId: i.productId,
-          quantity: i.quantity || 0,
-          unitPrice: i.unitPrice || 0,
-          receivedQty: i.receivedQty || 0,
-          lotNumber: i.lotNumber || '',
-          expiryDate: i.expiryDate || '',
-        })),
-      }],
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    var suppliers = await DB.dbGetAll('suppliers');
+    var sup = suppliers.find(function(s) { return s.id === order.supplierId; });
+    var lines = [CSV_HEADER];
+    _orderToCSVRows(order, sup ? sup.name : 'Inconnu').forEach(function(r) { lines.push(r); });
+    var blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
     a.href = url;
-    a.download = `${order.orderNumber || 'BC'}_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.download = (order.orderNumber || 'BC') + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    UI.toast(`Commande ${order.orderNumber} exportée`, 'success');
+    UI.toast('Commande ' + order.orderNumber + ' exportée en CSV', 'success');
   } catch (err) {
     console.warn('[Export] Erreur:', err);
-    UI.toast('Erreur lors de l\'export : ' + (err.message || err), 'error');
+    UI.toast('Erreur export : ' + (err.message || err), 'error');
   }
 }
 
 /**
- * Importe des commandes depuis un fichier JSON ou CSV
- * Si le statut est "received", le stock est mis à jour automatiquement
+ * Importe des commandes depuis un fichier CSV
+ * Si statut = received/reçue → stock mis à jour automatiquement
  */
 async function importOrdersFile(file) {
   if (!file) return;
   try {
-    // ── Validation du fichier ──
-    const maxSize = 50 * 1024 * 1024; // 50 MB
-    if (file.size > maxSize) {
-      UI.toast('Fichier trop volumineux (max 50 MB)', 'error');
-      return;
-    }
-    if (file.size === 0) {
-      UI.toast('Le fichier est vide', 'error');
-      return;
-    }
+    if (file.size > 50 * 1024 * 1024) { UI.toast('Fichier trop volumineux (max 50 MB)', 'error'); return; }
+    if (file.size === 0) { UI.toast('Le fichier est vide', 'error'); return; }
+    var text = await file.text();
+    if (!text || !text.trim()) { UI.toast('Le fichier ne contient aucune donnée', 'error'); return; }
 
-    const text = await file.text();
-    if (!text || !text.trim()) {
-      UI.toast('Le fichier ne contient aucune donnée', 'error');
-      return;
-    }
-
-    let ordersToImport = [];
-
-    // ── Détection du format (JSON ou CSV) ──
+    // Detect format
+    var ordersToImport = [];
     if (file.name.endsWith('.json')) {
       ordersToImport = _parseImportJSON(text);
-    } else if (file.name.endsWith('.csv')) {
-      ordersToImport = _parseImportCSV(text);
     } else {
-      UI.toast('Format non supporté. Utilisez .json ou .csv', 'error');
-      return;
+      ordersToImport = _parseImportCSV(text);
     }
+    if (!ordersToImport || ordersToImport.length === 0) { UI.toast('Aucune commande valide trouvée', 'warning'); return; }
 
-    if (!ordersToImport || ordersToImport.length === 0) {
-      UI.toast('Aucune commande valide trouvée dans le fichier', 'warning');
-      return;
-    }
-
-    // ── Confirmation avant import ──
-    const hasReceived = ordersToImport.some(o => o.status === 'received');
-    const confirmMsg = `Importer ${ordersToImport.length} commande(s) ?\n${hasReceived ? '⚠️ Les commandes "Reçues" mettront à jour le stock automatiquement.' : ''}`;
-    const confirmed = await UI.confirm(confirmMsg);
+    var hasReceived = ordersToImport.some(function(o) { return o.status === 'received'; });
+    var msg = 'Importer ' + ordersToImport.length + ' commande(s) ?';
+    if (hasReceived) msg += '\n⚠️ Les commandes "Reçues" mettront à jour le stock automatiquement.';
+    var confirmed = await UI.confirm(msg);
     if (!confirmed) return;
 
-    // ── Chargement des données de référence ──
-    const [products, suppliers, existingOrders] = await Promise.all([
-      DB.dbGetAll('products'),
-      DB.dbGetAll('suppliers'),
-      DB.dbGetAll('purchaseOrders'),
-    ]);
-
-    const productMap = {};
-    products.forEach(p => {
+    var products = await DB.dbGetAll('products');
+    var suppliers = await DB.dbGetAll('suppliers');
+    var existingOrders = await DB.dbGetAll('purchaseOrders');
+    var productMap = {};
+    products.forEach(function(p) {
       productMap[(p.name || '').toLowerCase().trim()] = p;
       if (p.code) productMap[p.code.toLowerCase().trim()] = p;
     });
-    const supplierMap = {};
-    suppliers.forEach(s => { supplierMap[(s.name || '').toLowerCase().trim()] = s; });
-    const existingNumbers = new Set(existingOrders.map(o => o.orderNumber));
+    var supplierMap = {};
+    suppliers.forEach(function(s) { supplierMap[(s.name || '').toLowerCase().trim()] = s; });
+    var existingNumbers = new Set(existingOrders.map(function(o) { return o.orderNumber; }));
 
-    let imported = 0;
-    let skipped = 0;
-    let stockUpdated = 0;
-    const errors = [];
+    var imported = 0, skipped = 0, stockUpdated = 0, errors = [];
 
-    for (const orderData of ordersToImport) {
+    for (var oi = 0; oi < ordersToImport.length; oi++) {
+      var orderData = ordersToImport[oi];
       try {
-        // ── Vérifier doublon ──
-        if (orderData.orderNumber && existingNumbers.has(orderData.orderNumber)) {
-          skipped++;
-          continue;
-        }
+        if (orderData.orderNumber && existingNumbers.has(orderData.orderNumber)) { skipped++; continue; }
 
-        // ── Résoudre le fournisseur ──
-        let supplierId = null;
+        // Resolve supplier
+        var supplierId = null;
         if (orderData.supplierName) {
-          const foundSup = supplierMap[orderData.supplierName.toLowerCase().trim()];
-          if (foundSup) {
-            supplierId = foundSup.id;
-          } else {
-            // Auto-créer le fournisseur s'il n'existe pas
-            supplierId = await DB.dbAdd('suppliers', {
-              name: orderData.supplierName,
-              status: 'active',
-              paymentTerms: 30,
-            });
-            supplierMap[orderData.supplierName.toLowerCase().trim()] = { id: supplierId, name: orderData.supplierName };
+          var foundSup = supplierMap[orderData.supplierName.toLowerCase().trim()];
+          if (foundSup) { supplierId = foundSup.id; }
+          else {
+            supplierId = await DB.dbAdd('suppliers', { name: orderData.supplierName, status: 'active', paymentTerms: 30 });
+            supplierMap[orderData.supplierName.toLowerCase().trim()] = { id: supplierId };
           }
         }
 
-        // ── Résoudre les produits des items ──
-        const resolvedItems = [];
-        for (const item of (orderData.items || [])) {
+        // Resolve items
+        var resolvedItems = [];
+        for (var ii = 0; ii < (orderData.items || []).length; ii++) {
+          var item = orderData.items[ii];
           if (!item.productName && !item.productId) continue;
-          let product = null;
-          if (item.productName) {
-            product = productMap[item.productName.toLowerCase().trim()];
-          }
-          if (!product && item.productId) {
-            product = products.find(p => p.id === item.productId);
-          }
-
-          const resolvedItem = {
-            productId: product?.id || null,
-            productName: item.productName || product?.name || 'Produit inconnu',
-            quantity: Math.max(0, parseInt(item.quantity) || 0),
-            unitPrice: Math.max(0, parseFloat(item.unitPrice) || product?.purchasePrice || 0),
+          var product = item.productName ? productMap[item.productName.toLowerCase().trim()] : null;
+          if (!product && item.productId) product = products.find(function(p) { return p.id === item.productId; });
+          var qty = Math.max(0, parseInt(item.quantity) || 0);
+          if (qty <= 0) continue;
+          resolvedItems.push({
+            productId: product ? product.id : null,
+            productName: item.productName || (product ? product.name : 'Inconnu'),
+            quantity: qty,
+            unitPrice: Math.max(0, parseFloat(item.unitPrice) || (product ? product.purchasePrice : 0) || 0),
             receivedQty: Math.max(0, parseInt(item.receivedQty) || 0),
             lotNumber: item.lotNumber || '',
-            expiryDate: item.expiryDate || '',
-          };
-
-          if (resolvedItem.quantity > 0) {
-            resolvedItems.push(resolvedItem);
-          }
+            expiryDate: item.expiryDate || ''
+          });
         }
+        if (resolvedItems.length === 0) { errors.push('BC ' + (orderData.orderNumber || '?') + ': aucun article valide'); skipped++; continue; }
 
-        if (resolvedItems.length === 0) {
-          errors.push(`Commande ${orderData.orderNumber || '?'} : aucun article valide`);
-          skipped++;
-          continue;
-        }
-
-        // ── Calculer le total ──
-        const totalAmount = resolvedItems.reduce((a, i) => a + i.quantity * i.unitPrice, 0);
-
-        // ── Créer la commande ──
-        const newOrder = {
-          orderNumber: orderData.orderNumber || `BC-IMP-${Date.now()}-${imported}`,
+        var totalAmount = resolvedItems.reduce(function(a, i) { return a + i.quantity * i.unitPrice; }, 0);
+        var newOrder = {
+          orderNumber: orderData.orderNumber || ('BC-IMP-' + Date.now() + '-' + imported),
           date: orderData.date || new Date().toISOString().split('T')[0],
           expectedDate: orderData.expectedDate || '',
           supplierId: supplierId,
           items: resolvedItems,
-          totalAmount,
+          totalAmount: totalAmount,
           status: orderData.status || 'pending',
-          note: (orderData.note || '') + ' [Importé]',
-          createdBy: DB.AppState.currentUser?.id,
-          importedAt: new Date().toISOString(),
+          note: (orderData.note || '') + ' [Importé CSV]',
+          createdBy: DB.AppState.currentUser ? DB.AppState.currentUser.id : null,
+          importedAt: new Date().toISOString()
         };
 
-        const orderId = await DB.dbAdd('purchaseOrders', newOrder);
+        var orderId = await DB.dbAdd('purchaseOrders', newOrder);
         existingNumbers.add(newOrder.orderNumber);
 
-        // ── Si statut "received" → mise à jour automatique du stock ──
+        // Auto stock for received orders
         if (newOrder.status === 'received') {
-          for (let idx = 0; idx < resolvedItems.length; idx++) {
-            const item = resolvedItems[idx];
-            const qtyReceived = item.receivedQty || item.quantity;
-
-            if (qtyReceived > 0 && item.productId) {
+          for (var si = 0; si < resolvedItems.length; si++) {
+            var ri = resolvedItems[si];
+            var qtyR = ri.receivedQty || ri.quantity;
+            if (qtyR > 0 && ri.productId) {
               try {
-                // Ajouter le lot
-                const lotNumber = item.lotNumber || `LOT-IMP-${Date.now()}-${idx}`;
-                await DB.dbAdd('lots', {
-                  productId: item.productId,
-                  lotNumber,
-                  expiryDate: item.expiryDate || '',
-                  quantity: qtyReceived,
-                  initialQuantity: qtyReceived,
-                  receiptDate: new Date().toISOString().split('T')[0],
-                  supplierId: supplierId,
-                  status: 'active',
-                });
-
-                // Mettre à jour le stock
-                const stockAll = await DB.dbGetAll('stock');
-                const existing = stockAll.find(s => s.productId === item.productId);
-                if (existing) {
-                  await DB.dbPut('stock', { ...existing, quantity: existing.quantity + qtyReceived });
-                } else {
-                  await DB.dbAdd('stock', { productId: item.productId, quantity: qtyReceived, reservedQuantity: 0 });
-                }
-
-                // Mouvement de stock
-                await DB.dbAdd('movements', {
-                  productId: item.productId,
-                  type: 'ENTRY',
-                  subType: 'PURCHASE_IMPORT',
-                  quantity: qtyReceived,
-                  lotNumber,
-                  date: new Date().toISOString(),
-                  userId: DB.AppState.currentUser?.id,
-                  reference: newOrder.orderNumber + ' (Import)',
-                });
-
+                var lotNum = ri.lotNumber || ('LOT-IMP-' + Date.now() + '-' + si);
+                await DB.dbAdd('lots', { productId: ri.productId, lotNumber: lotNum, expiryDate: ri.expiryDate || '', quantity: qtyR, initialQuantity: qtyR, receiptDate: new Date().toISOString().split('T')[0], supplierId: supplierId, status: 'active' });
+                var stockAll = await DB.dbGetAll('stock');
+                var existing = stockAll.find(function(s) { return s.productId === ri.productId; });
+                if (existing) { await DB.dbPut('stock', Object.assign({}, existing, { quantity: existing.quantity + qtyR })); }
+                else { await DB.dbAdd('stock', { productId: ri.productId, quantity: qtyR, reservedQuantity: 0 }); }
+                await DB.dbAdd('movements', { productId: ri.productId, type: 'ENTRY', subType: 'PURCHASE_IMPORT', quantity: qtyR, lotNumber: lotNum, date: new Date().toISOString(), userId: DB.AppState.currentUser ? DB.AppState.currentUser.id : null, reference: newOrder.orderNumber + ' (Import)' });
                 stockUpdated++;
-              } catch (stockErr) {
-                errors.push(`Stock ${item.productName}: ${stockErr.message || stockErr}`);
-              }
+              } catch (se) { errors.push('Stock ' + ri.productName + ': ' + (se.message || se)); }
             }
           }
-          // Marquer réception
-          const saved = await DB.dbGet('purchaseOrders', orderId);
-          if (saved) {
-            await DB.dbPut('purchaseOrders', { ...saved, receivedAt: Date.now() });
-          }
+          var saved = await DB.dbGet('purchaseOrders', orderId);
+          if (saved) await DB.dbPut('purchaseOrders', Object.assign({}, saved, { receivedAt: Date.now() }));
         }
 
-        await DB.writeAudit('IMPORT_ORDER', 'purchaseOrders', orderId, {
-          orderNumber: newOrder.orderNumber,
-          itemCount: resolvedItems.length,
-          totalAmount,
-          stockUpdated: newOrder.status === 'received',
-        });
-
+        await DB.writeAudit('IMPORT_ORDER', 'purchaseOrders', orderId, { orderNumber: newOrder.orderNumber, itemCount: resolvedItems.length, totalAmount: totalAmount });
         imported++;
-      } catch (orderErr) {
-        errors.push(`Commande ${orderData.orderNumber || '?'}: ${orderErr.message || orderErr}`);
-        skipped++;
-      }
+      } catch (oe) { errors.push('BC ' + (orderData.orderNumber || '?') + ': ' + (oe.message || oe)); skipped++; }
     }
 
-    // ── Résultat ──
-    let msg = `${imported} commande(s) importée(s)`;
-    if (stockUpdated > 0) msg += `, ${stockUpdated} entrée(s) de stock`;
-    if (skipped > 0) msg += `, ${skipped} ignorée(s)`;
-    UI.toast(msg, imported > 0 ? 'success' : 'warning', 5000);
-
-    if (errors.length > 0) {
-      console.warn('[Import] Erreurs:', errors);
-    }
-
+    var result = imported + ' commande(s) importée(s)';
+    if (stockUpdated > 0) result += ', ' + stockUpdated + ' entrée(s) de stock';
+    if (skipped > 0) result += ', ' + skipped + ' ignorée(s)';
+    UI.toast(result, imported > 0 ? 'success' : 'warning', 5000);
+    if (errors.length > 0) console.warn('[Import] Erreurs:', errors);
     Router.navigate('purchase-orders');
   } catch (err) {
     console.warn('[Import] Erreur générale:', err);
-    UI.toast('Erreur lors de l\'import : ' + (err.message || err), 'error');
+    UI.toast('Erreur import : ' + (err.message || err), 'error');
   }
-
-  // Reset le champ file pour permettre un nouveau import du même fichier
-  try {
-    const fileInputs = document.querySelectorAll('input[type="file"]');
-    fileInputs.forEach(inp => { inp.value = ''; });
-  } catch (e) { /* silencieux */ }
+  try { document.querySelectorAll('input[type="file"]').forEach(function(inp) { inp.value = ''; }); } catch(e) {}
 }
 
-/**
- * Parse un fichier JSON d'import
- */
 function _parseImportJSON(text) {
   try {
-    const data = JSON.parse(text);
-
-    // Format OrdiveX natif
-    if (data._format === 'OrdiveX_PurchaseOrders' && Array.isArray(data.orders)) {
-      return data.orders;
-    }
-
-    // Tableau direct de commandes
-    if (Array.isArray(data)) {
-      return data.filter(o => o && typeof o === 'object' && (o.items || o.orderNumber));
-    }
-
-    // Objet unique (une seule commande)
-    if (data.orderNumber || data.items) {
-      return [data];
-    }
-
-    UI.toast('Format JSON non reconnu. Utilisez le format OrdiveX.', 'error');
-    return [];
-  } catch (e) {
-    UI.toast('Le fichier JSON est mal formé : ' + e.message, 'error');
-    return [];
-  }
+    var data = JSON.parse(text);
+    if (data._format === 'OrdiveX_PurchaseOrders' && Array.isArray(data.orders)) return data.orders;
+    if (Array.isArray(data)) return data.filter(function(o) { return o && (o.items || o.orderNumber); });
+    if (data.orderNumber || data.items) return [data];
+    UI.toast('Format JSON non reconnu', 'error'); return [];
+  } catch (e) { UI.toast('JSON mal formé : ' + e.message, 'error'); return []; }
 }
 
-/**
- * Parse un fichier CSV d'import
- * Format attendu : orderNumber;supplierName;productName;quantity;unitPrice;lotNumber;expiryDate;status
- */
 function _parseImportCSV(text) {
   try {
-    const lines = text.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) {
-      UI.toast('Le CSV doit contenir au moins un en-tête et une ligne de données', 'error');
-      return [];
-    }
-
-    // Détecter le séparateur (;  ou ,  ou \t)
-    const firstLine = lines[0];
-    let sep = ';';
+    var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+    if (lines.length < 2) { UI.toast('Le CSV doit contenir un en-tête et au moins une ligne', 'error'); return []; }
+    var firstLine = lines[0];
+    var sep = ';';
     if (firstLine.split(',').length > firstLine.split(';').length) sep = ',';
     if (firstLine.split('\t').length > firstLine.split(sep).length) sep = '\t';
-
-    const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
-    const orderMap = {};
-
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(sep).map(c => c.trim().replace(/^["']|["']$/g, ''));
-      if (cols.length < 3) continue; // Ligne trop courte
-
-      const row = {};
-      headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
-
-      // Colonnes supportées
-      const orderNum = row.ordernumber || row.order_number || row['n° bc'] || row.bc || `CSV-IMP-${Date.now()}-${i}`;
-      const supplierName = row.suppliername || row.supplier_name || row.fournisseur || row.supplier || '';
-      const productName = row.productname || row.product_name || row.produit || row.product || '';
-      const quantity = parseInt(row.quantity || row.quantite || row.qte || row.qty || 0);
-      const unitPrice = parseFloat(row.unitprice || row.unit_price || row.prix || row.price || 0);
-      const lotNumber = row.lotnumber || row.lot_number || row.lot || '';
-      const expiryDate = row.expirydate || row.expiry_date || row.expiration || row.peremption || '';
-      const status = row.status || row.statut || 'pending';
-
+    var headers = lines[0].split(sep).map(function(h) { return h.trim().toLowerCase().replace(/['"﻿]/g, ''); });
+    var orderMap = {};
+    for (var i = 1; i < lines.length; i++) {
+      var cols = lines[i].split(sep).map(function(c) { return c.trim().replace(/^["']|["']$/g, ''); });
+      if (cols.length < 3) continue;
+      var row = {};
+      headers.forEach(function(h, idx) { row[h] = cols[idx] || ''; });
+      var orderNum = row.n_bc || row.ordernumber || row.order_number || row.bc || ('CSV-IMP-' + Date.now() + '-' + i);
+      var supplierName = row.fournisseur || row.suppliername || row.supplier || '';
+      var productName = row.produit || row.productname || row.product || '';
+      var quantity = parseInt(row.quantite || row.quantity || row.qte || 0);
+      var unitPrice = parseFloat(row.prix_unitaire || row.unitprice || row.prix || 0);
+      var qteRecue = parseInt(row.qte_recue || row.receivedqty || 0);
+      var lotNumber = row.lot || row.lotnumber || '';
+      var expiryDate = row.peremption || row.expirydate || row.expiration || '';
+      var status = row.statut || row.status || 'pending';
+      var dateLivraison = row.date_livraison || row.expecteddate || '';
+      var date = row.date || new Date().toISOString().split('T')[0];
+      var note = row.note || '';
       if (!productName || quantity <= 0) continue;
-
+      var isReceived = status.toLowerCase() === 'received' || status.toLowerCase() === 'reçue' || status.toLowerCase() === 'recue';
       if (!orderMap[orderNum]) {
-        orderMap[orderNum] = {
-          orderNumber: orderNum,
-          supplierName,
-          date: new Date().toISOString().split('T')[0],
-          status: status.toLowerCase() === 'received' || status.toLowerCase() === 'reçue' ? 'received' : 'pending',
-          items: [],
-        };
+        orderMap[orderNum] = { orderNumber: orderNum, supplierName: supplierName, date: date, expectedDate: dateLivraison, status: isReceived ? 'received' : 'pending', note: note, items: [] };
       }
-
-      orderMap[orderNum].items.push({
-        productName,
-        quantity,
-        unitPrice,
-        receivedQty: orderMap[orderNum].status === 'received' ? quantity : 0,
-        lotNumber,
-        expiryDate,
-      });
+      orderMap[orderNum].items.push({ productName: productName, quantity: quantity, unitPrice: unitPrice, receivedQty: isReceived ? (qteRecue || quantity) : qteRecue, lotNumber: lotNumber, expiryDate: expiryDate });
     }
-
     return Object.values(orderMap);
-  } catch (e) {
-    UI.toast('Erreur de lecture CSV : ' + e.message, 'error');
-    return [];
-  }
+  } catch (e) { UI.toast('Erreur lecture CSV : ' + e.message, 'error'); return []; }
 }
+
