@@ -1819,22 +1819,33 @@ function startAutoBackup() {
 }
 
 let _autoPullTimer = null;
+let _pullFailCount = 0;
 /**
  * AUTO-PULL : Synchronisation cloud → local automatique
- * Boucle récursive stabilisée à 15 secondes pour éviter de saturer le mobile.
+ * Boucle récursive stabilisée avec backoff exponentiel en cas d'échec réseau.
  */
 function startAutoPull() {
   if (_autoPullTimer) clearTimeout(_autoPullTimer);
 
   const loop = async () => {
+    _autoPullTimer = null; // reset pour éviter les doublons
     if (navigator.onLine && AppState.isOnline !== false) {
       try {
         await pullFromSupabase();
-      } catch (e) { }
+        _pullFailCount = 0; // succès → reset du compteur
+      } catch (e) {
+        _pullFailCount++;
+      }
+    } else {
+      _pullFailCount++;
     }
-    // Pull toutes les 60s en ligne (filet de sécurité si le WebSocket tombe)
-    // Hors ligne : vérifier toutes les 2 min
-    const delay = (!navigator.onLine || AppState.isOnline === false) ? 120000 : 60000;
+    // Backoff : 60s en ligne, 2min hors-ligne, puis x2 jusqu'à max 5min
+    let delay;
+    if (!navigator.onLine || AppState.isOnline === false || _pullFailCount > 0) {
+      delay = Math.min(300000, 120000 * Math.pow(1.5, Math.min(_pullFailCount - 1, 4)));
+    } else {
+      delay = 60000;
+    }
     _autoPullTimer = setTimeout(loop, delay);
   };
 
