@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -428,12 +428,43 @@ git commit -m "v9.4.1: description des changements"
 git push origin main
 </code></pre>
 <p>Le site se met à jour automatiquement en 2-5 minutes via GitHub Actions.</p>
-<h3 id="35-mise-jour-de-version">3.5 Mise à jour de version</h3>
+<h3 id="35-mise-jour-de-version">3.5 Mise a jour de version</h3>
 <p class="step">Modifier <code>APP_VERSION</code> dans <code>index.html</code> ligne 22</p>
-<p class="step">Modifier <code>version.json</code> à la racine</p>
-<p class="step">Incrémenter les <code>?v=X.X.X</code> dans les balises <code>&lt;script&gt;</code> de <code>index.html</code></p>
+<p class="step">Modifier <code>version.json</code> a la racine</p>
+<p class="step">Incrementer les <code>?v=X.X.X</code> dans les balises <code>&lt;script&gt;</code> de <code>index.html</code></p>
 <p class="step">Push sur <code>main</code></p>
 <p class="step">Les utilisateurs recevront une notification via Naomie AI</p>
+<h3 id="36-forcer-mise-a-jour-pwa">3.6 Forcer la mise a jour sur un appareil client (sans desinstaller)</h3>
+<p>Apres un deploiement, l'app installee sur le bureau peut garder l'ancienne version a cause du <strong>cache du Service Worker</strong>. Meme un <code>Ctrl+Shift+R</code> ne suffit pas toujours.</p>
+<h4>Methode 1 : Commande Console (recommandee)</h4>
+<p class="step">Ouvrir l'app OrdiveX sur l'appareil client</p>
+<p class="step">Appuyer sur <code>F12</code> pour ouvrir les outils developpeur</p>
+<p class="step">Aller dans l'onglet <strong>Console</strong></p>
+<p class="step">Coller et executer cette commande :</p>
+<pre><code class="language-javascript">
+caches.keys().then(k => Promise.all(k.map(c => caches.delete(c)))).then(() => navigator.serviceWorker.getRegistration().then(r => r && r.unregister())).then(() => { alert('Cache vide ! La page va se recharger.'); location.reload(true); });
+</code></pre>
+<p>Cette commande :</p>
+<ul>
+<li>Supprime <strong>tous les caches</strong> du Service Worker (ancien <code>pharma-cache-vX.X.X</code>)</li>
+<li>Desinscrit l'ancien Service Worker</li>
+<li>Recharge la page - le nouveau SW s'installe automatiquement</li>
+</ul>
+<blockquote>L'app reste installee sur le bureau. Aucune reinstallation necessaire. Les donnees IndexedDB ne sont PAS affectees.</blockquote>
+<h4>Methode 2 : Via les outils developpeur Chrome</h4>
+<p class="step">Ouvrir l'app, puis <code>F12</code></p>
+<p class="step">Aller dans l'onglet <strong>Application</strong> (ou <strong>Stockage</strong>)</p>
+<p class="step">Dans le panneau gauche, cliquer sur <strong>Service Workers</strong></p>
+<p class="step">Cocher <strong>"Update on reload"</strong></p>
+<p class="step">Cliquer sur <strong>"Unregister"</strong> a cote du SW actif</p>
+<p class="step">Faire <code>Ctrl+Shift+R</code> (hard refresh)</p>
+<p class="step">Decocher "Update on reload" apres la mise a jour</p>
+<h4>Methode 3 : Vider le cache navigateur (dernier recours)</h4>
+<p class="step">Dans Chrome : <code>Ctrl+Shift+Suppr</code></p>
+<p class="step">Cocher uniquement <strong>"Images et fichiers en cache"</strong></p>
+<p class="step">Periode : <strong>Derniere heure</strong></p>
+<p class="step">Cliquer <strong>"Effacer les donnees"</strong></p>
+<p class="step">Recharger l'app</p>
 <h3 id="36-configuration-supabase-cloud-sync">3.6 Configuration Supabase (Cloud Sync)</h3>
 <p class="step">Créer un projet sur [supabase.com](https://supabase.com)</p>
 <p class="step">Exécuter <code>supabase_schema.sql</code> dans l'éditeur SQL</p>
@@ -1673,6 +1704,67 @@ Voulez-vous quand même ajouter ce produit ?
 <li><strong>OTC</strong> : Over The Counter (Vente libre).</li>
 <li><strong>Rx</strong> : Médicament sur ordonnance.</li>
 <li><strong>IndexedDB</strong> : Base de données locale dans le navigateur.</li>
+</ul>
+<hr>
+<h2 id="chapitre-38-mode-production-devtools-guard">Chapitre 38 - Mode Production (DevTools Guard)</h2>
+<h3 id="381-description">38.1 Description</h3>
+<p>Le <strong>DevTools Guard</strong> empeche les utilisateurs finaux (pharmaciens, caissiers) d'acceder aux outils developpeur du navigateur (console F12). Il est <strong>desactive par defaut</strong> pendant la phase de test et s'active quand la pharmacie passe en production.</p>
+<h3 id="382-protections-activees">38.2 Protections activees</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Protection</th>
+<th>Detail</th>
+</tr></thead><tbody>
+<tr><td><strong>F12</strong></td><td>Raccourci bloque</td></tr>
+<tr><td><strong>Ctrl+Shift+I/J/C</strong></td><td>Inspecteur, Console, Selecteur bloques</td></tr>
+<tr><td><strong>Ctrl+U</strong></td><td>Code source bloque</td></tr>
+<tr><td><strong>Clic droit</strong></td><td>Menu contextuel desactive</td></tr>
+<tr><td><strong>Detection DevTools</strong></td><td>Toast d'avertissement si DevTools est ouvert</td></tr>
+<tr><td><strong>Console videe</strong></td><td>La console est videe toutes les 2 secondes</td></tr>
+</tbody></table></div>
+<blockquote>Les raccourcis OrdiveX (Ctrl+1-5, Ctrl+P, Ctrl+B, F5, Escape) ne sont PAS affectes.</blockquote>
+<h3 id="383-activation-locale">38.3 Activation locale (1 machine)</h3>
+<p class="step">Ouvrir l'app sur la machine du pharmacien</p>
+<p class="step">Appuyer sur <code>F12</code> puis aller dans l'onglet <strong>Console</strong></p>
+<p class="step">Coller cette commande :</p>
+<pre><code class="language-javascript">
+localStorage.setItem('ordivex_production_mode', 'true'); location.reload();
+</code></pre>
+<p class="step">Fermer la console. F12 ne fonctionne plus sur cette machine.</p>
+<h3 id="384-activation-distance">38.4 Activation a distance via Supabase (toutes les machines d'une pharmacie)</h3>
+<p>Cette methode active le guard sur <strong>TOUTES</strong> les machines d'une pharmacie en une seule action. Aucun acces physique aux machines n'est necessaire.</p>
+<p class="step">Aller sur <strong>supabase.com</strong> et se connecter au projet</p>
+<p class="step">Dans le menu gauche, cliquer sur <strong>Table Editor</strong> (icone tableau)</p>
+<p class="step">Dans la liste des tables a gauche, cliquer sur <strong>settings</strong></p>
+<p class="step">Un tableau s'affiche avec les parametres existants (pharmacy_name, supabase_url, etc.)</p>
+<p class="step">Cliquer sur le bouton <strong>"+ Insert row"</strong> en haut a droite du tableau</p>
+<p class="step">Un formulaire apparait. Remplir uniquement ces 2 champs :</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Champ</th>
+<th>Valeur a saisir</th>
+</tr></thead><tbody>
+<tr><td><code>key</code></td><td><code>production_mode</code></td></tr>
+<tr><td><code>value</code></td><td><code>true</code></td></tr>
+</tbody></table></div>
+<p class="step">Laisser tous les autres champs vides</p>
+<p class="step">Cliquer sur <strong>"Save"</strong></p>
+<p class="step">Attendre 1-2 minutes : les machines font un auto-pull et le guard s'active automatiquement</p>
+<blockquote>Pour desactiver : retrouver la ligne <code>production_mode</code> dans la table <code>settings</code>, cliquer dessus, changer <code>true</code> en <code>false</code>, et sauvegarder. Toutes les machines se desactivent en 1-2 minutes.</blockquote>
+<h3 id="385-desactivation">38.5 Desactivation (pour debug/maintenance)</h3>
+<p>Comme F12 est bloque, utiliser cette methode :</p>
+<p class="step">Ouvrir <strong>Chrome</strong> (pas l'app PWA installee)</p>
+<p class="step">Aller a l'URL de l'app dans un nouvel onglet</p>
+<p class="step">Ouvrir DevTools via le menu Chrome : <strong>Menu (trois points) &gt; Plus d'outils &gt; Outils de developpement</strong></p>
+<p class="step">Dans la console, coller :</p>
+<pre><code class="language-javascript">
+localStorage.setItem('ordivex_production_mode', 'false'); location.reload();
+</code></pre>
+<p>Pour desactiver sur toutes les machines : changer <code>value</code> a <code>"false"</code> dans la table <code>settings</code> de Supabase.</p>
+<h3 id="386-securite">38.6 Securite et limitations</h3>
+<ul>
+<li>Le guard est un <strong>dissuasion</strong>, pas une protection absolue - un developpeur experimente peut le contourner</li>
+<li>Pour des pharmaciens non-techniques, c'est <strong>largement suffisant</strong></li>
+<li>Le guard ne peut <strong>jamais</strong> crasher l'app (tout est dans un try/catch)</li>
+<li>Il est basculable a chaud : pas besoin de recharger l'app pour le desactiver</li>
 </ul>
 <hr>
 <p><strong>FIN DU DOCUMENT</strong></p>
