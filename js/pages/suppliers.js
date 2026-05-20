@@ -342,6 +342,8 @@ async function renderPurchaseOrders(container) {
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" onclick="Router.navigate('suppliers')"><i data-lucide="factory"></i> Fournisseurs</button>
+        <button class="btn btn-secondary" onclick="exportAllOrders()"><i data-lucide="download"></i> Exporter</button>
+        <label class="btn btn-secondary" style="cursor:pointer"><i data-lucide="upload"></i> Importer<input type="file" accept=".json,.csv" style="display:none" onchange="importOrdersFile(this.files[0])"></label>
         <button class="btn btn-primary" onclick="showNewOrderForm()"><i data-lucide="plus"></i> Nouvelle Commande</button>
       </div>
     </div>
@@ -873,6 +875,9 @@ async function viewOrder(orderId) {
     <h4 style="margin:16px 0 8px">Articles (Total: <strong>${UI.formatCurrency(order.totalAmount || 0)}</strong>)</h4>
     <div id="view-order-items-table"></div>
     ${order.receiveNote ? `<p class="text-muted" style="margin-top:12px">Note réception : ${order.receiveNote}</p>` : ''}
+    <div style="margin-top:16px;text-align:right">
+      <button class="btn btn-sm btn-secondary" onclick="exportSingleOrder(${orderId})"><i data-lucide="download"></i> Exporter cette commande</button>
+    </div>
   `, { size: 'large' });
   if (window.lucide) lucide.createIcons();
 
@@ -989,7 +994,460 @@ window.orderProductSearch = orderProductSearch;
 window.selectOrderProduct = selectOrderProduct;
 window.goSuppliersPage = goSuppliersPage;
 window.renderSuppliersPage = renderSuppliersPage;
+window.exportAllOrders = exportAllOrders;
+window.exportSingleOrder = exportSingleOrder;
+window.importOrdersFile = importOrdersFile;
 
 Router.register('suppliers', renderSuppliers);
 Router.register('purchase-orders', renderPurchaseOrders);
 
+// ═══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT DE COMMANDES
+// Gestion complète des erreurs pour robustesse production
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Exporte TOUTES les commandes en JSON
+ */
+async function exportAllOrders() {
+  try {
+    const [orders, suppliers] = await Promise.all([
+      DB.dbGetAll('purchaseOrders'),
+      DB.dbGetAll('suppliers'),
+    ]);
+    if (!orders || orders.length === 0) {
+      UI.toast('Aucune commande à exporter', 'warning');
+      return;
+    }
+    const supplierMap = {};
+    (suppliers || []).forEach(s => { supplierMap[s.id] = s.name; });
+
+    const exportData = {
+      _format: 'OrdiveX_PurchaseOrders',
+      _version: '9.4.6',
+      _exportDate: new Date().toISOString(),
+      _pharmacyName: (await DB.dbGetAll('settings')).find(s => s.key === 'pharmacy_name')?.value || '',
+      _count: orders.length,
+      orders: orders.map(o => ({
+        orderNumber: o.orderNumber || '',
+        date: o.date || '',
+        expectedDate: o.expectedDate || '',
+        status: o.status || 'pending',
+        supplierName: supplierMap[o.supplierId] || 'Inconnu',
+        supplierId: o.supplierId,
+        totalAmount: o.totalAmount || 0,
+        note: o.note || '',
+        items: (o.items || []).map(i => ({
+          productName: i.productName || '',
+          productId: i.productId,
+          quantity: i.quantity || 0,
+          unitPrice: i.unitPrice || 0,
+          receivedQty: i.receivedQty || 0,
+          lotNumber: i.lotNumber || '',
+          expiryDate: i.expiryDate || '',
+        })),
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `OrdiveX_Commandes_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    UI.toast(`${orders.length} commande(s) exportée(s)`, 'success');
+  } catch (err) {
+    console.warn('[Export] Erreur:', err);
+    UI.toast('Erreur lors de l\'export : ' + (err.message || err), 'error');
+  }
+}
+
+/**
+ * Exporte UNE commande spécifique
+ */
+async function exportSingleOrder(orderId) {
+  try {
+    const order = await DB.dbGet('purchaseOrders', orderId);
+    if (!order) { UI.toast('Commande introuvable', 'error'); return; }
+    const suppliers = await DB.dbGetAll('suppliers');
+    const sup = suppliers.find(s => s.id === order.supplierId);
+
+    const exportData = {
+      _format: 'OrdiveX_PurchaseOrders',
+      _version: '9.4.6',
+      _exportDate: new Date().toISOString(),
+      _count: 1,
+      orders: [{
+        orderNumber: order.orderNumber || '',
+        date: order.date || '',
+        expectedDate: order.expectedDate || '',
+        status: order.status || 'pending',
+        supplierName: sup?.name || 'Inconnu',
+        supplierId: order.supplierId,
+        totalAmount: order.totalAmount || 0,
+        note: order.note || '',
+        items: (order.items || []).map(i => ({
+          productName: i.productName || '',
+          productId: i.productId,
+          quantity: i.quantity || 0,
+          unitPrice: i.unitPrice || 0,
+          receivedQty: i.receivedQty || 0,
+          lotNumber: i.lotNumber || '',
+          expiryDate: i.expiryDate || '',
+        })),
+      }],
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${order.orderNumber || 'BC'}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    UI.toast(`Commande ${order.orderNumber} exportée`, 'success');
+  } catch (err) {
+    console.warn('[Export] Erreur:', err);
+    UI.toast('Erreur lors de l\'export : ' + (err.message || err), 'error');
+  }
+}
+
+/**
+ * Importe des commandes depuis un fichier JSON ou CSV
+ * Si le statut est "received", le stock est mis à jour automatiquement
+ */
+async function importOrdersFile(file) {
+  if (!file) return;
+  try {
+    // ── Validation du fichier ──
+    const maxSize = 50 * 1024 * 1024; // 50 MB
+    if (file.size > maxSize) {
+      UI.toast('Fichier trop volumineux (max 50 MB)', 'error');
+      return;
+    }
+    if (file.size === 0) {
+      UI.toast('Le fichier est vide', 'error');
+      return;
+    }
+
+    const text = await file.text();
+    if (!text || !text.trim()) {
+      UI.toast('Le fichier ne contient aucune donnée', 'error');
+      return;
+    }
+
+    let ordersToImport = [];
+
+    // ── Détection du format (JSON ou CSV) ──
+    if (file.name.endsWith('.json')) {
+      ordersToImport = _parseImportJSON(text);
+    } else if (file.name.endsWith('.csv')) {
+      ordersToImport = _parseImportCSV(text);
+    } else {
+      UI.toast('Format non supporté. Utilisez .json ou .csv', 'error');
+      return;
+    }
+
+    if (!ordersToImport || ordersToImport.length === 0) {
+      UI.toast('Aucune commande valide trouvée dans le fichier', 'warning');
+      return;
+    }
+
+    // ── Confirmation avant import ──
+    const hasReceived = ordersToImport.some(o => o.status === 'received');
+    const confirmMsg = `Importer ${ordersToImport.length} commande(s) ?\n${hasReceived ? '⚠️ Les commandes "Reçues" mettront à jour le stock automatiquement.' : ''}`;
+    const confirmed = await UI.confirm(confirmMsg);
+    if (!confirmed) return;
+
+    // ── Chargement des données de référence ──
+    const [products, suppliers, existingOrders] = await Promise.all([
+      DB.dbGetAll('products'),
+      DB.dbGetAll('suppliers'),
+      DB.dbGetAll('purchaseOrders'),
+    ]);
+
+    const productMap = {};
+    products.forEach(p => {
+      productMap[(p.name || '').toLowerCase().trim()] = p;
+      if (p.code) productMap[p.code.toLowerCase().trim()] = p;
+    });
+    const supplierMap = {};
+    suppliers.forEach(s => { supplierMap[(s.name || '').toLowerCase().trim()] = s; });
+    const existingNumbers = new Set(existingOrders.map(o => o.orderNumber));
+
+    let imported = 0;
+    let skipped = 0;
+    let stockUpdated = 0;
+    const errors = [];
+
+    for (const orderData of ordersToImport) {
+      try {
+        // ── Vérifier doublon ──
+        if (orderData.orderNumber && existingNumbers.has(orderData.orderNumber)) {
+          skipped++;
+          continue;
+        }
+
+        // ── Résoudre le fournisseur ──
+        let supplierId = null;
+        if (orderData.supplierName) {
+          const foundSup = supplierMap[orderData.supplierName.toLowerCase().trim()];
+          if (foundSup) {
+            supplierId = foundSup.id;
+          } else {
+            // Auto-créer le fournisseur s'il n'existe pas
+            supplierId = await DB.dbAdd('suppliers', {
+              name: orderData.supplierName,
+              status: 'active',
+              paymentTerms: 30,
+            });
+            supplierMap[orderData.supplierName.toLowerCase().trim()] = { id: supplierId, name: orderData.supplierName };
+          }
+        }
+
+        // ── Résoudre les produits des items ──
+        const resolvedItems = [];
+        for (const item of (orderData.items || [])) {
+          if (!item.productName && !item.productId) continue;
+          let product = null;
+          if (item.productName) {
+            product = productMap[item.productName.toLowerCase().trim()];
+          }
+          if (!product && item.productId) {
+            product = products.find(p => p.id === item.productId);
+          }
+
+          const resolvedItem = {
+            productId: product?.id || null,
+            productName: item.productName || product?.name || 'Produit inconnu',
+            quantity: Math.max(0, parseInt(item.quantity) || 0),
+            unitPrice: Math.max(0, parseFloat(item.unitPrice) || product?.purchasePrice || 0),
+            receivedQty: Math.max(0, parseInt(item.receivedQty) || 0),
+            lotNumber: item.lotNumber || '',
+            expiryDate: item.expiryDate || '',
+          };
+
+          if (resolvedItem.quantity > 0) {
+            resolvedItems.push(resolvedItem);
+          }
+        }
+
+        if (resolvedItems.length === 0) {
+          errors.push(`Commande ${orderData.orderNumber || '?'} : aucun article valide`);
+          skipped++;
+          continue;
+        }
+
+        // ── Calculer le total ──
+        const totalAmount = resolvedItems.reduce((a, i) => a + i.quantity * i.unitPrice, 0);
+
+        // ── Créer la commande ──
+        const newOrder = {
+          orderNumber: orderData.orderNumber || `BC-IMP-${Date.now()}-${imported}`,
+          date: orderData.date || new Date().toISOString().split('T')[0],
+          expectedDate: orderData.expectedDate || '',
+          supplierId: supplierId,
+          items: resolvedItems,
+          totalAmount,
+          status: orderData.status || 'pending',
+          note: (orderData.note || '') + ' [Importé]',
+          createdBy: DB.AppState.currentUser?.id,
+          importedAt: new Date().toISOString(),
+        };
+
+        const orderId = await DB.dbAdd('purchaseOrders', newOrder);
+        existingNumbers.add(newOrder.orderNumber);
+
+        // ── Si statut "received" → mise à jour automatique du stock ──
+        if (newOrder.status === 'received') {
+          for (let idx = 0; idx < resolvedItems.length; idx++) {
+            const item = resolvedItems[idx];
+            const qtyReceived = item.receivedQty || item.quantity;
+
+            if (qtyReceived > 0 && item.productId) {
+              try {
+                // Ajouter le lot
+                const lotNumber = item.lotNumber || `LOT-IMP-${Date.now()}-${idx}`;
+                await DB.dbAdd('lots', {
+                  productId: item.productId,
+                  lotNumber,
+                  expiryDate: item.expiryDate || '',
+                  quantity: qtyReceived,
+                  initialQuantity: qtyReceived,
+                  receiptDate: new Date().toISOString().split('T')[0],
+                  supplierId: supplierId,
+                  status: 'active',
+                });
+
+                // Mettre à jour le stock
+                const stockAll = await DB.dbGetAll('stock');
+                const existing = stockAll.find(s => s.productId === item.productId);
+                if (existing) {
+                  await DB.dbPut('stock', { ...existing, quantity: existing.quantity + qtyReceived });
+                } else {
+                  await DB.dbAdd('stock', { productId: item.productId, quantity: qtyReceived, reservedQuantity: 0 });
+                }
+
+                // Mouvement de stock
+                await DB.dbAdd('movements', {
+                  productId: item.productId,
+                  type: 'ENTRY',
+                  subType: 'PURCHASE_IMPORT',
+                  quantity: qtyReceived,
+                  lotNumber,
+                  date: new Date().toISOString(),
+                  userId: DB.AppState.currentUser?.id,
+                  reference: newOrder.orderNumber + ' (Import)',
+                });
+
+                stockUpdated++;
+              } catch (stockErr) {
+                errors.push(`Stock ${item.productName}: ${stockErr.message || stockErr}`);
+              }
+            }
+          }
+          // Marquer réception
+          const saved = await DB.dbGet('purchaseOrders', orderId);
+          if (saved) {
+            await DB.dbPut('purchaseOrders', { ...saved, receivedAt: Date.now() });
+          }
+        }
+
+        await DB.writeAudit('IMPORT_ORDER', 'purchaseOrders', orderId, {
+          orderNumber: newOrder.orderNumber,
+          itemCount: resolvedItems.length,
+          totalAmount,
+          stockUpdated: newOrder.status === 'received',
+        });
+
+        imported++;
+      } catch (orderErr) {
+        errors.push(`Commande ${orderData.orderNumber || '?'}: ${orderErr.message || orderErr}`);
+        skipped++;
+      }
+    }
+
+    // ── Résultat ──
+    let msg = `${imported} commande(s) importée(s)`;
+    if (stockUpdated > 0) msg += `, ${stockUpdated} entrée(s) de stock`;
+    if (skipped > 0) msg += `, ${skipped} ignorée(s)`;
+    UI.toast(msg, imported > 0 ? 'success' : 'warning', 5000);
+
+    if (errors.length > 0) {
+      console.warn('[Import] Erreurs:', errors);
+    }
+
+    Router.navigate('purchase-orders');
+  } catch (err) {
+    console.warn('[Import] Erreur générale:', err);
+    UI.toast('Erreur lors de l\'import : ' + (err.message || err), 'error');
+  }
+
+  // Reset le champ file pour permettre un nouveau import du même fichier
+  try {
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(inp => { inp.value = ''; });
+  } catch (e) { /* silencieux */ }
+}
+
+/**
+ * Parse un fichier JSON d'import
+ */
+function _parseImportJSON(text) {
+  try {
+    const data = JSON.parse(text);
+
+    // Format OrdiveX natif
+    if (data._format === 'OrdiveX_PurchaseOrders' && Array.isArray(data.orders)) {
+      return data.orders;
+    }
+
+    // Tableau direct de commandes
+    if (Array.isArray(data)) {
+      return data.filter(o => o && typeof o === 'object' && (o.items || o.orderNumber));
+    }
+
+    // Objet unique (une seule commande)
+    if (data.orderNumber || data.items) {
+      return [data];
+    }
+
+    UI.toast('Format JSON non reconnu. Utilisez le format OrdiveX.', 'error');
+    return [];
+  } catch (e) {
+    UI.toast('Le fichier JSON est mal formé : ' + e.message, 'error');
+    return [];
+  }
+}
+
+/**
+ * Parse un fichier CSV d'import
+ * Format attendu : orderNumber;supplierName;productName;quantity;unitPrice;lotNumber;expiryDate;status
+ */
+function _parseImportCSV(text) {
+  try {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) {
+      UI.toast('Le CSV doit contenir au moins un en-tête et une ligne de données', 'error');
+      return [];
+    }
+
+    // Détecter le séparateur (;  ou ,  ou \t)
+    const firstLine = lines[0];
+    let sep = ';';
+    if (firstLine.split(',').length > firstLine.split(';').length) sep = ',';
+    if (firstLine.split('\t').length > firstLine.split(sep).length) sep = '\t';
+
+    const headers = lines[0].split(sep).map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+    const orderMap = {};
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(sep).map(c => c.trim().replace(/^["']|["']$/g, ''));
+      if (cols.length < 3) continue; // Ligne trop courte
+
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = cols[idx] || ''; });
+
+      // Colonnes supportées
+      const orderNum = row.ordernumber || row.order_number || row['n° bc'] || row.bc || `CSV-IMP-${Date.now()}-${i}`;
+      const supplierName = row.suppliername || row.supplier_name || row.fournisseur || row.supplier || '';
+      const productName = row.productname || row.product_name || row.produit || row.product || '';
+      const quantity = parseInt(row.quantity || row.quantite || row.qte || row.qty || 0);
+      const unitPrice = parseFloat(row.unitprice || row.unit_price || row.prix || row.price || 0);
+      const lotNumber = row.lotnumber || row.lot_number || row.lot || '';
+      const expiryDate = row.expirydate || row.expiry_date || row.expiration || row.peremption || '';
+      const status = row.status || row.statut || 'pending';
+
+      if (!productName || quantity <= 0) continue;
+
+      if (!orderMap[orderNum]) {
+        orderMap[orderNum] = {
+          orderNumber: orderNum,
+          supplierName,
+          date: new Date().toISOString().split('T')[0],
+          status: status.toLowerCase() === 'received' || status.toLowerCase() === 'reçue' ? 'received' : 'pending',
+          items: [],
+        };
+      }
+
+      orderMap[orderNum].items.push({
+        productName,
+        quantity,
+        unitPrice,
+        receivedQty: orderMap[orderNum].status === 'received' ? quantity : 0,
+        lotNumber,
+        expiryDate,
+      });
+    }
+
+    return Object.values(orderMap);
+  } catch (e) {
+    UI.toast('Erreur de lecture CSV : ' + e.message, 'error');
+    return [];
+  }
+}

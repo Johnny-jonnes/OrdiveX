@@ -413,12 +413,12 @@ blockquote{border-left:3pt solid #e67e22;background:#fef9e7!important;color:#7d6
 <p class="step">La liste de toutes les ventes s'affiche, de la plus recente a la plus ancienne</p>
 <p class="step">Utilisez les filtres en haut pour chercher par date, vendeur ou mode de paiement</p>
 
-<h3>7.2 Detail d'une vente</h3>
-<p class="step">Cliquez sur une vente pour voir son detail</p>
+<h3>7.2 Détail d'une vente</h3>
+<p class="step">Cliquez sur une vente pour voir son Détail</p>
 <p>Vous verrez : la liste des produits, les quantites, le patient, l'ordonnance liée, le vendeur, le preparateur (si different), le mode de paiement et le montant.</p>
 
 <h3>7.3 Reimprimer un reçu</h3>
-<p class="step">Dans le detail d'une vente, cliquez sur <strong>"Reimprimer"</strong></p>
+<p class="step">Dans le Détail d'une vente, cliquez sur <strong>"Reimprimer"</strong></p>
 <p class="step">Choisissez le format (A4 ou thermique)</p>
 
 <h3>7.4 Credits en cours</h3>
@@ -593,7 +593,43 @@ blockquote{border-left:3pt solid #e67e22;background:#fef9e7!important;color:#7d6
 <tr><td><strong>Envoye</strong></td><td>Commande transmise au fournisseur</td></tr>
 <tr><td><strong>reçu</strong></td><td>Marchandise reçue et stockée</td></tr>
 </tbody></table></div>
-<h3>16.3 Imprimer un bon de commande</h3>
+<h3>16.3 Exporter des commandes</h3>
+<p class="step">Dans <strong>Bons de Commande</strong>, cliquez sur <strong>"Exporter"</strong> en haut à droite</p>
+<p class="step">Un fichier JSON contenant toutes vos commandes est téléchargé</p>
+<p class="step">Vous pouvez aussi exporter une seule commande : ouvrez-la avec <strong>"Voir"</strong>, puis cliquez <strong>"Exporter cette commande"</strong></p>
+<p class="tip">Le fichier exporté peut être réimporté sur une autre machine OrdiveX ou conservé comme archive.</p>
+
+<h3>16.4 Importer des commandes</h3>
+<p class="step">Dans <strong>Bons de Commande</strong>, cliquez sur <strong>"Importer"</strong></p>
+<p class="step">Sélectionnez un fichier <strong>.json</strong> (format OrdiveX) ou <strong>.csv</strong></p>
+<p class="step">OrdiveX analyse le fichier et vous demande confirmation</p>
+<p class="step">Les commandes sont créées automatiquement</p>
+<blockquote>Si une commande importée a le statut <strong>"Reçue"</strong>, le stock est automatiquement mis à jour : les lots sont créés et les quantités ajoutées au stock.</blockquote>
+
+<h4>Gestion automatique des erreurs à l'import</h4>
+<div class="table-wrap"><table><thead><tr><th>Situation</th><th>Comportement d'OrdiveX</th></tr></thead><tbody>
+<tr><td>Commande en doublon (même N° BC)</td><td>Ignorée automatiquement</td></tr>
+<tr><td>Fournisseur inconnu</td><td>Créé automatiquement</td></tr>
+<tr><td>Produit non trouvé dans le catalogue</td><td>Commande créée mais stock non mis à jour pour cet article</td></tr>
+<tr><td>Fichier mal formé</td><td>Message d'erreur clair affiché</td></tr>
+<tr><td>Fichier vide ou trop volumineux</td><td>Rejeté avec message</td></tr>
+</tbody></table></div>
+
+<h3>16.5 Format CSV pour l'import</h3>
+<p>Si vous préférez préparer vos commandes dans Excel :</p>
+<div class="table-wrap"><table><thead><tr><th>Colonne</th><th>Description</th><th>Obligatoire</th></tr></thead><tbody>
+<tr><td>orderNumber</td><td>Numéro du bon de commande</td><td>Non (auto-généré)</td></tr>
+<tr><td>supplierName / fournisseur</td><td>Nom du fournisseur</td><td>Non</td></tr>
+<tr><td>productName / produit</td><td>Nom du produit</td><td>Oui</td></tr>
+<tr><td>quantity / qte</td><td>Quantité commandée</td><td>Oui</td></tr>
+<tr><td>unitPrice / prix</td><td>Prix unitaire d'achat</td><td>Non</td></tr>
+<tr><td>lotNumber / lot</td><td>Numéro de lot</td><td>Non</td></tr>
+<tr><td>expiryDate / peremption</td><td>Date de péremption</td><td>Non</td></tr>
+<tr><td>status / statut</td><td>"pending" ou "received"</td><td>Non (défaut: pending)</td></tr>
+</tbody></table></div>
+<p class="tip">Enregistrez votre Excel en CSV avec séparateur point-virgule (;). OrdiveX détecte automatiquement le séparateur.</p>
+
+<h3>16.6 Imprimer un bon de commande</h3>
 <p class="step">Ouvrez le bon de commande et cliquez sur <strong>"Imprimer"</strong></p>
 
 <h1 id="partie-6">PARTIE VI - ANALYTIQUE</h1>
