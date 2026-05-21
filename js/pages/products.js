@@ -810,6 +810,7 @@ async function processImportCSV(content) {
   map.category = columns.findIndex(c => c.includes('cat'));
   map.purchasePrice = columns.findIndex(c => c.includes('achat') || c.includes('purchase'));
   map.rx = columns.findIndex(c => c.includes('rx') || c.includes('ord'));
+  map.quantity = columns.findIndex(c => c.includes('quantite') || c.includes('quantity') || c.includes('qte') || c.includes('qty') || c.includes('stock'));
 
   let imported = 0;
   let errors = 0;
@@ -848,7 +849,8 @@ async function processImportCSV(content) {
         minStock: existing?.minStock || 10,
         status: 'active',
         unit: existing?.unit || 'boîte',
-        _createdAt: existing?._createdAt || Date.now()
+        _createdAt: existing?._createdAt || Date.now(),
+        _importQty: map.quantity !== -1 ? Math.max(0, parseInt((row[map.quantity] || '0').replace(/[^\d]/g, '')) || 0) : 0
       };
 
       parsedProducts.push(product);
@@ -892,6 +894,36 @@ async function processImportCSV(content) {
   }
 
   await DB.writeAudit('BULK_IMPORT', 'products', null, { imported, errors });
+
+  // Phase 5 : Créer le stock pour les produits avec quantité
+  if (map.quantity !== -1) {
+    var stockCreated = 0;
+    try {
+      if (status) status.textContent = 'Mise à jour du stock...';
+      var allStock = await DB.dbGetAll('stock');
+      var stockMap = {};
+      allStock.forEach(function(s) { stockMap[s.productId] = s; });
+
+      for (var qi = 0; qi < parsedProducts.length; qi++) {
+        var prod = parsedProducts[qi];
+        var qty = prod._importQty || 0;
+        if (qty <= 0 || !prod.id) continue;
+        try {
+          var existingStock = stockMap[prod.id];
+          if (existingStock) {
+            await DB.dbPut('stock', Object.assign({}, existingStock, { quantity: qty }));
+          } else {
+            await DB.dbAdd('stock', { productId: prod.id, quantity: qty, reservedQuantity: 0 });
+          }
+          stockCreated++;
+        } catch (se) { console.warn('[Import] Stock error:', prod.code, se); }
+      }
+      if (stockCreated > 0 && results) {
+        results.innerHTML += '<br><small>📦 ' + stockCreated + ' entrée(s) de stock créées/mises à jour.</small>';
+      }
+    } catch (stockErr) { console.warn('[Import] Stock phase error:', stockErr); }
+  }
+
   setTimeout(() => renderProducts(document.getElementById('app-content')), 1500);
 }
 
@@ -908,7 +940,7 @@ function showImportError(msg) {
 
 function downloadImportTemplate(e) {
   e.preventDefault();
-  const csv = '\uFEFFCode,Nom,DCI,Marque,Categorie,Prix Vente,Prix Achat,Rx\nP001,Paracetamole 500mg,Paracétamol,Doliprane,Antalgique,5000,3500,Non\nP002,Amoxicilline 1g,Amoxicilline,Clamoxyl,Antibiotique,12000,8500,Oui';
+  const csv = '\uFEFFCode,Nom,DCI,Marque,Categorie,Prix Vente,Prix Achat,Rx,Quantite\nP001,Paracetamole 500mg,Paracétamol,Doliprane,Antalgique,5000,3500,Non,50\nP002,Amoxicilline 1g,Amoxicilline,Clamoxyl,Antibiotique,12000,8500,Oui,30';
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = 'modele_import_pharma.csv';
