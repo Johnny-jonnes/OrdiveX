@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Module Achats & Fournisseurs
  * Commandes, réceptions, litiges, évaluation fournisseurs
  */
@@ -143,6 +143,7 @@ function renderSuppliersPage() {
           </div>
         </div>
         <div class="supplier-actions">
+          <button class="btn btn-sm btn-secondary" onclick="showEditSupplier(${sup.id})" title="Modifier"><i data-lucide="pencil"></i></button>
           <button class="btn btn-sm btn-primary" onclick="showNewOrder(${sup.id}, '${sup.name}')"><i data-lucide="plus"></i> Commander</button>
           <button class="btn btn-sm btn-secondary" onclick="viewSupplierDetail(${sup.id})">Détail <i data-lucide="arrow-right"></i></button>
         </div>
@@ -245,6 +246,101 @@ async function submitSupplier() {
   } catch (err) { UI.toast('Erreur : ' + err.message, 'error'); }
 }
 
+/**
+ * Modifier un fournisseur existant — pré-remplit le formulaire avec les données actuelles
+ */
+async function showEditSupplier(supId) {
+  try {
+    var sup = await DB.dbGet('suppliers', supId);
+    if (!sup) { UI.toast('Fournisseur introuvable', 'error'); return; }
+
+    UI.modal('<i data-lucide="pencil" class="modal-icon-inline"></i> Modifier le Fournisseur', `
+      <form id="edit-supplier-form" class="form-grid">
+        <input type="hidden" name="id" value="${sup.id}">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Raison sociale *</label>
+            <input type="text" name="name" class="form-control" required value="${(sup.name || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="form-group">
+            <label>N° Agrément DNPM</label>
+            <input type="text" name="agrément" class="form-control" value="${(sup.agrément || '').replace(/"/g, '&quot;')}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Contact principal</label>
+            <input type="text" name="contact" class="form-control" value="${(sup.contact || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="form-group">
+            <label>Téléphone</label>
+            <input type="tel" name="phone" class="form-control" value="${(sup.phone || '').replace(/"/g, '&quot;')}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" class="form-control" value="${(sup.email || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="form-group">
+            <label>Délai de paiement (jours)</label>
+            <input type="number" name="paymentTerms" class="form-control" value="${sup.paymentTerms || 30}" min="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Adresse</label>
+          <input type="text" name="address" class="form-control" value="${(sup.address || '').replace(/"/g, '&quot;')}">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Spécialité produits</label>
+            <input type="text" name="specialty" class="form-control" value="${(sup.specialty || '').replace(/"/g, '&quot;')}">
+          </div>
+          <div class="form-group">
+            <label>Statut</label>
+            <select name="status" class="form-control">
+              <option value="active" ${sup.status === 'active' ? 'selected' : ''}>Actif</option>
+              <option value="inactive" ${sup.status !== 'active' ? 'selected' : ''}>Inactif</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Note</label>
+          <textarea name="note" class="form-control" rows="2">${(sup.note || '').replace(/</g, '&lt;')}</textarea>
+        </div>
+      </form>
+    `, {
+      footer: `
+        <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="submitEditSupplier(${sup.id})"><i data-lucide="check"></i> Sauvegarder</button>
+      `
+    });
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    UI.toast('Erreur chargement fournisseur : ' + (err.message || err), 'error');
+  }
+}
+
+async function submitEditSupplier(supId) {
+  try {
+    var form = document.getElementById('edit-supplier-form');
+    if (!form || !form.checkValidity()) { if (form) form.reportValidity(); return; }
+    var existing = await DB.dbGet('suppliers', supId);
+    if (!existing) { UI.toast('Fournisseur introuvable', 'error'); return; }
+    var data = Object.fromEntries(new FormData(form));
+    data.paymentTerms = parseInt(data.paymentTerms) || 30;
+    // Préserver les champs internes (complaints, etc.)
+    var updated = Object.assign({}, existing, data, { id: supId });
+    await DB.dbPut('suppliers', updated);
+    await DB.writeAudit('EDIT_SUPPLIER', 'suppliers', supId, { name: data.name });
+    UI.closeModal();
+    UI.toast('Fournisseur modifié avec succès', 'success');
+    Router.navigate('suppliers');
+  } catch (err) {
+    UI.toast('Erreur modification : ' + (err.message || err), 'error');
+  }
+}
+
 async function viewSupplierDetail(supId) {
   const [sup, orders] = await Promise.all([
     DB.dbGet('suppliers', supId),
@@ -257,6 +353,9 @@ async function viewSupplierDetail(supId) {
 
   UI.modal(`<i data-lucide="factory" class="modal-icon-inline"></i> ${sup.name}`, `
     <div class="supplier-detail">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-sm btn-secondary" onclick="UI.closeModal(); showEditSupplier(${supId})"><i data-lucide="pencil"></i> Modifier les informations</button>
+      </div>
       <div class="rx-detail-grid" style="margin-bottom:16px">
         <div class="rx-detail-card">
           <h4>Informations</h4>
@@ -973,6 +1072,8 @@ async function resolveComplaint(supId, complaintIdx) {
 
 window.showAddSupplier = showAddSupplier;
 window.submitSupplier = submitSupplier;
+window.showEditSupplier = showEditSupplier;
+window.submitEditSupplier = submitEditSupplier;
 window.viewSupplierDetail = viewSupplierDetail;
 window.showNewOrder = showNewOrder;
 window.showNewOrderForm = showNewOrderForm;
@@ -1261,9 +1362,9 @@ function _parseImportCSV(text) {
       var orderNum = row.n_bc || row.ordernumber || row.order_number || row.bc || ('CSV-IMP-' + Date.now() + '-' + i);
       var supplierName = row.fournisseur || row.suppliername || row.supplier || '';
       var productName = row.produit || row.productname || row.product || '';
-      var quantity = parseInt(row.quantite || row.quantity || row.qte || 0);
-      var unitPrice = parseFloat(row.prix_unitaire || row.unitprice || row.prix || 0);
-      var qteRecue = parseInt(row.qte_recue || row.receivedqty || 0);
+      var quantity = Math.max(0, parseInt(row.quantite || row.quantity || row.qte || row.qty || 0));
+      var unitPrice = Math.max(0, parseFloat(row.prix_unitaire || row.unitprice || row.prix || row.price || 0));
+      var qteRecue = Math.max(0, parseInt(row.qte_recue || row.receivedqty || row.qte_reçue || row.received || 0));
       var lotNumber = row.lot || row.lotnumber || '';
       var expiryDate = row.peremption || row.expirydate || row.expiration || '';
       var status = row.statut || row.status || 'pending';
