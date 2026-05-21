@@ -1,1 +1,1 @@
-{"version":"9.4.8","date":"2026-05-20","changelog":"Fix sync Supabase: importedAt exclu, export/import CSV commandes"}
+{"version":"9.4.9","date":"2026-05-21","changelog":"Fix sync: protection données locales, push non bloqué, backoff réseau"}

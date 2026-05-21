@@ -1066,9 +1066,9 @@ function _showSyncIndicator(active) {
 }
 
 async function syncToSupabase() {
-  // Triple garde : empêcher toute tentative réseau si hors-ligne
+  // Garde : empêcher doublons et hors-ligne
   if (_syncInProgress) return;
-  if (!navigator.onLine || !AppState.isOnline) return;
+  if (!navigator.onLine) return;
   _syncInProgress = true;
   // Phase 9 — Indicateur visuel furtif
   _showSyncIndicator(true);
@@ -1482,6 +1482,8 @@ async function pullFromSupabase(isManual = false) {
             var item = prepared[i];
             var kv = item[keyProp];
             var ex = (kv !== undefined && kv !== null) ? existingMap[kv] : null;
+            // PROTECTION : ne pas écraser les données locales non-poussées
+            if (ex && ex._synced === false) continue;
             store2.put(ex ? Object.assign({}, ex, item) : item);
           }
           tx2.oncomplete = function () { resolve(); };
@@ -1520,6 +1522,8 @@ async function pullFromSupabase(isManual = false) {
               var item = chunk[i];
               var kv = item[keyProp];
               var ex = (kv !== undefined && kv !== null) ? existingMap[kv] : null;
+              // PROTECTION : ne pas écraser les données locales non-poussées
+              if (ex && ex._synced === false) continue;
               store2.put(ex ? Object.assign({}, ex, item) : item);
             }
             tx2.oncomplete = function () { resolve(); };
