@@ -338,6 +338,16 @@ async function submitStockEntry() {
     await DB.writeAudit('STOCK_ENTRY', 'stock', productId, data);
     UI.closeModal();
     UI.toast('Entrée stock enregistrée', 'success');
+
+    // ⚡ Forcer la synchronisation immédiate vers Supabase
+    try {
+      if (navigator.onLine && typeof DB.syncToSupabase === 'function') {
+        await DB.syncToSupabase();
+      }
+    } catch (syncErr) {
+      console.warn('[StockEntry] Sync différée :', syncErr.message || syncErr);
+    }
+
     Router.navigate('stock');
   } catch (err) {
     UI.toast('Erreur : ' + err.message, 'error');
@@ -582,6 +592,16 @@ async function validateInventory() {
 
     UI.closeModal();
     UI.toast(`Inventaire validé — ${gaps.length} ajustement(s) appliqué(s)`, 'success', 5000);
+
+    // ⚡ Forcer la synchronisation immédiate vers Supabase
+    try {
+      if (navigator.onLine && typeof DB.syncToSupabase === 'function') {
+        await DB.syncToSupabase();
+      }
+    } catch (syncErr) {
+      console.warn('[Inventory] Sync différée :', syncErr.message || syncErr);
+    }
+
     Router.navigate('stock');
   } catch (err) {
     UI.toast('Erreur : ' + err.message, 'error');
@@ -716,6 +736,17 @@ async function submitAdjustStock(productId, oldQty) {
 
     UI.closeModal();
     UI.toast('Stock ajust\u00e9 : ' + oldQty + ' \u2192 ' + newQty + ' (' + (diff > 0 ? '+' : '') + diff + ')', 'success');
+
+    // ⚡ Forcer la synchronisation imm\u00e9diate vers Supabase
+    try {
+      if (navigator.onLine && typeof DB.syncToSupabase === 'function') {
+        await DB.syncToSupabase();
+      }
+    } catch (syncErr) {
+      console.warn('[AdjustStock] Sync diff\u00e9r\u00e9e :', syncErr.message || syncErr);
+      UI.toast('Ajustement sauv\u00e9 localement. Synchronisation en attente...', 'info');
+    }
+
     Router.navigate('stock');
   } catch (err) {
     UI.toast('Erreur ajustement : ' + (err.message || err), 'error');
