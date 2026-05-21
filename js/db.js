@@ -1098,20 +1098,13 @@ async function syncToSupabase() {
       }
     }
 
-    // --- PROBE MÉTIER (avec pré-vérification réseau) ---
+    // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
     if (!navigator.onLine) { AppState.isOnline = false; return; }
     try {
-      // Pré-test réseau ultra-léger (évite les erreurs rouges fetch)
-      try {
-        await Promise.race([
-          fetch(sb.supabaseUrl + '/rest/v1/', { method: 'HEAD', mode: 'no-cors' }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
-        ]);
-      } catch (netErr) {
-        AppState.isOnline = false;
-        return;
-      }
-      const probeReq = await sb.from('settings').select('key').limit(1);
+      var _probeCtrl = new AbortController();
+      var _probeTimeout = setTimeout(function() { _probeCtrl.abort(); }, 8000);
+      const probeReq = await sb.from('settings').select('key').limit(1).abortSignal(_probeCtrl.signal);
+      clearTimeout(_probeTimeout);
       if (probeReq.error) {
         // Si 401 → re-auth et retry
         if (probeReq.error.message?.includes('401') || probeReq.error.code === 'PGRST301') {
@@ -1393,20 +1386,13 @@ async function pullFromSupabase(isManual = false) {
       'cashRegister', 'auditLog', 'returns'
     ];
 
-    // --- PROBE MÉTIER (avec pré-vérification réseau) ---
+    // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
     if (!navigator.onLine) { AppState.isOnline = false; return; }
     try {
-      // Pré-test réseau ultra-léger (évite les erreurs rouges fetch)
-      try {
-        await Promise.race([
-          fetch(sb.supabaseUrl + '/rest/v1/', { method: 'HEAD', mode: 'no-cors' }),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000))
-        ]);
-      } catch (netErr) {
-        AppState.isOnline = false;
-        return;
-      }
-      const probeReq = await sb.from('settings').select('key').limit(1);
+      var _probeCtrl2 = new AbortController();
+      var _probeTimeout2 = setTimeout(function() { _probeCtrl2.abort(); }, 8000);
+      const probeReq = await sb.from('settings').select('key').limit(1).abortSignal(_probeCtrl2.signal);
+      clearTimeout(_probeTimeout2);
       if (probeReq.error) throw probeReq.error;
       AppState.isOnline = true;
     } catch (err) {
@@ -1843,26 +1829,45 @@ let _autoPullTimer = null;
 let _pullFailCount = 0;
 /**
  * AUTO-PULL : Synchronisation cloud → local automatique
- * Boucle récursive stabilisée avec backoff exponentiel en cas d'échec réseau.
+ * - navigator.onLine = false → SKIP total, aucune requête, aucun log
+ * - Backoff exponentiel : 60s → 2min → 3min → 5min max si échecs réseau
+ * - Reset instantané dès qu'un pull réussit
  */
 function startAutoPull() {
   if (_autoPullTimer) clearTimeout(_autoPullTimer);
 
+  // Écouter les changements réseau pour réagir instantanément
+  window.addEventListener('online', function() {
+    // Réseau revient : reset le backoff et tenter un pull dans 3s
+    _pullFailCount = 0;
+    AppState.isOnline = true;
+    if (_autoPullTimer) clearTimeout(_autoPullTimer);
+    _autoPullTimer = setTimeout(loop, 3000);
+  });
+  window.addEventListener('offline', function() {
+    AppState.isOnline = false;
+    if (_autoPullTimer) clearTimeout(_autoPullTimer);
+    // Pas de retry avant que 'online' se déclenche
+    _autoPullTimer = setTimeout(loop, 120000);
+  });
+
   const loop = async () => {
-    _autoPullTimer = null; // reset pour éviter les doublons
-    if (navigator.onLine && AppState.isOnline !== false) {
-      try {
-        await pullFromSupabase();
-        _pullFailCount = 0; // succès → reset du compteur
-      } catch (e) {
-        _pullFailCount++;
-      }
-    } else {
+    _autoPullTimer = null;
+    // SKIP TOTAL si hors-ligne — zéro requête, zéro log
+    if (!navigator.onLine) {
+      AppState.isOnline = false;
+      _autoPullTimer = setTimeout(loop, 120000);
+      return;
+    }
+    try {
+      await pullFromSupabase();
+      _pullFailCount = 0;
+    } catch (e) {
       _pullFailCount++;
     }
-    // Backoff : 60s en ligne, 2min hors-ligne, puis x2 jusqu'à max 5min
+    // Backoff progressif en cas d'échec, 60s si tout va bien
     let delay;
-    if (!navigator.onLine || AppState.isOnline === false || _pullFailCount > 0) {
+    if (_pullFailCount > 0) {
       delay = Math.min(300000, 120000 * Math.pow(1.5, Math.min(_pullFailCount - 1, 4)));
     } else {
       delay = 60000;
@@ -1870,7 +1875,7 @@ function startAutoPull() {
     _autoPullTimer = setTimeout(loop, delay);
   };
 
-  // On attend 8 secondes au démarrage pour laisser le UI charger
+  // Démarrage après 8s pour laisser le UI charger
   _autoPullTimer = setTimeout(loop, 8000);
 }
 
