@@ -157,6 +157,7 @@ function renderStockTable(data) {
       <div class="actions-cell">
         <button class="btn btn-xs btn-primary" onclick="viewProductLots(${r.id})" title="Voir les lots"><i data-lucide="package"></i></button>
         <button class="btn btn-xs btn-secondary" onclick="showStockMovements(${r.id})" title="Mouvements"><i data-lucide="clipboard-list"></i></button>
+        ${DB.AppState.currentUser && DB.AppState.currentUser.role === 'admin' ? `<button class="btn btn-xs btn-warning" onclick="showAdjustStock(${r.id})" title="Ajuster le stock"><i data-lucide="pencil"></i></button>` : ''}
         <button class="btn btn-xs btn-ghost" onclick="editProduct(${r.id})" title="Modifier"><i data-lucide="edit-3"></i></button>
       </div>` },
   ];
@@ -604,6 +605,123 @@ function exportInventory() {
   UI.toast('PV d\'inventaire exporté en CSV', 'success');
 }
 
+/**
+ * Ajustement rapide du stock par l'admin — trac\u00e9 dans l'audit
+ */
+async function showAdjustStock(productId) {
+  try {
+    if (!DB.AppState.currentUser || DB.AppState.currentUser.role !== 'admin') {
+      UI.toast('Seul un administrateur peut ajuster le stock', 'error');
+      return;
+    }
+    var product = await DB.dbGet('products', productId);
+    if (!product) { UI.toast('Produit introuvable', 'error'); return; }
+
+    var stockAll = await DB.dbGetAll('stock');
+    var currentStock = stockAll.find(function(s) { return s.productId === productId; });
+    var currentQty = currentStock ? (currentStock.quantity || 0) : 0;
+
+    UI.modal('<i data-lucide="pencil" class="modal-icon-inline"></i> Ajuster le Stock', `
+      <form id="adjust-stock-form" class="form-grid">
+        <div class="rx-detail-card" style="margin-bottom:16px">
+          <h4>${product.name}</h4>
+          <div class="detail-row"><span>Code</span><span><code>${product.code || '—'}</code></span></div>
+          <div class="detail-row"><span>Stock actuel</span><span><strong>${currentQty}</strong> ${product.unit || 'bo\u00eete(s)'}</span></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nouvelle quantit\u00e9 *</label>
+            <input type="number" name="newQty" class="form-control" value="${currentQty}" min="0" required
+              oninput="var d=parseInt(this.value||0)-${currentQty};var e=document.getElementById(\'adjust-diff\');if(e){e.textContent=(d>0?\'+\':\'\')+d;e.className=d===0?\'text-muted\':d>0?\'text-success\':\'text-danger\'}">
+          </div>
+          <div class="form-group">
+            <label>Diff\u00e9rence</label>
+            <div style="padding:10px;font-size:24px;font-weight:700;text-align:center" id="adjust-diff" class="text-muted">0</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Raison de l\'ajustement *</label>
+          <select name="reason" class="form-control" required>
+            <option value="">— Choisir —</option>
+            <option value="Installation initiale">Installation initiale (mise en place)</option>
+            <option value="Correction inventaire">Correction apr\u00e8s inventaire</option>
+            <option value="Casse/P\u00e9rim\u00e9">Casse ou produit p\u00e9rim\u00e9</option>
+            <option value="Vol/Perte">Vol ou perte constat\u00e9e</option>
+            <option value="Retour fournisseur">Retour fournisseur</option>
+            <option value="Erreur de saisie">Correction d\'erreur de saisie</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>D\u00e9tail / Commentaire</label>
+          <textarea name="comment" class="form-control" rows="2" placeholder="Pr\u00e9cisez si n\u00e9cessaire..."></textarea>
+        </div>
+      </form>
+    `, {
+      footer: `
+        <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="submitAdjustStock(${productId}, ${currentQty})"><i data-lucide="check"></i> Appliquer</button>
+      `
+    });
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    UI.toast('Erreur : ' + (err.message || err), 'error');
+  }
+}
+
+async function submitAdjustStock(productId, oldQty) {
+  try {
+    if (!DB.AppState.currentUser || DB.AppState.currentUser.role !== 'admin') {
+      UI.toast('Permission refus\u00e9e', 'error'); return;
+    }
+    var form = document.getElementById('adjust-stock-form');
+    if (!form || !form.checkValidity()) { if (form) form.reportValidity(); return; }
+    var data = Object.fromEntries(new FormData(form));
+    var newQty = Math.max(0, parseInt(data.newQty) || 0);
+    var diff = newQty - oldQty;
+
+    if (diff === 0) { UI.toast('Aucun changement d\u00e9tect\u00e9', 'info'); UI.closeModal(); return; }
+    if (!data.reason) { UI.toast('Veuillez s\u00e9lectionner une raison', 'warning'); return; }
+
+    // Mettre \u00e0 jour le stock
+    var stockAll = await DB.dbGetAll('stock');
+    var existing = stockAll.find(function(s) { return s.productId === productId; });
+    if (existing) {
+      await DB.dbPut('stock', Object.assign({}, existing, { quantity: newQty }));
+    } else {
+      await DB.dbAdd('stock', { productId: productId, quantity: newQty, reservedQuantity: 0 });
+    }
+
+    // Enregistrer le mouvement
+    await DB.dbAdd('movements', {
+      productId: productId,
+      type: diff > 0 ? 'ENTRY' : 'EXIT',
+      subType: 'ADMIN_ADJUSTMENT',
+      quantity: diff,
+      date: new Date().toISOString(),
+      userId: DB.AppState.currentUser.id,
+      reference: 'ADJ-' + new Date().toISOString().split('T')[0] + '-' + productId,
+      note: data.reason + (data.comment ? ' — ' + data.comment : '')
+    });
+
+    // Tracer dans l'audit
+    await DB.writeAudit('ADMIN_STOCK_ADJUST', 'stock', productId, {
+      oldQty: oldQty,
+      newQty: newQty,
+      diff: diff,
+      reason: data.reason,
+      comment: data.comment || '',
+      adjustedBy: DB.AppState.currentUser.name || DB.AppState.currentUser.username
+    });
+
+    UI.closeModal();
+    UI.toast('Stock ajust\u00e9 : ' + oldQty + ' \u2192 ' + newQty + ' (' + (diff > 0 ? '+' : '') + diff + ')', 'success');
+    Router.navigate('stock');
+  } catch (err) {
+    UI.toast('Erreur ajustement : ' + (err.message || err), 'error');
+  }
+}
+
 window.filterStock = filterStock;
 window.viewProductLots = viewProductLots;
 window.showStockMovements = showStockMovements;
@@ -615,6 +733,8 @@ window.filterInventory = filterInventory;
 window.calcInventoryGap = calcInventoryGap;
 window.validateInventory = validateInventory;
 window.exportInventory = exportInventory;
+window.showAdjustStock = showAdjustStock;
+window.submitAdjustStock = submitAdjustStock;
 
 window.filterStockEntryProducts = function(query) {
   const resultsDiv = document.getElementById('stock-entry-product-results');
