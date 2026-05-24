@@ -99,7 +99,8 @@ CREATE TABLE lots (
   "productionDate"        TEXT,
   "manufactureDate"       TEXT,
   supplier                TEXT,
-  location                TEXT DEFAULT 'rayon'
+  location                TEXT DEFAULT 'rayon',
+  "createdAt"             BIGINT
 );
 
 -- ═══════════════════════════════════════════════════════════════
