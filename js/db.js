@@ -1088,7 +1088,7 @@ async function syncToSupabase() {
     if (!sb) return;
     if (!navigator.onLine) return;
 
-    const storesToSync = ['products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients', 'prescriptions', 'alerts', 'cashRegister', 'auditLog', 'users', 'settings', 'returns'];
+    const storesToSync = ['products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients', 'prescriptions', 'alerts', 'cashRegister', 'auditLog', 'users', 'settings', 'returns', 'invoices'];
 
     let totalPendingCount = 0;
 
@@ -1099,7 +1099,10 @@ async function syncToSupabase() {
       sales: ['paymentDetails']
     };
     var _colCache = {};
-    try { _colCache = JSON.parse(localStorage.getItem('pharma_bad_columns') || '{}'); } catch (e) { }
+    try { 
+      localStorage.removeItem('pharma_bad_columns'); // Reset for sync overhaul
+      _colCache = JSON.parse(localStorage.getItem('pharma_bad_columns') || '{}'); 
+    } catch (e) { }
     // Fusionner le hardcodé avec le cache dynamique
     for (var tbl in _knownBadCols) {
       if (!_colCache[tbl]) _colCache[tbl] = [];
@@ -1177,16 +1180,8 @@ async function syncToSupabase() {
           }
 
           // ── COLONNES LOCAL-ONLY : à supprimer au fur et à mesure qu'elles sont ajoutées à Supabase ──
-          // Après exécution de la migration v9.3.3, cette liste peut être vide
-          // Seules restent les colonnes véritablement fantômes/legacy
-          const _localOnlyColumns = {
-            products: ['notices', 'interactions', 'dosageForm', 'costPrice'],
-            lots: ['productionDate', 'manufactureDate', 'supplier'],
-            stock: ['lastUpdate', 'minQuantity'],
-            prescriptions: ['note'],  // Supabase a 'notes' (avec s), pas 'note'
-            suppliers: ['complaints'],  // complaints stockées localement uniquement
-            purchaseOrders: ['importedAt'],  // champ d'import CSV local uniquement
-          };
+          // Vides pour la refonte - toutes les colonnes doivent être envoyées
+          const _localOnlyColumns = {};
           // Exclure les clés settings qui contiennent du JSON complexe non-compatible Supabase
           if (storeName === 'settings' && payload.key === 'held_carts') {
             return null;

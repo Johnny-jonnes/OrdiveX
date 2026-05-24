@@ -59,6 +59,11 @@ CREATE TABLE products (
   "unitsPerBox"           INTEGER DEFAULT 1,
   "pricePerUnit"          NUMERIC DEFAULT 0,
   "allowUnitSale"         BOOLEAN DEFAULT false,
+  "notices"               TEXT,
+  "interactions"          TEXT,
+  "dosageForm"            TEXT,
+  "costPrice"             NUMERIC,
+  "hasLots"               BOOLEAN,
   "updatedAt"             BIGINT
 );
 
@@ -84,6 +89,9 @@ CREATE TABLE lots (
   "destructionBy"         TEXT,
   "invoiceId"             BIGINT,
   "invoiceRef"            TEXT,
+  "productionDate"        TEXT,
+  "manufactureDate"       TEXT,
+  supplier                TEXT,
   location                TEXT DEFAULT 'rayon'
 );
 
@@ -96,6 +104,8 @@ CREATE TABLE stock (
   quantity            INTEGER DEFAULT 0,
   "reservedQuantity"  INTEGER DEFAULT 0,
   "lastUpdated"       BIGINT,
+  "lastUpdate"        TEXT,
+  "minQuantity"       INTEGER,
   "updatedAt"         BIGINT
 );
 
@@ -130,6 +140,7 @@ CREATE TABLE suppliers (
   status          TEXT DEFAULT 'active',
   "agrément"      TEXT,
   "paymentTerms"  INTEGER DEFAULT 30,
+  complaints      TEXT,
   "updatedAt"     BIGINT
 );
 
@@ -150,6 +161,7 @@ CREATE TABLE "purchaseOrders" (
   "receivedAt"    TEXT,
   "receiveNote"   TEXT,
   "hasNonConformity" BOOLEAN DEFAULT false,
+  "importedAt"    TEXT,
   "updatedAt"     BIGINT
 );
 
@@ -195,6 +207,7 @@ CREATE TABLE prescriptions (
   status        TEXT DEFAULT 'pending',
   "doctorName"  TEXT,
   items         JSONB,
+  note          TEXT,
   "updatedAt"   BIGINT
 );
 

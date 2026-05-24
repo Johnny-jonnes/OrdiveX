@@ -1007,10 +1007,9 @@ window.importStockCsv = async function(event) {
             form: cForm !== -1 ? cols[cForm] : '',
             code: code,
             category: 'Médicament',
-            sellPrice: sellPrice,
+            salePrice: sellPrice,
             purchasePrice: buyPrice,
             minStock: 10,
-            hasLots: true,
             status: 'active'
           };
           const prodId = await DB.dbAdd('products', newProd);
@@ -1133,9 +1132,7 @@ window.showImportStockModal = function() {
 
 window.downloadStockCsvTemplate = function() {
   const headers = "Nom;Quantité;Achat;Vente;Expiration;Lot;Emplacement;Facture;Fournisseur;DCI;Marque;Forme\\n";
-  const example1 = "Paracetamol 500mg;100;500;1000;2026-12-31;LOT-001;reserve;F-2024-001;PharmaGros;Paracetamol;Sanofi;Comprimé\\n";
-  const example2 = "Amoxicilline 1g;50;2000;4500;2025-06-30;LOT-002;rayon;;;Amoxicilline;;Gélule\\n";
-  const blob = new Blob([headers + example1 + example2], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([headers], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
