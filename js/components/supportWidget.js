@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Support Widget Component — OrdiveX
  * Chatbot d'assistance intégré, intelligent et personnalisé
  * Ne s'affiche qu'APRÈS la connexion de l'utilisateur
@@ -869,7 +869,7 @@ const CONVERSATIONS = [
  {
  triggers: ['version', 'mise a jour', 'update', 'changelog', 'nouveaute'],
  responses: [
-"Vous utilisez <strong>OrdiveX v9.4</strong>, {name}! <br><br>Dernières améliorations :<br> Multi-onglets POS (ventes parallèles)<br> Vue 360° Patient et Employé<br> Double traçabilité Vendeur/Caissier<br> Dashboard Inventaire avec KPIs financiers<br> 55+ catégories dynamiques avec saisie libre<br> Moi-même : Naomie v4 avec requêtes live! <br><br>Les mises à jour sont automatiques via GitHub Pages!",
+"Vous utilisez <strong>OrdiveX v9.4</strong>, {name}! <br><br>Dernières améliorations :<br> Gestion Pro des Factures (PDF, CSV, Traçabilité)<br> Multi-onglets POS (ventes parallèles)<br> Vue 360° Patient et Employé<br> Double traçabilité Vendeur/Caissier<br> Dashboard Inventaire avec KPIs financiers<br> 55+ catégories dynamiques avec saisie libre<br> Moi-même : Naomie v4 avec requêtes live! <br><br>Les mises à jour sont automatiques via GitHub Pages!",
  ]
  },
  // ── Nouvelles conversations v9.2.1 (Bonnes pratiques guide) ──
@@ -879,6 +879,18 @@ const CONVERSATIONS = [
 "Le <strong>tiers-payant</strong> fonctionne ainsi, {name}! <br><br>Au <strong>POS</strong>, sélectionnez le paiement « <strong>Assurance</strong> » :<br>1️⃣ Saisissez l'organisme (ex: CNSS, ASCOMA)<br>2️⃣ Entrez le numéro de <strong>prise en charge</strong><br>3️⃣ Indiquez le <strong>taux de couverture</strong><br><br>Le système sépare automatiquement :<br>• Le <strong>ticket modérateur</strong> (part patient) → encaissé immédiatement<br>• La <strong>créance assurance</strong> (part entreprise) → en attente de règlement<br><br>Tout est tracé dans l'historique des ventes!",
  ]
  },
+ {
+  triggers: ['import', 'csv', 'excel', 'importer', 'catalogue en masse', 'bulk', 'fichier'],
+  responses: [
+  "L'<strong>import CSV</strong> est ultra-puissant, {name}! <br><br> <strong>Import de Catalogue :</strong> Allez dans Catalogue Produits > « Importer CSV » pour ajouter des milliers de références.<br> <strong>Import de Facture :</strong> Dans Factures Professionnelles, cliquez sur « Importer Facture (CSV) » pour créer un brouillon depuis un Excel fournisseur.<br><br> OrdiveX va matcher automatiquement les noms de produits avec votre base de données!",
+  ]
+  },
+  {
+  triggers: ['facture', 'facturation', 'bon de livraison', 'facture pro', 'entree stock facture'],
+  responses: [
+  "La gestion des <strong>Factures Professionnelles</strong> est complète, {name}! <br><br>1️⃣ <strong>Saisie Intelligente</strong> : À la saisie manuelle d'une entrée stock, entrez un N° de facture et je la crée automatiquement.<br>2️⃣ <strong>Import CSV</strong> : Vous pouvez importer le fichier Excel de votre grossiste.<br>3️⃣ <strong>Traçabilité</strong> : L'onglet « Tracer Facture » montre tous les lots liés et leur stock restant.<br>4️⃣ <strong>PDF Premium</strong> : Imprimez un magnifique récapitulatif pour votre comptabilité!",
+  ]
+  },
  {
  triggers: ['cloture', 'cloturer', 'fermer la caisse', 'fin de journee', 'fermeture caisse'],
  responses: [

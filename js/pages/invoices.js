@@ -588,6 +588,7 @@ async function viewInvoice(invoiceId) {
     size: 'large',
     footer: `
       <button class="btn btn-secondary" onclick="UI.closeModal()">Fermer</button>
+      <button class="btn btn-secondary" onclick="exportSingleInvoiceCsv(${invoiceId})"><i data-lucide="download"></i> Exporter (CSV)</button>
       <button class="btn btn-primary" onclick="printInvoicePDF(${invoiceId})"><i data-lucide="printer"></i> Imprimer PDF</button>
       ${invoice.status === 'draft' ? `<button class="btn btn-success" onclick="UI.closeModal(); validateInvoice(${invoiceId})"><i data-lucide="check-circle"></i> Valider</button>` : ''}
     `
@@ -609,6 +610,25 @@ function exportInvoicesCsv() {
   const link = document.createElement('a');
   link.setAttribute('href', url);
   link.setAttribute('download', `Factures_OrdiveX_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function exportSingleInvoiceCsv(invoiceId) {
+  const invoice = window._invoicesData?.find(i => i.id === invoiceId);
+  if (!invoice) return;
+
+  let csv = 'Produit,Lot,Peremption,Quantite,Prix Unitaire,Total\n';
+  (invoice.items || []).forEach(item => {
+    csv += `"${item.productName}","${item.lotNumber || ''}","${item.expiryDate || ''}","${item.quantity}","${item.unitPrice || 0}","${item.total || (item.quantity * item.unitPrice) || 0}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `Facture_${invoice.invoiceNumber}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1000,6 +1020,7 @@ window.submitInvoice = submitInvoice;
 window.validateInvoice = validateInvoice;
 window.viewInvoice = viewInvoice;
 window.exportInvoicesCsv = exportInvoicesCsv;
+window.exportSingleInvoiceCsv = exportSingleInvoiceCsv;
 window.importInvoiceCsv = importInvoiceCsv;
 window.printInvoicePDF = printInvoicePDF;
 
