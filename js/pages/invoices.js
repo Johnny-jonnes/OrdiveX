@@ -3,6 +3,8 @@
  * Factures fournisseurs, traçabilité, liaison stock
  */
 
+const INVOICE_PAGE_SIZE = 50;
+
 async function renderInvoices(container) {
   UI.loading(container, 'Chargement des factures...');
   const [invoices, suppliers, products] = await Promise.all([
@@ -18,6 +20,10 @@ async function renderInvoices(container) {
   const sorted = invoices.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
   const draft = invoices.filter(i => i.status === 'draft');
   const validated = invoices.filter(i => i.status === 'validated');
+
+  window._invoicesData = sorted;
+  window._invoicesSupplierMap = supplierMap;
+  window._invoicesCurrentPage = 1;
 
   container.innerHTML = `
     <div class="page-header">
@@ -37,32 +43,53 @@ async function renderInvoices(container) {
       <div class="stat-chip stat-blue"><span class="stat-val">${UI.formatCurrency(validated.reduce((a, i) => a + (i.totalAmount || 0), 0))}</span><span class="stat-label">Total Validé</span></div>
     </div>
 
-    <div class="filter-bar">
-      <select id="inv-status" class="filter-select" onchange="filterInvoices()">
+    <div class="filter-bar" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+      <input type="text" id="inv-search" class="filter-input" placeholder="N° de facture..." oninput="resetInvoicePagination(); filterInvoices();" style="flex: 1; min-width: 200px;">
+      <select id="inv-status" class="filter-select" onchange="resetInvoicePagination(); filterInvoices();" style="min-width: 150px;">
         <option value="">Tous statuts</option>
         <option value="draft">Brouillon</option>
         <option value="validated">Validée</option>
       </select>
-      <select id="inv-supplier" class="filter-select" onchange="filterInvoices()">
+      <select id="inv-supplier" class="filter-select" onchange="resetInvoicePagination(); filterInvoices();" style="min-width: 200px;">
         <option value="">Tous fournisseurs</option>
         ${suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
       </select>
     </div>
 
     <div id="inv-table-container"></div>
+    <div id="inv-pagination" style="text-align: center; margin-top: 15px; display: none;">
+      <button class="btn btn-secondary" onclick="loadMoreInvoices()"><i data-lucide="chevrons-down"></i> Afficher plus de factures</button>
+    </div>
   `;
 
-  window._invoicesData = sorted;
-  window._invoicesSupplierMap = supplierMap;
+  filterInvoices();
+}
+
+function resetInvoicePagination() {
+  window._invoicesCurrentPage = 1;
+}
+
+function loadMoreInvoices() {
+  window._invoicesCurrentPage++;
   filterInvoices();
 }
 
 function filterInvoices() {
+  const query = document.getElementById('inv-search')?.value.trim().toLowerCase() || '';
   const status = document.getElementById('inv-status')?.value || '';
   const supId = document.getElementById('inv-supplier')?.value;
   let data = window._invoicesData || [];
-  if (status) data = data.filter(i => i.status === status);
-  if (supId) data = data.filter(i => i.supplierId === parseInt(supId));
+  
+  // Filtrage
+  if (query) {
+    data = data.filter(i => (i.invoiceNumber || '').toLowerCase().includes(query));
+  }
+  if (status) {
+    data = data.filter(i => i.status === status);
+  }
+  if (supId) {
+    data = data.filter(i => i.supplierId === parseInt(supId));
+  }
 
   const container = document.getElementById('inv-table-container');
   if (!container) return;
@@ -71,6 +98,22 @@ function filterInvoices() {
     draft: { label: 'Brouillon', cls: 'badge-neutral' },
     validated: { label: 'Validée', cls: 'badge-success' },
   };
+
+  // Pagination logic
+  const totalCount = data.length;
+  const page = window._invoicesCurrentPage || 1;
+  const paginatedData = data.slice(0, page * INVOICE_PAGE_SIZE);
+
+  const paginationContainer = document.getElementById('inv-pagination');
+  if (paginationContainer) {
+    if (totalCount > paginatedData.length) {
+      paginationContainer.style.display = 'block';
+      const btn = paginationContainer.querySelector('button');
+      if (btn) btn.innerHTML = `<i data-lucide="chevrons-down"></i> Afficher plus (${totalCount - paginatedData.length} restantes)`;
+    } else {
+      paginationContainer.style.display = 'none';
+    }
+  }
 
   UI.table(container, [
     { label: 'N° Facture', render: r => `<code class="code-tag">${r.invoiceNumber || 'F-' + String(r.id).padStart(5, '0')}</code>` },
@@ -93,10 +136,10 @@ function filterInvoices() {
       label: 'Actions', render: r => `
       <div class="actions-cell">
         <button class="btn btn-xs btn-primary" onclick="viewInvoice(${r.id})"><i data-lucide="eye"></i> Voir</button>
-        ${r.status === 'draft' ? `<button class="btn btn-xs btn-success" onclick="validateInvoice(${r.id})"><i data-lucide="check-circle"></i> Valider & Entrer Stock</button>` : ''}
+        ${r.status === 'draft' ? `<button class="btn btn-xs btn-success" onclick="validateInvoice(${r.id})"><i data-lucide="check-circle"></i> Valider & Stock</button>` : ''}
         <button class="btn btn-xs btn-secondary" onclick="printInvoicePDF(${r.id})"><i data-lucide="printer"></i> PDF</button>
       </div>` },
-  ], data, { emptyMessage: 'Aucune facture', emptyIcon: 'file-text', pageSize: 100 });
+  ], paginatedData, { emptyMessage: 'Aucune facture trouvée', emptyIcon: 'file-search', pageSize: INVOICE_PAGE_SIZE });
   if (window.lucide) lucide.createIcons();
 }
 
@@ -660,6 +703,8 @@ function printInvoicePDF(invoiceId) {
 
 window.renderInvoices = renderInvoices;
 window.filterInvoices = filterInvoices;
+window.resetInvoicePagination = resetInvoicePagination;
+window.loadMoreInvoices = loadMoreInvoices;
 window.showNewInvoiceForm = showNewInvoiceForm;
 window.addInvoiceItem = addInvoiceItem;
 window.invoiceProductSearch = invoiceProductSearch;
