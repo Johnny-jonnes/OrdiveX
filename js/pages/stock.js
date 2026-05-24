@@ -1105,8 +1105,8 @@ window.importStockCsv = async function(event) {
       Router.navigate('stock');
 
     } catch (err) {
-      UI.toast('Erreur Import CSV: ' + err.message, 'error');
-      console.error(err);
+      UI.toast(err.message || 'Erreur lors de la lecture du fichier', 'error');
+      document.getElementById('import-stock-file').value = '';
     }
   };
   reader.readAsText(file);
