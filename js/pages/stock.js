@@ -24,12 +24,22 @@ async function renderStock(container) {
     }
   });
 
-  const stockData = products.map(p => ({
-    ...p,
-    currentStock: stockMap[p.id]?.quantity || 0,
-    reservedQty: stockMap[p.id]?.reservedQuantity || 0,
-    lots: lotsMap[p.id] || [],
-  }));
+  const stockData = products.map(p => {
+    const pLots = lotsMap[p.id] || [];
+    let qtyRayon = 0, qtyReserve = 0;
+    pLots.forEach(l => {
+      if (!l.location || l.location === 'rayon') qtyRayon += (l.quantity || 0);
+      else qtyReserve += (l.quantity || 0);
+    });
+    return {
+      ...p,
+      currentStock: stockMap[p.id]?.quantity || 0,
+      reservedQty: stockMap[p.id]?.reservedQuantity || 0,
+      lots: pLots,
+      qtyRayon,
+      qtyReserve
+    };
+  });
 
   // Stats
   const totalProducts = products.length;
@@ -75,6 +85,11 @@ async function renderStock(container) {
         <option value="rupture">Rupture</option>
         <option value="expiry">Expiration proche</option>
       </select>
+      <select id="stock-filter-location" class="filter-select" onchange="filterStock()">
+        <option value="">Tous les emplacements</option>
+        <option value="rayon">En Rayon</option>
+        <option value="reserve">En Réserve</option>
+      </select>
       <select id="stock-filter-category" class="filter-select" onchange="filterStock()">
         <option value="">Toutes catégories</option>
         ${[...new Set(products.map(p => p.category))].map(c => `<option value="${c}">${c}</option>`).join('')}
@@ -93,6 +108,7 @@ async function renderStock(container) {
 function filterStock() {
   const search = document.getElementById('stock-search')?.value.toLowerCase() || '';
   const status = document.getElementById('stock-filter-status')?.value || '';
+  const location = document.getElementById('stock-filter-location')?.value || '';
   const category = document.getElementById('stock-filter-category')?.value || '';
 
   let data = window._stockData || [];
@@ -111,6 +127,9 @@ function filterStock() {
   else if (status === 'expiry') data = data.filter(p =>
     p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d <= 90; })
   );
+
+  if (location === 'rayon') data = data.filter(p => p.qtyRayon > 0);
+  else if (location === 'reserve') data = data.filter(p => p.qtyReserve > 0);
 
   renderStockTable(data);
 }
