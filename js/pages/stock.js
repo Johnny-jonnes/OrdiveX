@@ -489,7 +489,7 @@ async function submitStockEntry() {
             totalAmount: invoiceItem.total,
             paymentMethod: '',
             note: 'Facture générée automatiquement via l\'Entrée Stock',
-            createdAt: new Date().toISOString()
+            createdAt: Date.now()
           });
         }
       } catch(err) {
@@ -1071,7 +1071,7 @@ window.importStockCsv = async function(event) {
               totalAmount: invoiceItem.total,
               paymentMethod: '',
               note: 'Import automatique depuis CSV Stock',
-              createdAt: new Date().toISOString()
+              createdAt: Date.now()
             };
             const invId = await DB.dbAdd('invoices', inv);
             inv.id = invId;

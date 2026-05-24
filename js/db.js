@@ -1164,6 +1164,13 @@ async function syncToSupabase() {
                 continue;
               }
 
+              if (key === 'createdAt' || key === 'updatedAt' || key === 'lastUpdated') {
+                if (typeof value === 'string' && value.includes('T')) {
+                  payload[key] = new Date(value).getTime() || Date.now();
+                  continue;
+                }
+              }
+
               if (typeof value === 'string') {
                 if (value.startsWith('session_')) {
                   payload[key] = parseInt(value.replace('session_', '')) || 1;
