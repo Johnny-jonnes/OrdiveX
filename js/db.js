@@ -88,6 +88,7 @@ const STORES = {
   settings: 'settings',
   cashRegister: 'cashRegister',
   returns: 'returns',
+  invoices: 'invoices',
 };
 
 let db = null;
@@ -341,7 +342,7 @@ function _setupRealtime(sbClient) {
   const _validStores = new Set([
     'users', 'settings', 'products', 'lots', 'stock', 'movements',
     'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients',
-    'prescriptions', 'alerts', 'cashRegister', 'auditLog', 'returns'
+    'prescriptions', 'alerts', 'cashRegister', 'auditLog', 'returns', 'invoices'
   ]);
 
   _realtimeSubscription = sbClient.channel('flash-sync-channel')
@@ -654,6 +655,15 @@ async function initDB() {
         ret.createIndex('status', 'status');
         ret.createIndex('userId', 'userId');
         ret.createIndex('patientId', 'patientId');
+      }
+
+      // Invoices
+      if (!database.objectStoreNames.contains('invoices')) {
+        const inv = database.createObjectStore('invoices', { keyPath: 'id', autoIncrement: true });
+        inv.createIndex('invoiceNumber', 'invoiceNumber');
+        inv.createIndex('supplierId', 'supplierId');
+        inv.createIndex('date', 'date');
+        inv.createIndex('status', 'status');
       }
     };
   });

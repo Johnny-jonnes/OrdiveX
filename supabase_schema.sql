@@ -21,6 +21,7 @@ DROP TABLE IF EXISTS sales CASCADE;
 DROP TABLE IF EXISTS movements CASCADE;
 DROP TABLE IF EXISTS stock CASCADE;
 DROP TABLE IF EXISTS lots CASCADE;
+DROP TABLE IF EXISTS invoices CASCADE;
 DROP TABLE IF EXISTS "purchaseOrders" CASCADE;
 DROP TABLE IF EXISTS suppliers CASCADE;
 DROP TABLE IF EXISTS prescriptions CASCADE;
@@ -80,7 +81,9 @@ CREATE TABLE lots (
   "destructionReason"     TEXT,
   "destructionMethod"     TEXT,
   "destructionWitnesses"  TEXT,
-  "destructionBy"         TEXT
+  "destructionBy"         TEXT,
+  "invoiceId"             BIGINT,
+  "invoiceRef"            TEXT
 );
 
 -- ═══════════════════════════════════════════════════════════════
@@ -109,6 +112,7 @@ CREATE TABLE movements (
   "userId"      BIGINT,
   note          TEXT,
   reference     TEXT,
+  "invoiceRef"  TEXT,
   "updatedAt"   BIGINT
 );
 
@@ -145,6 +149,24 @@ CREATE TABLE "purchaseOrders" (
   "receivedAt"    TEXT,
   "receiveNote"   TEXT,
   "hasNonConformity" BOOLEAN DEFAULT false,
+  "updatedAt"     BIGINT
+);
+
+-- ═══════════════════════════════════════════════════════════════
+-- 6.5. TABLE INVOICES — Factures fournisseurs professionnelles
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE invoices (
+  id              BIGINT PRIMARY KEY,
+  "invoiceNumber" TEXT,
+  "supplierId"    BIGINT,
+  "supplierName"  TEXT,
+  date            TEXT,
+  "totalAmount"   NUMERIC DEFAULT 0,
+  items           JSONB,
+  status          TEXT DEFAULT 'draft',
+  "paymentMethod" TEXT,
+  note            TEXT,
+  "createdBy"     BIGINT,
   "updatedAt"     BIGINT
 );
 
@@ -347,6 +369,15 @@ ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "receiveNote" TEXT;
 ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "hasNonConformity" BOOLEAN DEFAULT false;
 
 -- ═══════════════════════════════════════════════════════════════
+-- 20. MIGRATION — Ajout Factures & Liaisons (v4.1.0)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE lots ADD COLUMN IF NOT EXISTS "invoiceId" BIGINT;
+ALTER TABLE lots ADD COLUMN IF NOT EXISTS "invoiceRef" TEXT;
+
+ALTER TABLE movements ADD COLUMN IF NOT EXISTS "invoiceRef" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
 -- ✅ TERMINÉ — Toutes les tables sont prêtes. v4.0.1-stable
 -- ═══════════════════════════════════════════════════════════════
 
@@ -419,6 +450,17 @@ DROP POLICY IF EXISTS "purchaseOrders_policy_update" ON "purchaseOrders";
 CREATE POLICY "purchaseOrders_policy_update" ON "purchaseOrders" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
 DROP POLICY IF EXISTS "purchaseOrders_policy_delete" ON "purchaseOrders";
 CREATE POLICY "purchaseOrders_policy_delete" ON "purchaseOrders" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour invoices
+ALTER TABLE "invoices" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "invoices_policy_select" ON "invoices";
+CREATE POLICY "invoices_policy_select" ON "invoices" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "invoices_policy_insert" ON "invoices";
+CREATE POLICY "invoices_policy_insert" ON "invoices" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "invoices_policy_update" ON "invoices";
+CREATE POLICY "invoices_policy_update" ON "invoices" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "invoices_policy_delete" ON "invoices";
+CREATE POLICY "invoices_policy_delete" ON "invoices" FOR DELETE USING (auth.uid() IS NOT NULL);
 
 -- RLS pour patients
 ALTER TABLE "patients" ENABLE ROW LEVEL SECURITY;
@@ -608,6 +650,17 @@ DROP POLICY IF EXISTS "purchaseOrders_policy_update" ON "purchaseOrders";
 CREATE POLICY "purchaseOrders_policy_update" ON "purchaseOrders" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
 DROP POLICY IF EXISTS "purchaseOrders_policy_delete" ON "purchaseOrders";
 CREATE POLICY "purchaseOrders_policy_delete" ON "purchaseOrders" FOR DELETE USING (auth.uid() IS NOT NULL);
+
+-- RLS pour invoices
+ALTER TABLE "invoices" ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "invoices_policy_select" ON "invoices";
+CREATE POLICY "invoices_policy_select" ON "invoices" FOR SELECT USING (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "invoices_policy_insert" ON "invoices";
+CREATE POLICY "invoices_policy_insert" ON "invoices" FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "invoices_policy_update" ON "invoices";
+CREATE POLICY "invoices_policy_update" ON "invoices" FOR UPDATE USING (auth.uid() IS NOT NULL) WITH CHECK (auth.uid() IS NOT NULL);
+DROP POLICY IF EXISTS "invoices_policy_delete" ON "invoices";
+CREATE POLICY "invoices_policy_delete" ON "invoices" FOR DELETE USING (auth.uid() IS NOT NULL);
 
 -- RLS pour patients
 ALTER TABLE "patients" ENABLE ROW LEVEL SECURITY;

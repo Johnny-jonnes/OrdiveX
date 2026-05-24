@@ -342,9 +342,10 @@ async function doLotTrace() {
   }
 
   // Lazy-load mouvements et prescriptions seulement maintenant
-  const [movements, prescriptions] = await Promise.all([
+  const [movements, prescriptions, suppliers] = await Promise.all([
     DB.dbGetAll('movements'),
     DB.dbGetAll('prescriptions'),
+    DB.dbGetAll('suppliers'),
   ]);
 
   container.innerHTML = matchedLots.map(lot => {
@@ -357,6 +358,8 @@ async function doLotTrace() {
     const relatedRx = prescriptions.filter(rx =>
       (rx.items || []).some(item => item.productId === lot.productId) && rx.status === 'dispensed'
     ).slice(0, 5);
+
+    const supplier = suppliers.find(s => s.id === lot.supplierId);
 
     return `
     <div class="trace-result-card">
@@ -375,6 +378,8 @@ async function doLotTrace() {
           <div class="trace-detail"><span class="trace-lbl">Expiration</span><span>${UI.formatDate(lot.expiryDate)}</span></div>
           <div class="trace-detail"><span class="trace-lbl">Stock initial</span><span>${lot.initialQuantity}</span></div>
           <div class="trace-detail"><span class="trace-lbl">Stock actuel</span><span class="${lot.quantity <= 0 ? 'text-danger' : 'text-success'} font-bold">${lot.quantity}</span></div>
+          ${lot.invoiceRef ? `<div class="trace-detail"><span class="trace-lbl">Facture</span><span class="font-bold" style="color:var(--primary)">${lot.invoiceRef}</span></div>` : ''}
+          ${supplier ? `<div class="trace-detail"><span class="trace-lbl">Fournisseur</span><span>${supplier.name}</span></div>` : ''}
           <div class="trace-detail"><span class="trace-lbl">Unités vendues</span><span>${totalDispensed}</span></div>
           <div class="trace-detail"><span class="trace-lbl">Mouvements</span><span>${lotMovements.length}</span></div>
         </div>
