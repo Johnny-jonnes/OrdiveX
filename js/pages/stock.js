@@ -294,7 +294,7 @@ window.submitTransferLot = async function(lotId) {
       quantity: 0,
       date: new Date().toISOString(),
       reference: lot.lotNumber,
-      note: \`Transfert de \${transferQty} unités de la réserve vers le rayon\`,
+      note: `Transfert de ${transferQty} unités de la réserve vers le rayon`,
       userId: DB.AppState.currentUser?.id
     });
 
@@ -988,7 +988,7 @@ window.importStockCsv = async function(event) {
 
         const buyPrice = cBuyPrice !== -1 ? (parseFloat(cols[cBuyPrice]) || 0) : 0;
         const sellPrice = cSellPrice !== -1 ? (parseFloat(cols[cSellPrice]) || 0) : 0;
-        const lotNumber = cLot !== -1 && cols[cLot] ? cols[cLot] : \`LOT-AUTO-\${Date.now()}-\${i}\`;
+        const lotNumber = cLot !== -1 && cols[cLot] ? cols[cLot] : `LOT-AUTO-${Date.now()}-${i}`;
         const expiryStr = cExpiry !== -1 && cols[cExpiry] ? cols[cExpiry] : '2099-12-31';
         let location = cLocation !== -1 && cols[cLocation] ? cols[cLocation].toLowerCase() : 'reserve';
         if (location !== 'rayon' && location !== 'reserve') location = 'reserve';
@@ -1099,7 +1099,7 @@ window.importStockCsv = async function(event) {
         importedCount++;
       }
 
-      UI.toast(\`Import réussi : \${importedCount} lots, \${newProductsCount} produits créés, \${newInvoicesCount} factures créées\`, 'success');
+      UI.toast(`Import réussi : ${importedCount} lots, ${newProductsCount} produits créés, ${newInvoicesCount} factures créées`, 'success');
       document.getElementById('import-stock-file').value = '';
       if (typeof DB.syncToSupabase === 'function') DB.syncToSupabase();
       Router.navigate('stock');
