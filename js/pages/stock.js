@@ -51,7 +51,7 @@ async function renderStock(container) {
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" onclick="renderStockInventory()"><i data-lucide="clipboard-list"></i> Inventaire</button>
-        <button class="btn btn-secondary" onclick="document.getElementById('import-stock-file').click()"><i data-lucide="upload"></i> Importer Stock (CSV)</button>
+        <button class="btn btn-secondary" onclick="showImportStockModal()"><i data-lucide="upload"></i> Importer Stock (CSV)</button>
         <input type="file" id="import-stock-file" accept=".csv" style="display:none" onchange="importStockCsv(event)">
         <button class="btn btn-primary" onclick="renderStockEntry()"><i data-lucide="plus"></i> Entrée Stock</button>
       </div>
@@ -934,6 +934,7 @@ window.submitAdjustStock = submitAdjustStock;
 window.importStockCsv = async function(event) {
   const file = event.target.files[0];
   if (!file) return;
+  UI.closeModal();
   const reader = new FileReader();
   reader.onload = async (e) => {
     try {
@@ -1110,6 +1111,39 @@ window.importStockCsv = async function(event) {
     }
   };
   reader.readAsText(file);
+};
+
+window.showImportStockModal = function() {
+  const content = `
+    <div class="info-box" style="margin-bottom:15px">
+      <strong>Format attendu :</strong> Fichier CSV avec séparateur point-virgule (;).<br>
+      Le système reconnaîtra automatiquement les colonnes. S'ils n'existent pas, les produits et les factures seront créés automatiquement.
+      <br><br>
+      Colonnes obligatoires : <b>Nom</b>, <b>Quantité</b>.<br>
+      Si <b>Emplacement</b> (Rayon / Réserve) n'est pas précisé, le stock ira en Réserve par défaut.
+    </div>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button class="btn btn-outline" onclick="downloadStockCsvTemplate()"><i data-lucide="download"></i> Télécharger le Modèle</button>
+      <button class="btn btn-primary" onclick="document.getElementById('import-stock-file').click()"><i data-lucide="upload"></i> Choisir le Fichier CSV</button>
+    </div>
+  `;
+  UI.modal('<i data-lucide="file-spreadsheet" class="modal-icon-inline"></i> Importation Avancée de Stock', content);
+  if (window.lucide) lucide.createIcons();
+};
+
+window.downloadStockCsvTemplate = function() {
+  const headers = "Nom;Quantité;Achat;Vente;Expiration;Lot;Emplacement;Facture;Fournisseur;DCI;Marque;Forme\\n";
+  const example1 = "Paracetamol 500mg;100;500;1000;2026-12-31;LOT-001;reserve;F-2024-001;PharmaGros;Paracetamol;Sanofi;Comprimé\\n";
+  const example2 = "Amoxicilline 1g;50;2000;4500;2025-06-30;LOT-002;rayon;;;Amoxicilline;;Gélule\\n";
+  const blob = new Blob([headers + example1 + example2], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'Modele_Import_Stock.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 window.filterStockEntryProducts = function(query) {
