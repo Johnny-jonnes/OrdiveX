@@ -51,6 +51,8 @@ async function renderStock(container) {
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" onclick="renderStockInventory()"><i data-lucide="clipboard-list"></i> Inventaire</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('import-stock-file').click()"><i data-lucide="upload"></i> Importer Stock (CSV)</button>
+        <input type="file" id="import-stock-file" accept=".csv" style="display:none" onchange="importStockCsv(event)">
         <button class="btn btn-primary" onclick="renderStockEntry()"><i data-lucide="plus"></i> Entrée Stock</button>
       </div>
     </div>
@@ -187,27 +189,123 @@ async function viewProductLots(productId) {
     DB.dbGetAll('stock', 'productId', productId),
   ]);
 
+  let qtyRayon = 0, qtyReserve = 0;
+  lots.forEach(l => {
+    if (l.status === 'active') {
+      if (!l.location || l.location === 'rayon') qtyRayon += (l.quantity || 0);
+      else qtyReserve += (l.quantity || 0);
+    }
+  });
+
+  const headerHtml = `
+    <div style="display:flex;gap:20px;margin-bottom:15px;background:var(--surface-2);padding:10px;border-radius:8px;">
+      <div><span class="text-muted">Stock Total:</span> <strong>${qtyRayon + qtyReserve}</strong></div>
+      <div><span class="text-muted"><i data-lucide="layout-grid" style="width:14px;height:14px"></i> En Rayon:</span> <strong class="text-success">${qtyRayon}</strong></div>
+      <div><span class="text-muted"><i data-lucide="box" style="width:14px;height:14px"></i> En Réserve:</span> <strong class="text-warning">${qtyReserve}</strong></div>
+    </div>
+  `;
+
   const lotsHTML = lots.length === 0 ? '<p class="text-muted text-center">Aucun lot enregistré</p>' : `
+    ${headerHtml}
     <table class="data-table">
       <thead>
-        <tr><th>N° Lot</th><th>Facture Réf.</th><th>Quantité</th><th>Expiration</th><th>Réception</th><th>Statut</th></tr>
+        <tr><th>N° Lot</th><th>Emplacement</th><th>Facture Réf.</th><th>Quantité</th><th>Expiration</th><th>Action</th></tr>
       </thead>
       <tbody>
-        ${lots.map(l => `
+        ${lots.map(l => {
+          const isRayon = (!l.location || l.location === 'rayon');
+          return `
           <tr>
             <td><code>${l.lotNumber}</code></td>
+            <td>${isRayon ? '<span class="badge badge-success"><i data-lucide="layout-grid" style="width:12px;height:12px"></i> Rayon</span>' : '<span class="badge badge-warning"><i data-lucide="box" style="width:12px;height:12px"></i> Réserve</span>'}</td>
             <td>${l.invoiceRef ? `<span class="badge badge-neutral" style="font-size:10px;"><i data-lucide="file-text" style="width:12px;height:12px"></i> ${l.invoiceRef}</span>` : '—'}</td>
             <td><strong>${l.quantity}</strong> / ${l.initialQuantity}</td>
             <td>${UI.expiryBadge(l.expiryDate)}</td>
-            <td>${UI.formatDate(l.receiptDate)}</td>
-            <td><span class="badge badge-${l.status === 'active' ? 'success' : 'neutral'}">${l.status}</span></td>
-          </tr>`).join('')}
+            <td>
+              ${(!isRayon && l.quantity > 0 && l.status === 'active') ? `<button class="btn btn-xs btn-primary" onclick="initTransferLot(${l.id})"><i data-lucide="arrow-right-left"></i> Transférer</button>` : '—'}
+            </td>
+          </tr>`;
+        }).join('')}
       </tbody>
     </table>`;
 
   UI.modal(`<i data-lucide="package" class="modal-icon-inline"></i> Lots — ${product?.name}`, lotsHTML, { size: 'large' });
   if (window.lucide) lucide.createIcons();
 }
+
+window.initTransferLot = async function(lotId) {
+  const lot = await DB.dbGet('lots', lotId);
+  if (!lot) return;
+  
+  const formHTML = `
+    <div class="info-box" style="margin-bottom:15px;">
+      Transférer le stock du lot <strong>${lot.lotNumber}</strong> de la <span class="badge badge-warning">Réserve</span> vers le <span class="badge badge-success">Rayon</span>.
+      <br><br>Stock disponible dans ce carton : <strong>${lot.quantity}</strong>
+    </div>
+    <div class="form-group">
+      <label>Quantité à transférer en rayon</label>
+      <input type="number" id="transfer-qty" class="form-control" max="${lot.quantity}" min="1" value="${lot.quantity}" required>
+    </div>
+  `;
+
+  UI.modal('Transférer en Rayon', formHTML, {
+    footer: `
+      <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="submitTransferLot(${lot.id})"><i data-lucide="check"></i> Valider le Transfert</button>
+    `
+  });
+  if (window.lucide) lucide.createIcons();
+};
+
+window.submitTransferLot = async function(lotId) {
+  const qtyInput = document.getElementById('transfer-qty');
+  if (!qtyInput || !qtyInput.checkValidity()) { qtyInput?.reportValidity(); return; }
+  
+  const transferQty = parseInt(qtyInput.value);
+  try {
+    const lot = await DB.dbGet('lots', lotId);
+    if (!lot || transferQty > lot.quantity || transferQty <= 0) {
+      UI.toast('Quantité invalide', 'error');
+      return;
+    }
+
+    if (transferQty === lot.quantity) {
+      // Transfert total
+      lot.location = 'rayon';
+      await DB.dbPut('lots', lot);
+    } else {
+      // Transfert partiel : on crée un nouveau lot pour le rayon
+      lot.quantity -= transferQty;
+      await DB.dbPut('lots', lot);
+      
+      const newLot = { ...lot };
+      delete newLot.id; // nouvel ID
+      newLot.quantity = transferQty;
+      newLot.initialQuantity = transferQty;
+      newLot.location = 'rayon';
+      newLot.createdAt = new Date().toISOString();
+      await DB.dbAdd('lots', newLot);
+    }
+
+    // Traçabilité mouvement
+    await DB.dbAdd('movements', {
+      productId: lot.productId,
+      type: 'TRANSFER',
+      quantity: 0,
+      date: new Date().toISOString(),
+      reference: lot.lotNumber,
+      note: \`Transfert de \${transferQty} unités de la réserve vers le rayon\`,
+      userId: DB.AppState.currentUser?.id
+    });
+
+    UI.closeModal();
+    UI.toast('Transfert effectué avec succès', 'success');
+    viewProductLots(lot.productId); // Rafraîchit la modale parente (qui va se rouvrir par-dessus)
+  } catch(e) {
+    UI.toast('Erreur de transfert', 'error');
+    console.error(e);
+  }
+};
 
 async function showStockMovements(productId) {
   const [product, movements] = await Promise.all([
@@ -269,7 +367,7 @@ function renderStockEntry() {
       <div class="form-row">
         <div class="form-group">
           <label>N° Facture (Optionnel)</label>
-          <input type="text" name="invoiceNumber" class="form-control" placeholder="Ex: F-2024-001">
+          <input type="text" name="invoiceNumber" class="form-control" placeholder="Ex: F-2024-001" oninput="if(this.value.trim()){document.getElementById('stock-entry-location').value='reserve';}">
         </div>
         <div class="form-group">
           <label>Fournisseur</label>
@@ -280,9 +378,18 @@ function renderStockEntry() {
           <input type="number" name="purchasePrice" class="form-control" placeholder="0 GNF">
         </div>
       </div>
-      <div class="form-group">
-        <label>Note</label>
-        <textarea name="note" class="form-control" rows="2" placeholder="Observations..."></textarea>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Emplacement *</label>
+          <select name="location" id="stock-entry-location" class="form-control" required>
+            <option value="rayon">Rayon (Produit en vitrine/étagère)</option>
+            <option value="reserve">Réserve (Dans son carton)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Note</label>
+          <input type="text" name="note" class="form-control" placeholder="Observations...">
+        </div>
       </div>
     </form>
   `;
@@ -316,6 +423,7 @@ async function submitStockEntry() {
       receiptDate: new Date().toISOString().split('T')[0],
       status: 'active',
       invoiceRef: data.invoiceNumber || null,
+      location: data.location || 'rayon',
     });
 
     // Smart Invoice Logic
@@ -823,6 +931,186 @@ window.validateInventory = validateInventory;
 window.exportInventory = exportInventory;
 window.showAdjustStock = showAdjustStock;
 window.submitAdjustStock = submitAdjustStock;
+window.importStockCsv = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      UI.toast('Importation et analyse en cours...', 'info');
+      const text = e.target.result;
+      const lines = text.split('\\n').filter(l => l.trim() !== '');
+      if (lines.length < 2) throw new Error('Fichier CSV vide ou invalide');
+
+      const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
+      const mapCol = (names) => {
+        for (let n of names) {
+          const idx = headers.findIndex(h => h.includes(n));
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
+
+      const cName = mapCol(['name', 'nom', 'produit']);
+      const cDci = mapCol(['dci', 'molecule']);
+      const cBrand = mapCol(['brand', 'marque', 'labo']);
+      const cForm = mapCol(['form', 'forme']);
+      const cBuyPrice = mapCol(['buyprice', 'achat', 'prix achat']);
+      const cSellPrice = mapCol(['sellprice', 'vente', 'prix vente']);
+      const cLot = mapCol(['lot', 'lotnumber']);
+      const cExpiry = mapCol(['expiry', 'peremption', 'expiration']);
+      const cQty = mapCol(['qty', 'quantity', 'quantité', 'quantite']);
+      const cLocation = mapCol(['location', 'emplacement', 'rayon', 'reserve']);
+      const cInvoice = mapCol(['invoice', 'facture']);
+      const cSupplier = mapCol(['supplier', 'fournisseur']);
+
+      if (cName === -1 || cQty === -1) {
+        throw new Error('Les colonnes Nom et Quantité sont obligatoires.');
+      }
+
+      const productsAll = await DB.dbGetAll('products');
+      const invoicesAll = await DB.dbGetAll('invoices');
+      const suppliersAll = await DB.dbGetAll('suppliers');
+
+      let importedCount = 0;
+      let newProductsCount = 0;
+      let newInvoicesCount = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(';').map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols.length < 2) continue;
+
+        const pName = cols[cName];
+        if (!pName) continue;
+
+        const qty = parseInt(cols[cQty]) || 0;
+        if (qty <= 0) continue;
+
+        const buyPrice = cBuyPrice !== -1 ? (parseFloat(cols[cBuyPrice]) || 0) : 0;
+        const sellPrice = cSellPrice !== -1 ? (parseFloat(cols[cSellPrice]) || 0) : 0;
+        const lotNumber = cLot !== -1 && cols[cLot] ? cols[cLot] : \`LOT-AUTO-\${Date.now()}-\${i}\`;
+        const expiryStr = cExpiry !== -1 && cols[cExpiry] ? cols[cExpiry] : '2099-12-31';
+        let location = cLocation !== -1 && cols[cLocation] ? cols[cLocation].toLowerCase() : 'reserve';
+        if (location !== 'rayon' && location !== 'reserve') location = 'reserve';
+        const invoiceNum = cInvoice !== -1 && cols[cInvoice] ? cols[cInvoice] : null;
+        const supplierName = cSupplier !== -1 && cols[cSupplier] ? cols[cSupplier] : null;
+
+        // 1. Trouver ou Créer le Produit
+        let prod = productsAll.find(p => p.name.toLowerCase() === pName.toLowerCase());
+        if (!prod) {
+          const code = pName.substring(0,3).toUpperCase() + Date.now().toString().slice(-4);
+          const newProd = {
+            name: pName,
+            dci: cDci !== -1 ? cols[cDci] : '',
+            brand: cBrand !== -1 ? cols[cBrand] : '',
+            form: cForm !== -1 ? cols[cForm] : '',
+            code: code,
+            category: 'Médicament',
+            sellPrice: sellPrice,
+            purchasePrice: buyPrice,
+            minStock: 10,
+            hasLots: true,
+            status: 'active'
+          };
+          const prodId = await DB.dbAdd('products', newProd);
+          prod = { ...newProd, id: prodId };
+          productsAll.push(prod);
+          newProductsCount++;
+        }
+
+        // 2. Créer ou Mettre à jour la Facture (Smart Invoice)
+        if (invoiceNum) {
+          let inv = invoicesAll.find(inv => inv.invoiceNumber.toLowerCase() === invoiceNum.toLowerCase());
+          const invoiceItem = {
+            productId: prod.id,
+            productName: prod.name,
+            quantity: qty,
+            unitPrice: buyPrice || prod.purchasePrice || 0,
+            total: qty * (buyPrice || prod.purchasePrice || 0),
+            lotNumber: lotNumber,
+            expiryDate: expiryStr
+          };
+
+          if (inv) {
+            inv.items = inv.items || [];
+            inv.items.push(invoiceItem);
+            inv.totalAmount = (inv.totalAmount || 0) + invoiceItem.total;
+            await DB.dbPut('invoices', inv);
+          } else {
+            let supId = null;
+            if (supplierName) {
+              const sup = suppliersAll.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+              if (sup) supId = sup.id;
+            }
+            inv = {
+              invoiceNumber: invoiceNum,
+              supplierId: supId,
+              supplierName: supplierName || 'Import CSV',
+              date: new Date().toISOString().split('T')[0],
+              status: 'validated',
+              items: [invoiceItem],
+              totalAmount: invoiceItem.total,
+              paymentMethod: '',
+              note: 'Import automatique depuis CSV Stock',
+              createdAt: new Date().toISOString()
+            };
+            const invId = await DB.dbAdd('invoices', inv);
+            inv.id = invId;
+            invoicesAll.push(inv);
+            newInvoicesCount++;
+          }
+        }
+
+        // 3. Créer le Lot
+        await DB.dbAdd('lots', {
+          productId: prod.id,
+          lotNumber: lotNumber,
+          expiryDate: expiryStr,
+          quantity: qty,
+          initialQuantity: qty,
+          receiptDate: new Date().toISOString().split('T')[0],
+          status: 'active',
+          invoiceRef: invoiceNum || null,
+          location: location
+        });
+
+        // 4. Mettre à jour le Stock total
+        const stockAll = await DB.dbGetAll('stock');
+        const existingStock = stockAll.find(s => s.productId === prod.id);
+        if (existingStock) {
+          await DB.dbPut('stock', { ...existingStock, quantity: existingStock.quantity + qty });
+        } else {
+          await DB.dbAdd('stock', { productId: prod.id, quantity: qty, reservedQuantity: 0 });
+        }
+
+        // 5. Mouvement
+        await DB.dbAdd('movements', {
+          productId: prod.id,
+          type: 'ENTRY',
+          subType: 'PURCHASE',
+          quantity: qty,
+          lotNumber: lotNumber,
+          reference: invoiceNum || 'CSV',
+          date: new Date().toISOString(),
+          userId: DB.AppState.currentUser?.id,
+          note: 'Import CSV'
+        });
+
+        importedCount++;
+      }
+
+      UI.toast(\`Import réussi : \${importedCount} lots, \${newProductsCount} produits créés, \${newInvoicesCount} factures créées\`, 'success');
+      document.getElementById('import-stock-file').value = '';
+      if (typeof DB.syncToSupabase === 'function') DB.syncToSupabase();
+      Router.navigate('stock');
+
+    } catch (err) {
+      UI.toast('Erreur Import CSV: ' + err.message, 'error');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+};
 
 window.filterStockEntryProducts = function(query) {
   const resultsDiv = document.getElementById('stock-entry-product-results');

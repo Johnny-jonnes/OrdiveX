@@ -175,7 +175,7 @@ function checkDrugInteractions(newProduct) {
 function getFEFOLot(productId) {
   try {
     const productLots = posLots
-      .filter(l => l.productId === productId && l.status === 'active' && l.quantity > 0)
+      .filter(l => l.productId === productId && l.status === 'active' && l.quantity > 0 && (!l.location || l.location === 'rayon'))
       .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
     return productLots[0] || null;
   } catch (e) { return null; }
@@ -888,6 +888,12 @@ function addToCart(productId, mode = 'box') {
 
   // FEFO : identifier le lot
   const fefoLot = getFEFOLot(productId);
+
+  // Vérification Rayon vs Réserve
+  if (p.hasLots && avail > 0 && !fefoLot) {
+    UI.toast('Stock disponible uniquement en RÉSERVE. Veuillez transférer en RAYON via Gestion des Stocks.', 'error', 6000);
+    return;
+  }
 
   if (existing) { existing.qty++; existing.total = existing.qty * existing.unitPrice; }
   else {
