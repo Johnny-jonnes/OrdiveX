@@ -270,16 +270,21 @@ window.initTransferLot = async function(lotId) {
   UI.modal('Transférer en Rayon', formHTML, {
     footer: `
       <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
-      <button class="btn btn-primary" onclick="submitTransferLot(${lot.id})"><i data-lucide="check"></i> Valider le Transfert</button>
+      <button class="btn btn-primary" onclick="submitTransferLot(${lot.id}, this)"><i data-lucide="check"></i> Valider le Transfert</button>
     `
   });
   if (window.lucide) lucide.createIcons();
 };
 
-window.submitTransferLot = async function(lotId) {
+window.submitTransferLot = async function(lotId, btn) {
   const qtyInput = document.getElementById('transfer-qty');
   if (!qtyInput || !qtyInput.checkValidity()) { qtyInput?.reportValidity(); return; }
   
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="lucide-loader"></i> Transfert...';
+  }
+
   const transferQty = parseInt(qtyInput.value);
   try {
     const lot = await DB.dbGet('lots', lotId);
@@ -317,10 +322,13 @@ window.submitTransferLot = async function(lotId) {
       userId: DB.AppState.currentUser?.id
     });
 
-    UI.closeModal();
     UI.toast('Transfert effectué avec succès', 'success');
-    viewProductLots(lot.productId); // Rafraîchit la modale parente (qui va se rouvrir par-dessus)
+    await viewProductLots(lot.productId); // Rafraîchit directement le contenu de la modale sans la fermer
   } catch(e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="check"></i> Valider le Transfert';
+    }
     UI.toast('Erreur de transfert', 'error');
     console.error(e);
   }
