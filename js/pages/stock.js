@@ -1198,4 +1198,62 @@ window.selectStockEntryProduct = function(id, label) {
   document.getElementById('stock-entry-product-results').style.display = 'none';
 };
 
+window._softRefreshStock = async function() {
+  if (document.getElementById('stock-table-container')) {
+    const [products, stockAll, lots] = await Promise.all([
+      DB.dbGetAll('products'),
+      DB.dbGetAll('stock'),
+      DB.dbGetAll('lots'),
+    ]);
+    const stockMap = {};
+    stockAll.forEach(s => { stockMap[s.productId] = s; });
+    const lotsMap = {};
+    lots.forEach(l => {
+      if (l.status === 'active') {
+        if (!lotsMap[l.productId]) lotsMap[l.productId] = [];
+        lotsMap[l.productId].push(l);
+      }
+    });
+    const stockData = products.map(p => {
+      const pLots = lotsMap[p.id] || [];
+      let qtyRayon = 0, qtyReserve = 0;
+      pLots.forEach(l => {
+        if (!l.location || l.location === 'rayon') qtyRayon += (l.quantity || 0);
+        else qtyReserve += (l.quantity || 0);
+      });
+      return {
+        ...p,
+        currentStock: stockMap[p.id]?.quantity || 0,
+        reservedQty: stockMap[p.id]?.reservedQuantity || 0,
+        lots: pLots,
+        qtyRayon,
+        qtyReserve
+      };
+    });
+    window._stockData = stockData;
+    
+    // Update stats bar if it exists
+    const inStock = stockData.filter(p => p.currentStock > 0).length;
+    const ruptures = stockData.filter(p => p.currentStock === 0).length;
+    const lowStock = stockData.filter(p => p.currentStock > 0 && p.currentStock <= p.minStock).length;
+    const alertExpiry = lots.filter(l => {
+      const days = UI.daysUntilExpiry(l.expiryDate);
+      return l.status === 'active' && days !== null && days <= 90;
+    }).length;
+    
+    const statsVals = document.querySelectorAll('.stats-bar .stat-val');
+    if (statsVals.length >= 5) {
+      statsVals[0].textContent = products.length;
+      statsVals[1].textContent = inStock;
+      statsVals[2].textContent = lowStock;
+      statsVals[3].textContent = ruptures;
+      statsVals[4].textContent = alertExpiry;
+    }
+    
+    if (typeof filterStock === 'function') {
+      filterStock();
+    }
+  }
+};
+
 Router.register('stock', renderStock);

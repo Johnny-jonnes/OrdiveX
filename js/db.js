@@ -251,7 +251,14 @@ function _silentRefreshPage(page, storeNames) {
   try {
     const container = document.getElementById('app-content');
     if (!container || !window.Router?.routes?.[page]) return;
-    // Empêcher le scroll reset et le flash
+    
+    // Si c'est la page stock, on ne rafraîchit que les données et le tableau pour éviter de perdre le focus/scroll
+    if (page === 'stock' && typeof window._softRefreshStock === 'function') {
+      window._softRefreshStock();
+      return;
+    }
+    
+    // Empêcher le scroll reset et le flash pour les autres pages
     const scrollY = container.scrollTop || 0;
     const scrollX = container.scrollLeft || 0;
     // Verrouiller la hauteur du container pendant le render
