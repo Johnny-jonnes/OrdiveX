@@ -67,7 +67,7 @@
 })();
 
 const DB_NAME = 'OrdiveXDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const STORES = {
   products: 'products',
@@ -1207,7 +1207,16 @@ async function syncToSupabase() {
           return payload;
         });
 
-        var currentPayloads = payloads.filter(Boolean);
+        var currentPayloads = payloads.filter(p => {
+          if (!p) return false;
+          // Purger les vieux IDs 'virtual_' qui font planter Supabase (invalid type bigint)
+          if ((typeof p.id === 'string' && p.id.startsWith('virtual_')) || 
+              (typeof p.lotId === 'string' && p.lotId.startsWith('virtual_'))) {
+            _dbPutRaw(storeName, { ...p, _synced: true }).catch(()=>{});
+            return false;
+          }
+          return true;
+        });
 
         let retries = 0;
         const maxRetries = 10;
