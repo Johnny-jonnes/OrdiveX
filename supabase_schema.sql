@@ -141,6 +141,14 @@ CREATE TABLE suppliers (
   "agrément"      TEXT,
   "paymentTerms"  INTEGER DEFAULT 30,
   complaints      TEXT,
+  rating          NUMERIC,
+  "contactName"   TEXT,
+  "contactPhone"  TEXT,
+  "contactEmail"  TEXT,
+  "leadTime"      INTEGER,
+  notes           TEXT,
+  specialty       TEXT,
+  note            TEXT,
   "updatedAt"     BIGINT
 );
 
@@ -180,6 +188,7 @@ CREATE TABLE invoices (
   "paymentMethod" TEXT,
   note            TEXT,
   "createdBy"     BIGINT,
+  "createdAt"     BIGINT,
   "updatedAt"     BIGINT
 );
 

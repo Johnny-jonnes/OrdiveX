@@ -1397,7 +1397,7 @@ async function pullFromSupabase(isManual = false) {
       'users', 'settings',
       'products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders',
       'sales', 'saleItems', 'patients', 'prescriptions', 'alerts',
-      'cashRegister', 'auditLog', 'returns'
+      'cashRegister', 'auditLog', 'returns', 'invoices'
     ];
 
     // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
