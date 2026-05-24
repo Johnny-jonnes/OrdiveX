@@ -62,6 +62,7 @@ async function renderTraceability(container) {
     <div class="tabs-bar">
       <button class="tab-btn active" data-tab="expiry" onclick="switchTraceTab(this,'expiry')"><i data-lucide="clock"></i> Expirations</button>
       <button class="tab-btn" data-tab="search" onclick="switchTraceTab(this,'search')"><i data-lucide="search"></i> Tracer un lot</button>
+      <button class="tab-btn" data-tab="invoice-trace" onclick="switchTraceTab(this,'invoice-trace')"><i data-lucide="file-text"></i> Tracer Facture</button>
       <button class="tab-btn" data-tab="recalls" onclick="switchTraceTab(this,'recalls')"><i data-lucide="alert-triangle"></i> Rappels actifs</button>
       <button class="tab-btn" data-tab="destruction" onclick="switchTraceTab(this,'destruction')"><i data-lucide="trash-2"></i> Destruction</button>
       ${DB.AppState.currentUser?.role === 'admin' ? `
@@ -115,10 +116,22 @@ async function renderTraceability(container) {
       <div class="trace-search-box">
         <h3 class="section-subtitle">Tracer un Lot ou Médicament</h3>
         <div class="trace-search-bar">
-          <input type="text" id="trace-input" class="filter-input" placeholder="Entrez un numéro de lot, code produit, ou nom...">
+          <input type="text" id="trace-input" class="filter-input" placeholder="Entrez un numéro de lot, code produit, ou nom..." onkeydown="if(event.key==='Enter') doLotTrace()">
           <button class="btn btn-primary" onclick="doLotTrace()"><i data-lucide="search"></i> Tracer</button>
         </div>
         <div id="trace-results"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Invoice Trace -->
+    <div id="tab-invoice-trace" class="tab-content" style="display:none">
+      <div class="trace-search-box">
+        <h3 class="section-subtitle">Tracer une Facture Fournisseur</h3>
+        <div class="trace-search-bar">
+          <input type="text" id="trace-invoice-input" class="filter-input" placeholder="Entrez un numéro de facture (ex: F-2024)..." onkeydown="if(event.key==='Enter') traceInvoice()">
+          <button class="btn btn-primary" onclick="traceInvoice()"><i data-lucide="search"></i> Tracer Facture</button>
+        </div>
+        <div id="trace-invoice-results"></div>
       </div>
     </div>
 
@@ -1108,6 +1121,93 @@ function loadMoreAudit() {
 
 window.switchTraceTab = switchTraceTab;
 window.doLotTrace = doLotTrace;
+window.traceInvoice = async function() {
+  const q = document.getElementById('trace-invoice-input')?.value.trim();
+  const resDiv = document.getElementById('trace-invoice-results');
+  if (!q) return;
+
+  UI.loading(resDiv, 'Recherche de la facture et de ses lots...');
+  
+  try {
+    const [invoices, lotsAll, productsAll] = await Promise.all([
+      DB.dbGetAll('invoices'),
+      DB.dbGetAll('lots'),
+      DB.dbGetAll('products')
+    ]);
+
+    const invoice = invoices.find(i => i.invoiceNumber && i.invoiceNumber.toLowerCase() === q.toLowerCase());
+    const matchedLots = lotsAll.filter(l => l.invoiceRef && l.invoiceRef.toLowerCase() === q.toLowerCase());
+
+    if (!invoice && matchedLots.length === 0) {
+      resDiv.innerHTML = `<div class="empty-state-small"><i data-lucide="alert-circle"></i> Aucune facture ni lot trouvé pour la référence "<strong>${q}</strong>"</div>`;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    let html = '';
+
+    if (invoice) {
+      html += `
+        <div class="trace-card">
+          <div class="trace-header" style="background:var(--primary);color:white;padding:15px;border-radius:8px 8px 0 0;">
+            <h4 style="margin:0;font-size:18px;"><i data-lucide="file-text"></i> Facture : ${invoice.invoiceNumber}</h4>
+          </div>
+          <div class="trace-body" style="padding:15px;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;background:var(--surface);">
+            <div style="display:flex;gap:20px;flex-wrap:wrap;">
+              <div><strong>Fournisseur:</strong> ${invoice.supplierName || '—'}</div>
+              <div><strong>Date:</strong> ${new Date(invoice.date).toLocaleDateString('fr-FR')}</div>
+              <div><strong>Statut:</strong> <span class="badge ${invoice.status==='validated'?'badge-success':'badge-neutral'}">${invoice.status}</span></div>
+              <div><strong>Montant Total:</strong> ${invoice.totalAmount ? invoice.totalAmount.toLocaleString('fr-FR') : '0'} GNF</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      html += `<div class="alert-section-banner alert-warning"><i data-lucide="info"></i> Facture non trouvée dans le registre, mais des lots y font référence.</div>`;
+    }
+
+    if (matchedLots.length > 0) {
+      html += `<h4 style="margin-top:25px;margin-bottom:15px;">Lots liés à cette facture (${matchedLots.length})</h4>`;
+      html += `<table class="data-table">
+        <thead>
+          <tr>
+            <th>Produit</th>
+            <th>N° Lot</th>
+            <th>Qté Initiale</th>
+            <th>Stock Restant</th>
+            <th>Péremption</th>
+            <th>Statut</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${matchedLots.map(lot => {
+            const p = productsAll.find(prod => prod.id === lot.productId);
+            return `
+              <tr>
+                <td><strong>${p ? p.name : 'Inconnu'}</strong></td>
+                <td><code>${lot.lotNumber}</code></td>
+                <td>${lot.initialQuantity || lot.quantity}</td>
+                <td><strong>${lot.quantity}</strong></td>
+                <td>${UI.expiryBadge(lot.expiryDate)}</td>
+                <td><span class="badge badge-${lot.status === 'active' ? 'success' : 'neutral'}">${lot.status}</span></td>
+                <td><button class="btn btn-xs btn-primary" onclick="document.getElementById('trace-input').value='${lot.lotNumber}'; switchTraceTab(null, 'search'); doLotTrace();"><i data-lucide="search"></i> Tracer ce lot</button></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>`;
+    } else {
+      html += `<div class="empty-state-small"><i data-lucide="info"></i> Aucun lot n'est actuellement lié à cette facture dans le stock.</div>`;
+    }
+
+    resDiv.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+  } catch(err) {
+    resDiv.innerHTML = `<div class="empty-state-small" style="color:var(--danger)"><i data-lucide="alert-octagon"></i> Erreur lors de la recherche: ${err.message}</div>`;
+    if (window.lucide) lucide.createIcons();
+  }
+};
 window.traceLot = traceLot;
 window.showLotRecallForm = showLotRecallForm;
 window.updateRecallInfo = updateRecallInfo;

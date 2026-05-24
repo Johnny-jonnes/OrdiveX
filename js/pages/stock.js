@@ -191,12 +191,13 @@ async function viewProductLots(productId) {
   const lotsHTML = lots.length === 0 ? '<p class="text-muted text-center">Aucun lot enregistré</p>' : `
     <table class="data-table">
       <thead>
-        <tr><th>N° Lot</th><th>Quantité</th><th>Expiration</th><th>Réception</th><th>Statut</th></tr>
+        <tr><th>N° Lot</th><th>Facture Réf.</th><th>Quantité</th><th>Expiration</th><th>Réception</th><th>Statut</th></tr>
       </thead>
       <tbody>
         ${lots.map(l => `
           <tr>
             <td><code>${l.lotNumber}</code></td>
+            <td>${l.invoiceRef ? `<span class="badge badge-neutral" style="font-size:10px;"><i data-lucide="file-text" style="width:12px;height:12px"></i> ${l.invoiceRef}</span>` : '—'}</td>
             <td><strong>${l.quantity}</strong> / ${l.initialQuantity}</td>
             <td>${UI.expiryBadge(l.expiryDate)}</td>
             <td>${UI.formatDate(l.receiptDate)}</td>
@@ -268,6 +269,10 @@ function renderStockEntry() {
       </div>
       <div class="form-row">
         <div class="form-group">
+          <label>N° Facture (Optionnel)</label>
+          <input type="text" name="invoiceNumber" class="form-control" placeholder="Ex: F-2024-001">
+        </div>
+        <div class="form-group">
           <label>Fournisseur</label>
           <input type="text" name="supplier" class="form-control" placeholder="Nom du fournisseur">
         </div>
@@ -311,7 +316,60 @@ async function submitStockEntry() {
       initialQuantity: parseInt(data.quantity),
       receiptDate: new Date().toISOString().split('T')[0],
       status: 'active',
+      invoiceRef: data.invoiceNumber || null,
     });
+
+    // Smart Invoice Logic
+    if (data.invoiceNumber && data.invoiceNumber.trim() !== '') {
+      try {
+        const invoices = await DB.dbGetAll('invoices');
+        const invNum = data.invoiceNumber.trim();
+        let existingInvoice = invoices.find(i => i.invoiceNumber.toLowerCase() === invNum.toLowerCase());
+        
+        const productsAll = await DB.dbGetAll('products');
+        const prod = productsAll.find(p => p.id === productId);
+        
+        const invoiceItem = {
+          productId,
+          productName: prod ? prod.name : 'Produit inconnu',
+          quantity: parseInt(data.quantity),
+          unitPrice: parseFloat(data.purchasePrice || prod?.purchasePrice || 0),
+          total: parseInt(data.quantity) * parseFloat(data.purchasePrice || prod?.purchasePrice || 0),
+          lotNumber: data.lotNumber,
+          expiryDate: data.expiryDate,
+        };
+
+        if (existingInvoice) {
+          // Append to existing invoice
+          existingInvoice.items = existingInvoice.items || [];
+          existingInvoice.items.push(invoiceItem);
+          existingInvoice.totalAmount = (existingInvoice.totalAmount || 0) + invoiceItem.total;
+          await DB.dbPut('invoices', existingInvoice);
+        } else {
+          // Create new validated invoice implicitly
+          let supId = null;
+          if (data.supplier) {
+            const suppliers = await DB.dbGetAll('suppliers');
+            const existSup = suppliers.find(s => s.name.toLowerCase() === data.supplier.toLowerCase());
+            if (existSup) supId = existSup.id;
+          }
+          await DB.dbAdd('invoices', {
+            invoiceNumber: invNum,
+            supplierId: supId,
+            supplierName: data.supplier || 'Inconnu (Saisie Libre)',
+            date: new Date().toISOString().split('T')[0],
+            status: 'validated',
+            items: [invoiceItem],
+            totalAmount: invoiceItem.total,
+            paymentMethod: '',
+            note: 'Facture générée automatiquement via l\'Entrée Stock',
+            createdAt: new Date().toISOString()
+          });
+        }
+      } catch(err) {
+        console.warn('Erreur lors de la création/maj intelligente de la facture:', err);
+      }
+    }
 
     // Update stock
     const stockAll = await DB.dbGetAll('stock');

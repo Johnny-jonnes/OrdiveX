@@ -32,6 +32,8 @@ async function renderInvoices(container) {
         <p class="page-subtitle">${invoices.length} factures — ${draft.length} en brouillon</p>
       </div>
       <div class="header-actions">
+        <input type="file" id="inv-csv-file" accept=".csv" style="display:none" onchange="importInvoiceCsv(event)">
+        <button class="btn btn-secondary" onclick="document.getElementById('inv-csv-file').click()"><i data-lucide="upload-cloud"></i> Importer Facture (CSV)</button>
         <button class="btn btn-secondary" onclick="exportInvoicesCsv()"><i data-lucide="file-spreadsheet"></i> Exporter CSV</button>
         <button class="btn btn-primary" onclick="showNewInvoiceForm()"><i data-lucide="plus"></i> Nouvelle Facture</button>
       </div>
@@ -612,88 +614,371 @@ function exportInvoicesCsv() {
   document.body.removeChild(link);
 }
 
+async function importInvoiceCsv(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const content = e.target.result;
+    const lines = content.split('\\n').filter(l => l.trim().length > 0);
+    if (lines.length < 2) { UI.toast('Fichier CSV invalide ou vide', 'error'); return; }
+
+    const sep = lines[0].includes(';') ? ';' : ',';
+    const headers = lines[0].split(sep).map(h => h.trim().toLowerCase());
+
+    const items = [];
+    const products = window._invoicesProducts || await DB.dbGetAll('products');
+    
+    // Essayer d'identifier les colonnes
+    const idxProd = headers.findIndex(h => h.includes('produit') || h.includes('nom') || h.includes('article'));
+    const idxQty = headers.findIndex(h => h.includes('qte') || h.includes('quantit') || h.includes('qty'));
+    const idxPrice = headers.findIndex(h => h.includes('prix') || h.includes('price') || h.includes('achat'));
+    const idxLot = headers.findIndex(h => h.includes('lot'));
+    const idxExp = headers.findIndex(h => h.includes('exp') || h.includes('peremption') || h.includes('date'));
+
+    if (idxProd === -1 || idxQty === -1) {
+      UI.toast('Colonnes produit et quantité introuvables dans le CSV', 'error');
+      return;
+    }
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(sep).map(c => c.trim().replace(/^["']|["']$/g, ''));
+      if (cols.length < 2) continue;
+
+      const pName = cols[idxProd];
+      const qty = parseInt(cols[idxQty] || '0');
+      const price = parseFloat(cols[idxPrice] || '0');
+      const lot = idxLot !== -1 ? cols[idxLot] : '';
+      let exp = idxExp !== -1 ? cols[idxExp] : '';
+      
+      // Auto-match product
+      const match = products.find(p => p.name.toLowerCase() === pName.toLowerCase() || p.name.toLowerCase().includes(pName.toLowerCase()));
+      
+      items.push({
+        productId: match ? match.id : null,
+        productName: match ? match.name : pName,
+        quantity: qty,
+        unitPrice: price || (match?.purchasePrice || 0),
+        lotNumber: lot,
+        expiryDate: exp,
+      });
+    }
+
+    showNewInvoiceForm();
+    
+    // Remplir dynamiquement après un court délai pour laisser le temps au DOM de se créer
+    setTimeout(() => {
+      const listEl = document.getElementById('invoice-items-list');
+      if (listEl) {
+        listEl.innerHTML = '';
+        window._invoiceItemCounter = 0;
+        
+        items.forEach(item => {
+          addInvoiceItem();
+          const currentIdx = window._invoiceItemCounter - 1;
+          
+          if (item.productId) {
+            selectInvoiceProduct(currentIdx, item.productId, item.productName, item.unitPrice);
+          } else {
+            document.getElementById(`inv-search-${currentIdx}`).value = item.productName;
+          }
+          
+          document.getElementById(`inv-qty-${currentIdx}`).value = item.quantity;
+          document.getElementById(`inv-price-${currentIdx}`).value = item.unitPrice;
+          document.getElementById(`inv-lot-${currentIdx}`).value = item.lotNumber;
+          document.getElementById(`inv-exp-${currentIdx}`).value = item.expiryDate;
+        });
+        updateInvoiceTotal();
+        UI.toast(`Facture importée: ${items.length} lignes. Veuillez vérifier et compléter.`, 'success', 5000);
+      }
+    }, 500);
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // reset
+}
+
 function printInvoicePDF(invoiceId) {
-  // Simplification pour l'impression (Ouvrir dans une nouvelle fenêtre stylisée)
   const invoice = window._invoicesData?.find(i => i.id === invoiceId);
   if (!invoice) return;
   
+  const pharmacyName = (typeof gs === 'function' ? gs('pharmacy_name') : '') || 'OrdiveX Pharmacie';
+  const pharmacySlogan = (typeof gs === 'function' ? gs('pharmacy_slogan') : '') || 'Votre santé, notre priorité';
+  const pharmacyAddress = (typeof gs === 'function' ? gs('pharmacy_address') : '') || 'Conakry, Guinée';
+  const pharmacyPhone = (typeof gs === 'function' ? gs('pharmacy_phone') : '') || '';
+  
+  // Utiliser DB.AppState pour récupérer l'utilisateur si disponible
+  let createdBy = 'Administrateur';
+  if (window.DB && DB.AppState && DB.AppState.currentUser) {
+    createdBy = DB.AppState.currentUser.name || DB.AppState.currentUser.username || createdBy;
+  }
+
   const printWin = window.open('', '_blank');
   printWin.document.write(`
     <html>
       <head>
         <title>Facture ${invoice.invoiceNumber}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; }
-          .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-          h1 { color: #2c3e50; margin: 0; font-size: 24px; }
-          .invoice-details, .supplier-details { margin-bottom: 30px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-          th { background-color: #f8f9fa; font-weight: bold; }
-          .total { font-size: 20px; font-weight: bold; text-align: right; margin-top: 20px; }
-          .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-          .badge-success { background: #d4edda; color: #155724; }
-          .badge-neutral { background: #e2e3e5; color: #383d41; }
+          @page { size: A4; margin: 0; }
+          body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            padding: 40px; 
+            color: #1e293b; 
+            background: #fff;
+            font-size: 13px;
+            line-height: 1.5;
+          }
+          .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+            box-sizing: border-box;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f1f5f9;
+          }
+          .pharma-info h1 {
+            margin: 0 0 5px 0;
+            color: #0f172a;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+          }
+          .pharma-info p {
+            margin: 0;
+            color: #64748b;
+            font-size: 13px;
+          }
+          .invoice-title {
+            text-align: right;
+          }
+          .invoice-title h2 {
+            margin: 0 0 8px 0;
+            color: #3b82f6;
+            font-size: 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .badge-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+          .badge-draft { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+          
+          .info-blocks {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            gap: 20px;
+          }
+          .info-card {
+            flex: 1;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+          }
+          .info-card h3 {
+            margin: 0 0 15px 0;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+          }
+          .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+          }
+          .info-label { color: #64748b; }
+          .info-val { font-weight: 600; color: #0f172a; text-align: right; }
+          
+          table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+          }
+          th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+          }
+          td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+          }
+          tr:last-child td { border-bottom: none; }
+          tr:nth-child(even) { background: #fafafa; }
+          
+          .product-name { font-weight: 600; color: #0f172a; }
+          .money { font-family: 'Courier New', Courier, monospace; font-weight: 600; }
+          
+          .totals-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+          }
+          .notes {
+            flex: 1;
+            padding-right: 40px;
+            color: #64748b;
+          }
+          .notes h4 { margin: 0 0 10px 0; color: #0f172a; }
+          
+          .totals-box {
+            width: 300px;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #475569;
+          }
+          .total-row.grand-total {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px dashed #cbd5e1;
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+          }
+          .footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 11px;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 20px;
+          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div>
-            <h1>FACTURE FOURNISSEUR</h1>
-            <p>OrdiveX - Entrée de Stock</p>
+        <div class="invoice-box">
+          <div class="header">
+            <div class="pharma-info">
+              <h1>${pharmacyName}</h1>
+              <p style="font-weight: 500; color: #3b82f6; margin-bottom: 5px;">${pharmacySlogan}</p>
+              <p>${pharmacyAddress}</p>
+              ${pharmacyPhone ? `<p>Tel: ${pharmacyPhone}</p>` : ''}
+            </div>
+            <div class="invoice-title">
+              <h2>FACTURE ENTREE</h2>
+              <p style="font-size: 16px; color: #64748b; margin: 0 0 10px 0;">N° <strong>${invoice.invoiceNumber}</strong></p>
+              <span class="badge ${invoice.status === 'validated' ? 'badge-success' : 'badge-draft'}">
+                ${invoice.status === 'validated' ? 'VALIDÉE / STOCK AJOUTÉ' : 'BROUILLON'}
+              </span>
+            </div>
           </div>
-          <div style="text-align: right">
-            <h2>N° ${invoice.invoiceNumber}</h2>
-            <span class="badge ${invoice.status === 'validated' ? 'badge-success' : 'badge-neutral'}">
-              ${invoice.status === 'validated' ? 'VALIDÉE' : 'BROUILLON'}
-            </span>
+          
+          <div class="info-blocks">
+            <div class="info-card">
+              <h3>Informations Fournisseur</h3>
+              <div class="info-row">
+                <span class="info-label">Nom</span>
+                <span class="info-val">${invoice.supplierName || '—'}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Méthode de paiement</span>
+                <span class="info-val" style="text-transform: capitalize;">${invoice.paymentMethod || 'Non spécifié'}</span>
+              </div>
+            </div>
+            
+            <div class="info-card">
+              <h3>Détails d'Enregistrement</h3>
+              <div class="info-row">
+                <span class="info-label">Date de facture</span>
+                <span class="info-val">${new Date(invoice.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Enregistré par</span>
+                <span class="info-val">${createdBy}</span>
+              </div>
+            </div>
           </div>
-        </div>
-        
-        <div style="display: flex; justify-content: space-between">
-          <div class="invoice-details">
-            <strong>Détails Facture</strong><br>
-            Date: ${new Date(invoice.date).toLocaleDateString('fr-FR')}<br>
-            Méthode paiement: ${invoice.paymentMethod || 'Non spécifié'}<br>
-            Note: ${invoice.note || 'Aucune'}
-          </div>
-          <div class="supplier-details">
-            <strong>Fournisseur</strong><br>
-            Nom: ${invoice.supplierName || '—'}
-          </div>
-        </div>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Produit</th>
-              <th>Lot</th>
-              <th>Date Exp.</th>
-              <th>Quantité</th>
-              <th>Prix U.</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${(invoice.items || []).map(item => `
+          
+          <table>
+            <thead>
               <tr>
-                <td>${item.productName}</td>
-                <td>${item.lotNumber || '—'}</td>
-                <td>${item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('fr-FR') : '—'}</td>
-                <td>${item.quantity}</td>
-                <td>${item.unitPrice ? item.unitPrice.toLocaleString('fr-FR') : '0'} GNF</td>
-                <td>${(item.total || (item.quantity * item.unitPrice) || 0).toLocaleString('fr-FR')} GNF</td>
+                <th>Produit</th>
+                <th>Lot</th>
+                <th>Péremption</th>
+                <th style="text-align: right;">Qté</th>
+                <th style="text-align: right;">Prix Unitaire</th>
+                <th style="text-align: right;">Total</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        <div class="total">
-          TOTAL FACTURE : ${invoice.totalAmount ? invoice.totalAmount.toLocaleString('fr-FR') : '0'} GNF
+            </thead>
+            <tbody>
+              ${(invoice.items || []).map(item => `
+                <tr>
+                  <td class="product-name">${item.productName}</td>
+                  <td><code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">${item.lotNumber || '—'}</code></td>
+                  <td>${item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }) : '—'}</td>
+                  <td style="text-align: right; font-weight: 600;">${item.quantity}</td>
+                  <td style="text-align: right;" class="money">${item.unitPrice ? item.unitPrice.toLocaleString('fr-FR') : '0'}</td>
+                  <td style="text-align: right;" class="money">${(item.total || (item.quantity * item.unitPrice) || 0).toLocaleString('fr-FR')} GNF</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="totals-section">
+            <div class="notes">
+              <h4>Notes / Observations</h4>
+              <p style="font-size: 12px; font-style: italic; background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 3px solid #3b82f6;">
+                ${invoice.note || 'Aucune note particulière pour cette facture d\'entrée de stock.'}
+              </p>
+            </div>
+            
+            <div class="totals-box">
+              <div class="total-row">
+                <span>Nombre d'articles</span>
+                <span>${invoice.items?.length || 0}</span>
+              </div>
+              <div class="total-row grand-total">
+                <span>Total Facture</span>
+                <span style="color: #3b82f6;">${invoice.totalAmount ? invoice.totalAmount.toLocaleString('fr-FR') : '0'} GNF</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="footer">
+            Document généré électroniquement par <strong>OrdiveX ERP</strong> le ${new Date().toLocaleString('fr-FR')}
+          </div>
         </div>
-        
         <script>
-          setTimeout(() => { window.print(); }, 500);
+          setTimeout(() => { window.print(); }, 800);
         </script>
       </body>
     </html>
@@ -715,6 +1000,7 @@ window.submitInvoice = submitInvoice;
 window.validateInvoice = validateInvoice;
 window.viewInvoice = viewInvoice;
 window.exportInvoicesCsv = exportInvoicesCsv;
+window.importInvoiceCsv = importInvoiceCsv;
 window.printInvoicePDF = printInvoicePDF;
 
 Router.register('invoices', renderInvoices);
