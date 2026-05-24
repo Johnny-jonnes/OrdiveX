@@ -4,7 +4,6 @@
 
 async function renderStock(container) {
   UI.loading(container, 'Chargement des stocks...');
-  if (DB._isPulling) { let w=0; while(DB._isPulling && w<90000){await new Promise(r=>setTimeout(r,500));w+=500;} }
 
   const [products, stockAll, lots] = await Promise.all([
     DB.dbGetAll('products'),

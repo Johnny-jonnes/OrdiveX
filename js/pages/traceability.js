@@ -5,7 +5,6 @@
 
 async function renderTraceability(container) {
   UI.loading(container, 'Chargement du module traçabilité...');
-  if (DB._isPulling) { let w=0; while(DB._isPulling && w<90000){await new Promise(r=>setTimeout(r,500));w+=500;} }
 
   // Chargement léger : seulement lots + produits. Mouvements/prescriptions/patients en lazy-load.
   const [lots, products] = await Promise.all([
@@ -1191,7 +1190,7 @@ window.traceInvoice = async function() {
                 <td><strong>${lot.quantity}</strong></td>
                 <td>${UI.expiryBadge(lot.expiryDate)}</td>
                 <td><span class="badge badge-${lot.status === 'active' ? 'success' : 'neutral'}">${lot.status}</span></td>
-                <td><button class="btn btn-xs btn-primary" onclick="document.getElementById('trace-input').value='${lot.lotNumber}'; switchTraceTab(null, 'search'); doLotTrace();"><i data-lucide="search"></i> Tracer ce lot</button></td>
+                <td><button class="btn btn-xs btn-primary" onclick="document.getElementById('trace-input').value='${lot.lotNumber}'; switchTraceTab(document.querySelector('[data-tab=\\'search\\']'), 'search'); doLotTrace();"><i data-lucide="search"></i> Tracer ce lot</button></td>
               </tr>
             `;
           }).join('')}
