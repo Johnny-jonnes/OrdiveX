@@ -819,17 +819,17 @@ function refreshGrid() {
     const unitShort = unitLabels[rawUnit] || rawUnit.substring(0, 4);
     const unitFull = p.unit || 'Boîte';
 
-    // Stock affiché de manière intelligente
     let stockText = '';
+    const locTag = p.hasLots ? ' <small style="font-size:10px;color:var(--primary)">(Rayon)</small>' : '';
     if (rupt) {
-      stockText = '<i data-lucide="x-circle"></i> Rupture';
+      stockText = '<i data-lucide="x-circle"></i> Rupture' + locTag;
     } else if (p.allowUnitSale) {
       const totU = (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
       const boxes = Math.floor(q / totU);
       const remain = q % totU;
-      stockText = (low ? '<i data-lucide="alert-triangle"></i> ' : '') + boxes + ' ' + unitShort + (remain > 0 ? ' +' + remain + 'u' : '');
+      stockText = (low ? '<i data-lucide="alert-triangle"></i> ' : '') + boxes + ' ' + unitShort + (remain > 0 ? ' +' + remain + 'u' : '') + locTag;
     } else {
-      stockText = (low ? '<i data-lucide="alert-triangle"></i> ' : '') + q + ' ' + unitShort;
+      stockText = (low ? '<i data-lucide="alert-triangle"></i> ' : '') + q + ' ' + unitShort + locTag;
     }
 
     return `<div class="prod-card ${rupt ? 'prod-rupt' : ''} ${inCart ? 'prod-incart' : ''} ${low ? 'prod-low' : ''}" data-pid="${p.id}"
@@ -2126,7 +2126,7 @@ async function validerVente() {
       let remainingQty = deductQty;
       try {
         const productLots = posLots
-          .filter(l => l.productId === item.productId && l.status === 'active' && l.quantity > 0)
+          .filter(l => l.productId === item.productId && l.status === 'active' && l.quantity > 0 && (!l.location || l.location === 'rayon'))
           .sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
         for (const lot of productLots) {
           if (remainingQty <= 0) break;
