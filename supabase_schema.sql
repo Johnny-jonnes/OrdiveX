@@ -64,6 +64,13 @@ CREATE TABLE products (
   "dosageForm"            TEXT,
   "costPrice"             NUMERIC,
   "hasLots"               BOOLEAN,
+  "sellPrice"             NUMERIC,
+  "subUnitsPerBox"        INTEGER,
+  "pricePerSubUnit"       NUMERIC,
+  "isControlled"          BOOLEAN,
+  "controlledClass"       TEXT,
+  "manufacturer"          TEXT,
+  "noticePdfUrl"          TEXT,
   "updatedAt"             BIGINT
 );
 
