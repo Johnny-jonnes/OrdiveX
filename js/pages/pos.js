@@ -283,20 +283,40 @@ async function renderPOS(container) {
     const loadPOS = async () => {
       if (DB._isPulling) { let w = 0; while (DB._isPulling && w < 60000) { await new Promise(r => setTimeout(r, 500)); w += 500; } }
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-      const stockAll = await DB.dbGetAll('stock');
+      
+      const [stockAll, allLots, allProducts] = await Promise.all([
+        DB.dbGetAll('stock'),
+        DB.dbGetAll('lots'),
+        DB.dbGetAll('products')
+      ]);
+
+      posLots = allLots.filter(l => l.status === 'active');
+      const rayonStockMap = {};
+      posLots.forEach(l => {
+        if (!l.location || l.location === 'rayon') {
+          rayonStockMap[l.productId] = (rayonStockMap[l.productId] || 0) + l.quantity;
+        }
+      });
+
+      const productsMap = {};
+      allProducts.forEach(p => { productsMap[p.id] = p; });
+
       posStock = {};
-      stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
+      stockAll.forEach(s => { 
+        const p = productsMap[s.productId];
+        if (p && p.hasLots) posStock[s.productId] = rayonStockMap[s.productId] || 0;
+        else posStock[s.productId] = s.quantity; 
+      });
 
       let products;
       if (isMobile) {
         products = await DB.dbSearchProducts('', 100);
       } else {
-        products = await DB.dbGetAll('products');
+        products = allProducts;
       }
       posProducts = products.filter(p => p.status !== 'inactive');
       posProducts.forEach(p => posProductsCache.set(p.id, p));
 
-      posLots = [];
       _posDataReady = true;
       _posDataTime = Date.now();
       renderFullPOSUI(container);
@@ -620,14 +640,13 @@ function renderFullPOSUI(container) {
  */
 async function refreshPOSData() {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  const [stockAll, allLots] = await Promise.all([
+  const [stockAll, allLots, allProducts] = await Promise.all([
     DB.dbGetAll('stock'),
-    DB.dbGetAll('lots')
+    DB.dbGetAll('lots'),
+    DB.dbGetAll('products')
   ]);
   
   posLots = allLots.filter(l => l.status === 'active');
-  posStock = {};
-  
   const rayonStockMap = {};
   posLots.forEach(l => {
     if (!l.location || l.location === 'rayon') {
@@ -635,21 +654,26 @@ async function refreshPOSData() {
     }
   });
 
-  stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
+  const productsMap = {};
+  allProducts.forEach(p => { productsMap[p.id] = p; });
+
+  posStock = {};
+  stockAll.forEach(s => { 
+    const p = productsMap[s.productId];
+    if (p && p.hasLots) posStock[s.productId] = rayonStockMap[s.productId] || 0;
+    else posStock[s.productId] = s.quantity; 
+  });
 
   let products;
   if (isMobile) {
     products = await DB.dbSearchProducts(posSearch || '', 100);
   } else {
-    products = await DB.dbGetAll('products');
+    products = allProducts;
   }
+  
   posProducts = products.filter(p => p.status !== 'inactive');
-  posProducts.forEach(p => {
-    posProductsCache.set(p.id, p);
-    if (p.hasLots) {
-      posStock[p.id] = rayonStockMap[p.id] || 0;
-    }
-  });
+  posProducts.forEach(p => posProductsCache.set(p.id, p));
+  
   if (typeof refreshGrid === 'function') refreshGrid();
 }
 
