@@ -620,8 +620,21 @@ function renderFullPOSUI(container) {
  */
 async function refreshPOSData() {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  const stockAll = await DB.dbGetAll('stock');
+  const [stockAll, allLots] = await Promise.all([
+    DB.dbGetAll('stock'),
+    DB.dbGetAll('lots')
+  ]);
+  
+  posLots = allLots.filter(l => l.status === 'active');
   posStock = {};
+  
+  const rayonStockMap = {};
+  posLots.forEach(l => {
+    if (!l.location || l.location === 'rayon') {
+      rayonStockMap[l.productId] = (rayonStockMap[l.productId] || 0) + l.quantity;
+    }
+  });
+
   stockAll.forEach(s => { posStock[s.productId] = s.quantity; });
 
   let products;
@@ -631,7 +644,12 @@ async function refreshPOSData() {
     products = await DB.dbGetAll('products');
   }
   posProducts = products.filter(p => p.status !== 'inactive');
-  posProducts.forEach(p => posProductsCache.set(p.id, p));
+  posProducts.forEach(p => {
+    posProductsCache.set(p.id, p);
+    if (p.hasLots) {
+      posStock[p.id] = rayonStockMap[p.id] || 0;
+    }
+  });
   if (typeof refreshGrid === 'function') refreshGrid();
 }
 
