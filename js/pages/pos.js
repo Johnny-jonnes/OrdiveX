@@ -292,8 +292,10 @@ async function renderPOS(container) {
 
       posLots = allLots.filter(l => l.status === 'active');
       const rayonStockMap = {};
-      posLots.forEach(l => {
-        if (!l.location || l.location === 'rayon') {
+      const hasAnyLotMap = {};
+      allLots.forEach(l => {
+        hasAnyLotMap[l.productId] = true;
+        if (l.status === 'active' && (!l.location || l.location === 'rayon')) {
           rayonStockMap[l.productId] = (rayonStockMap[l.productId] || 0) + l.quantity;
         }
       });
@@ -303,8 +305,7 @@ async function renderPOS(container) {
 
       posStock = {};
       stockAll.forEach(s => { 
-        const p = productsMap[s.productId];
-        if (p && p.hasLots) posStock[s.productId] = rayonStockMap[s.productId] || 0;
+        if (hasAnyLotMap[s.productId]) posStock[s.productId] = rayonStockMap[s.productId] || 0;
         else posStock[s.productId] = s.quantity; 
       });
 
@@ -315,7 +316,10 @@ async function renderPOS(container) {
         products = allProducts;
       }
       posProducts = products.filter(p => p.status !== 'inactive');
-      posProducts.forEach(p => posProductsCache.set(p.id, p));
+      posProducts.forEach(p => {
+        p._hasLots = hasAnyLotMap[p.id] || false;
+        posProductsCache.set(p.id, p);
+      });
 
       _posDataReady = true;
       _posDataTime = Date.now();
@@ -648,8 +652,10 @@ async function refreshPOSData() {
   
   posLots = allLots.filter(l => l.status === 'active');
   const rayonStockMap = {};
-  posLots.forEach(l => {
-    if (!l.location || l.location === 'rayon') {
+  const hasAnyLotMap = {};
+  allLots.forEach(l => {
+    hasAnyLotMap[l.productId] = true;
+    if (l.status === 'active' && (!l.location || l.location === 'rayon')) {
       rayonStockMap[l.productId] = (rayonStockMap[l.productId] || 0) + l.quantity;
     }
   });
@@ -659,8 +665,7 @@ async function refreshPOSData() {
 
   posStock = {};
   stockAll.forEach(s => { 
-    const p = productsMap[s.productId];
-    if (p && p.hasLots) posStock[s.productId] = rayonStockMap[s.productId] || 0;
+    if (hasAnyLotMap[s.productId]) posStock[s.productId] = rayonStockMap[s.productId] || 0;
     else posStock[s.productId] = s.quantity; 
   });
 
@@ -672,7 +677,10 @@ async function refreshPOSData() {
   }
   
   posProducts = products.filter(p => p.status !== 'inactive');
-  posProducts.forEach(p => posProductsCache.set(p.id, p));
+  posProducts.forEach(p => {
+    p._hasLots = hasAnyLotMap[p.id] || false;
+    posProductsCache.set(p.id, p);
+  });
   
   if (typeof refreshGrid === 'function') refreshGrid();
 }
@@ -820,7 +828,7 @@ function refreshGrid() {
     const unitFull = p.unit || 'Boîte';
 
     let stockText = '';
-    const locTag = p.hasLots ? ' <small style="font-size:10px;color:var(--primary)">(Rayon)</small>' : '';
+    const locTag = (p.hasLots || p._hasLots) ? ' <small style="font-size:10px;color:var(--primary)">(Rayon)</small>' : '';
     if (rupt) {
       stockText = '<i data-lucide="x-circle"></i> Rupture' + locTag;
     } else if (p.allowUnitSale) {
@@ -932,7 +940,7 @@ function addToCart(productId, mode = 'box') {
   const fefoLot = getFEFOLot(productId);
 
   // Vérification Rayon vs Réserve
-  if (p.hasLots && avail > 0 && !fefoLot) {
+  if ((p.hasLots || p._hasLots) && avail > 0 && !fefoLot) {
     UI.toast('Stock disponible uniquement en RÉSERVE. Veuillez transférer en RAYON via Gestion des Stocks.', 'error', 6000);
     return;
   }
