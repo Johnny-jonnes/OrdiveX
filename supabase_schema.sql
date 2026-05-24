@@ -83,7 +83,8 @@ CREATE TABLE lots (
   "destructionWitnesses"  TEXT,
   "destructionBy"         TEXT,
   "invoiceId"             BIGINT,
-  "invoiceRef"            TEXT
+  "invoiceRef"            TEXT,
+  location                TEXT DEFAULT 'rayon'
 );
 
 -- ═══════════════════════════════════════════════════════════════
@@ -374,6 +375,7 @@ ALTER TABLE "purchaseOrders" ADD COLUMN IF NOT EXISTS "hasNonConformity" BOOLEAN
 
 ALTER TABLE lots ADD COLUMN IF NOT EXISTS "invoiceId" BIGINT;
 ALTER TABLE lots ADD COLUMN IF NOT EXISTS "invoiceRef" TEXT;
+ALTER TABLE lots ADD COLUMN IF NOT EXISTS "location" TEXT DEFAULT 'rayon';
 
 ALTER TABLE movements ADD COLUMN IF NOT EXISTS "invoiceRef" TEXT;
 
