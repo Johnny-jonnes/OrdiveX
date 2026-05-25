@@ -120,5 +120,8 @@ if (!apiUrl) throw new Error('NEXT_PUBLIC_API_URL manquante')
 | 2026-04-21 | `restoreFromBackup` via `dbBulkPut` par chunks de 10k | Remplace l'ancien import unitaire qui crashait à 9303 éléments |
 | 2026-04-25 | Connection Resilience Engine (debounce 5s + backoff exponentiel) | Empêche les boucles online/offline et les reconnexions WebSocket en rafale |
 | 2026-04-25 | Cooldown 30s sur le WebSocket realtime | Évite les tentatives de reconnexion en boucle qui saturent les logs |
-| 2026-04-25 | Pagination impression stock (500 items/page) | L'ancien rapport chargeait 100k lignes HTML d'un coup, crash navigateur |
 | 2026-04-25 | Sanitisation XSS dans le chatbot Naomie | `innerHTML` avec contenu utilisateur → échappement HTML systématique |
+| 2026-05-24 | Sanitisation des timestamps vers Supabase | Conversion à la volée des dates ISO en BIGINT (`Date.now()`) dans `db.js` pour éviter les erreurs 400 (type bigint) |
+| 2026-05-24 | Sécurisation de la déduction des lots en Caisse | Ajout du filtre strict `location === 'rayon'` lors de la vente pour interdire la déduction furtive en réserve |
+| 2026-05-24 | Déduction dynamique des propriétés produits | Calcul de `hasLots` à la volée via la table `lots` pour réparer les produits legacy n'ayant pas cette colonne en base |
+| 2026-05-24 | Optimisation UX du transfert de lots | Remplacement de la fermeture/réouverture de modale par une mise à jour in-place avec un état de chargement |
