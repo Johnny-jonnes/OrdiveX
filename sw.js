@@ -1,9 +1,9 @@
 /**
- * OrdiveX — Service Worker
+ * OrdiveX â€” Service Worker
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.4.9';
+const CACHE_NAME = 'pharma-cache-v9.5.0';
 const ASSETS = [
   './',
   './index.html',
@@ -72,7 +72,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => {
-      console.log('[SW] Activated — Old caches cleared');
+      console.log('[SW] Activated â€” Old caches cleared');
       return self.clients.claim();
     })
   );
@@ -82,13 +82,13 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = event.request.url;
 
-  // 🛡️ REQUÊTES EXTERNES (Supabase, fonts, CDN)
+  // ðŸ›¡ï¸ REQUÃŠTES EXTERNES (Supabase, fonts, CDN)
   if (!url.startsWith(self.location.origin)) {
-    // FONTS : NE PAS intercepter — laisser le navigateur gérer nativement
-    // Le HTTP cache du navigateur les sert en offline, font-display:swap utilise les polices système sinon
-    // Cela évite les 14x "Failed to decode downloaded font" warnings (browser-level, non-filtrable par JS)
+    // FONTS : NE PAS intercepter â€” laisser le navigateur gÃ©rer nativement
+    // Le HTTP cache du navigateur les sert en offline, font-display:swap utilise les polices systÃ¨me sinon
+    // Cela Ã©vite les 14x "Failed to decode downloaded font" warnings (browser-level, non-filtrable par JS)
     if (url.includes('fonts.g') || url.endsWith('.woff2') || url.endsWith('.woff') || url.endsWith('.ttf')) {
-      return; // Ne PAS appeler respondWith — le navigateur gère seul
+      return; // Ne PAS appeler respondWith â€” le navigateur gÃ¨re seul
     }
 
     // APIS (Supabase, etc.) : try-catch silencieux
@@ -145,7 +145,7 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'OrdiveX', {
       body: data.body || 'Nouvelle alerte',
-      icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext y='68' font-size='60' text-anchor='middle' x='50'%3E💊%3C/text%3E%3C/svg%3E",
+      icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext y='68' font-size='60' text-anchor='middle' x='50'%3EðŸ’Š%3C/text%3E%3C/svg%3E",
       data: { url: data.url || '/' },
       tag: data.tag || 'pharma-alert',
       requireInteraction: data.critical || false,
@@ -158,3 +158,11 @@ self.addEventListener('notificationclick', event => {
   const url = event.notification.data?.url || '/';
   event.waitUntil(clients.openWindow(url));
 });
+
+// ── Réception du signal SKIP_WAITING depuis la bannière de mise à jour ──
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+

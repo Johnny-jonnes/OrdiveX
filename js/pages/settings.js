@@ -35,6 +35,10 @@ function renderLogin(container) {
               <div class="input-wrapper-elite">
                 <i data-lucide="lock"></i>
                 <input type="password" id="login-password" placeholder="••••••••" required>
+                <button type="button" id="toggle-password" class="pwd-toggle-btn" onclick="togglePasswordVisibility()" tabindex="-1" aria-label="Afficher le mot de passe" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:6px;color:var(--text-light,#94a3b8);z-index:2;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:color 0.2s ease">
+                  <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg id="eye-off-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                </button>
               </div>
             </div>
 
@@ -49,7 +53,7 @@ function renderLogin(container) {
         </div>
         
         <div class="login-footer-elite">
-          <span class="version-tag">OrdiveX v9.4.1</span>
+          <span class="version-tag">OrdiveX v9.5.0</span>
           <div class="network-tag ${navigator.onLine ? 'online' : 'offline'}">
             <i data-lucide="${navigator.onLine ? 'wifi' : 'wifi-off'}"></i>
             ${navigator.onLine ? 'Système synchronisé' : 'Mode hors-ligne'}
@@ -76,7 +80,32 @@ function renderLogin(container) {
   `;
 
   if (window.lucide) lucide.createIcons();
+
+  // Ajuster le padding-right de l'input pour ne pas superposer le texte avec le bouton œil
+  const pwdInput = document.getElementById('login-password');
+  if (pwdInput) pwdInput.style.paddingRight = '48px';
 }
+
+// ── Toggle visibilité mot de passe ──
+function togglePasswordVisibility() {
+  const input = document.getElementById('login-password');
+  const eyeIcon = document.getElementById('eye-icon');
+  const eyeOffIcon = document.getElementById('eye-off-icon');
+  const btn = document.getElementById('toggle-password');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (eyeIcon) eyeIcon.style.display = 'none';
+    if (eyeOffIcon) eyeOffIcon.style.display = 'block';
+    if (btn) btn.style.color = 'var(--primary, #1b6fae)';
+  } else {
+    input.type = 'password';
+    if (eyeIcon) eyeIcon.style.display = 'block';
+    if (eyeOffIcon) eyeOffIcon.style.display = 'none';
+    if (btn) btn.style.color = 'var(--text-light, #94a3b8)';
+  }
+}
+window.togglePasswordVisibility = togglePasswordVisibility;
 
 function setDemo(u, p) {
   document.getElementById('login-username').value = u;

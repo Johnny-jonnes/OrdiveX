@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="OrdiveX - ERP Pharmaceutique pour la Guinée">
+  <meta name="description" content="OrdiveX - ERP Pharmaceutique pour la GuinÃ©e">
   <meta name="theme-color" content="#1B4F72">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,8 +17,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/main.css?v=9.4.9">
-  <link rel="stylesheet" href="css/mobile.css?v=9.4.9">
+  <link rel="stylesheet" href="css/main.css?v=9.5.0">
+  <link rel="stylesheet" href="css/mobile.css?v=9.5.0">
   <script>const APP_VERSION = '9.4.9';</script>
   <meta name="theme-color" content="#1B4F72">
   <meta name="mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
   <script src="js/vendor/supabase.min.js"></script>
   <script src="js/vendor/lucide.min.js"></script>
   <script>
-    //  PERFORMANCE: Override lucide.createIcons pour scope automatique â”€â”€
+    //  PERFORMANCE: Override lucide.createIcons pour scope automatique Ã¢â€â‚¬Ã¢â€â‚¬
     // Au lieu de scanner tout le DOM (lent sur mobile), scope au conteneur actif.
     if (window.lucide) {
       const _originalCreateIcons = lucide.createIcons.bind(lucide);
@@ -58,7 +58,7 @@
       <div class="sidebar-logo-text">
         <div class="sidebar-logo-title" id="pharmacy-name-display">Ordive<span style="color:var(--accent)">X</span>
         </div>
-        <div class="sidebar-logo-subtitle" id="pharmacy-slogan-display">Santé & Technologie</div>
+        <div class="sidebar-logo-subtitle" id="pharmacy-slogan-display">SantÃ© & Technologie</div>
       </div>
     </div>
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
@@ -70,10 +70,10 @@
       <div class="sidebar-user" id="sidebar-user">
         <div class="sidebar-user-avatar" id="user-avatar">?</div>
         <div class="sidebar-user-info">
-          <div class="sidebar-user-name" id="user-name">Non connecté</div>
-          <div class="sidebar-user-role" id="user-role">â€”</div>
+          <div class="sidebar-user-name" id="user-name">Non connectÃ©</div>
+          <div class="sidebar-user-role" id="user-role">Ã¢â‚¬â€</div>
         </div>
-        <button class="sidebar-logout" onclick="Auth.logout()" title="Déconnecter"><i
+        <button class="sidebar-logout" onclick="Auth.logout()" title="DÃ©connecter"><i
             data-lucide="log-out"></i></button>
       </div>
       <div style="padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center;">
@@ -84,7 +84,7 @@
             <path d="m17 8 4 4-4 4" />
             <path d="m14 4-4 16" />
           </svg>
-          <span>Propulsé par <strong>TrillionX</strong></span>
+          <span>PropulsÃ© par <strong>TrillionX</strong></span>
         </a>
       </div>
     </div>
@@ -98,12 +98,12 @@
       <button class="topbar-btn" id="pwa-install-btn" onclick="installPWA()" title="Installer l'app"
         style="display:none"><i data-lucide="smartphone"></i></button>
       <button class="topbar-btn" id="device-sync-btn" onclick="if(window.UI && UI.openSyncMonitor) UI.openSyncMonitor()"
-        title="Moniteur de Réseau">
+        title="Moniteur de RÃ©seau">
         <i data-lucide="monitor" id="device-sync-icon"></i>
         <span class="notif-badge" id="device-sync-badge"
           style="display:none; background:var(--warning); color:#fff;">!</span>
       </button>
-      <button class="topbar-btn" onclick="navigatePage('reorder')" title="Réapprovisionnement"><i
+      <button class="topbar-btn" onclick="navigatePage('reorder')" title="RÃ©approvisionnement"><i
           data-lucide="refresh-cw"></i></button>
       <button class="topbar-btn" onclick="navigatePage('print')" title="Impression"><i
           data-lucide="printer"></i></button>
@@ -112,9 +112,9 @@
       </button>
       <button class="topbar-btn" onclick="DB.doBackup ? DB.doBackup() : UI.toast('Backup...','info')"
         title="Sauvegarde"><i data-lucide="save"></i></button>
-      <button class="topbar-btn" id="theme-toggle-btn" onclick="UI.toggleTheme()" title="Changer le thème"><i
+      <button class="topbar-btn" id="theme-toggle-btn" onclick="UI.toggleTheme()" title="Changer le thÃ¨me"><i
           data-lucide="moon"></i></button>
-      <button class="topbar-btn" id="topbar-settings-btn" onclick="navigatePage('settings')" title="Paramètres"><i
+      <button class="topbar-btn" id="topbar-settings-btn" onclick="navigatePage('settings')" title="ParamÃ¨tres"><i
           data-lucide="settings-2"></i></button>
     </div>
   </header>
@@ -122,7 +122,7 @@
   <main id="app-content">
     <div class="loading-state">
       <div class="spinner"></div>
-      <p>Démarrage de OrdiveX...</p>
+      <p>DÃ©marrage de OrdiveX...</p>
     </div>
   </main>
 
@@ -135,10 +135,10 @@
     <div class="modal-content"
       style="background: var(--surface); padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
       <h3 style="margin-top:0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="monitor-speaker"></i> Moniteur de Réseau
+        <i data-lucide="monitor-speaker"></i> Moniteur de RÃ©seau
       </h3>
       <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">
-        État en temps réel de la synchronisation des différents appareils (PC, Tablettes, Mobiles).
+        Ã‰tat en temps rÃ©el de la synchronisation des diffÃ©rents appareils (PC, Tablettes, Mobiles).
       </p>
       <div id="sync-monitor-list"
         style="display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto;">
@@ -152,7 +152,7 @@
     </div>
   </div>
 
-  <!-- â•â•â• BOTTOM TAB BAR â€” Mobile POS uniquement â•â•â• -->
+  <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â BOTTOM TAB BAR Ã¢â‚¬â€ Mobile POS uniquement Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
   <nav id="mobile-pos-tabbar" class="mobile-tabbar" style="display:none">
     <button class="tab-btn active" data-vue="produits" onclick="mobileShowVue('produits')">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -185,46 +185,46 @@
     </button>
   </nav>
 
-  <script src="js/db.js?v=9.4.9"></script>
-  <script src="js/auth.js?v=9.4.9"></script>
-  <script src="js/ui.js?v=9.4.9"></script>
-  <script src="js/mobile-money.js?v=9.4.9"></script>
-  <script src="js/sms.js?v=9.4.9"></script>
-  <script src="js/pages/dashboard.js?v=9.4.9"></script>
-  <script src="js/pages/pos.js?v=9.4.9"></script>
-  <script src="js/pages/stock.js?v=9.4.9"></script>
-  <script src="js/pages/products.js?v=9.4.9"></script>
-  <script src="js/pages/sales.js?v=9.4.9"></script>
-  <script src="js/pages/returns.js?v=9.4.9"></script>
-  <script src="js/pages/settings.js?v=9.4.9"></script>
-  <script src="js/pages/prescriptions.js?v=9.4.9"></script>
-  <script src="js/pages/suppliers.js?v=9.4.9"></script>
-  <script src="js/pages/invoices.js?v=9.4.9"></script>
-  <script src="js/pages/patients.js?v=9.4.9"></script>
-  <script src="js/pages/caisse.js?v=9.4.9"></script>
-  <script src="js/pages/traceability.js?v=9.4.9"></script>
-  <script src="js/pages/alerts-engine.js?v=9.4.9"></script>
-  <script src="js/pages/alerts.js?v=9.4.9"></script>
-  <script src="js/pages/print.js?v=9.4.9"></script>
-  <script src="js/pages/onboarding.js?v=9.4.9"></script>
-  <script src="js/pages/metrics.js?v=9.4.9"></script>
-  <script src="js/ui/command-palette.js?v=9.4.9"></script>
-  <script src="js/ui/feedback.js?v=9.4.9"></script>
-  <script src="js/utils/animations.js?v=9.4.9"></script>
-  <script src="js/components/supportWidget.js?v=9.4.9"></script>
-  <script src="js/utils/stability.js?v=9.4.9"></script>
-  <script src="js/utils/devtools-guard.js?v=9.4.9"></script>
+  <script src="js/db.js?v=9.5.0"></script>
+  <script src="js/auth.js?v=9.5.0"></script>
+  <script src="js/ui.js?v=9.5.0"></script>
+  <script src="js/mobile-money.js?v=9.5.0"></script>
+  <script src="js/sms.js?v=9.5.0"></script>
+  <script src="js/pages/dashboard.js?v=9.5.0"></script>
+  <script src="js/pages/pos.js?v=9.5.0"></script>
+  <script src="js/pages/stock.js?v=9.5.0"></script>
+  <script src="js/pages/products.js?v=9.5.0"></script>
+  <script src="js/pages/sales.js?v=9.5.0"></script>
+  <script src="js/pages/returns.js?v=9.5.0"></script>
+  <script src="js/pages/settings.js?v=9.5.0"></script>
+  <script src="js/pages/prescriptions.js?v=9.5.0"></script>
+  <script src="js/pages/suppliers.js?v=9.5.0"></script>
+  <script src="js/pages/invoices.js?v=9.5.0"></script>
+  <script src="js/pages/patients.js?v=9.5.0"></script>
+  <script src="js/pages/caisse.js?v=9.5.0"></script>
+  <script src="js/pages/traceability.js?v=9.5.0"></script>
+  <script src="js/pages/alerts-engine.js?v=9.5.0"></script>
+  <script src="js/pages/alerts.js?v=9.5.0"></script>
+  <script src="js/pages/print.js?v=9.5.0"></script>
+  <script src="js/pages/onboarding.js?v=9.5.0"></script>
+  <script src="js/pages/metrics.js?v=9.5.0"></script>
+  <script src="js/ui/command-palette.js?v=9.5.0"></script>
+  <script src="js/ui/feedback.js?v=9.5.0"></script>
+  <script src="js/utils/animations.js?v=9.5.0"></script>
+  <script src="js/components/supportWidget.js?v=9.5.0"></script>
+  <script src="js/utils/stability.js?v=9.5.0"></script>
+  <script src="js/utils/devtools-guard.js?v=9.5.0"></script>
 
   <script>
     const NAV_ITEMS = [
       { section: 'Principal' },
       { page: 'dashboard', icon: 'layout-dashboard', label: 'Tableau de Bord', roles: ['admin', 'pharmacien', 'caissier'] },
       { page: 'pos', icon: 'monitor-smartphone', label: 'Point de Vente', roles: ['admin', 'pharmacien', 'caissier'] },
-      { page: 'caisse', icon: 'banknote', label: 'Caisse Journalière', roles: ['admin', 'pharmacien', 'caissier'] },
+      { page: 'caisse', icon: 'banknote', label: 'Caisse JournaliÃ¨re', roles: ['admin', 'pharmacien', 'caissier'] },
       { section: 'Stock & Produits' },
       { page: 'products', icon: 'pill', label: 'Catalogue Produits', roles: ['admin', 'pharmacien'] },
       { page: 'stock', icon: 'package-search', label: 'Gestion des Stocks', roles: ['admin', 'pharmacien'] },
-      { page: 'reorder', icon: 'refresh-ccw-dot', label: 'Réapprovisionnement', roles: ['admin', 'pharmacien'] },
+      { page: 'reorder', icon: 'refresh-ccw-dot', label: 'RÃ©approvisionnement', roles: ['admin', 'pharmacien'] },
       { section: 'Ordonnances & Patients' },
       { page: 'prescriptions', icon: 'file-text', label: 'Ordonnances', roles: ['admin', 'pharmacien'] },
       { page: 'patients', icon: 'users', label: 'Dossiers Patients', roles: ['admin', 'pharmacien'] },
@@ -232,28 +232,28 @@
       { page: 'suppliers', icon: 'factory', label: 'Fournisseurs', roles: ['admin', 'pharmacien'] },
       { page: 'purchase-orders', icon: 'clipboard-list', label: 'Bons de Commande', roles: ['admin', 'pharmacien'] },
       { page: 'invoices', icon: 'file-text', label: 'Factures Fournisseurs', roles: ['admin', 'pharmacien'] },
-      { section: 'Traçabilité' },
-      { page: 'traceability', icon: 'shield-check', label: 'Traçabilité & Pharmavig.', roles: ['admin', 'pharmacien'] },
+      { section: 'TraÃ§abilitÃ©' },
+      { page: 'traceability', icon: 'shield-check', label: 'TraÃ§abilitÃ© & Pharmavig.', roles: ['admin', 'pharmacien'] },
       { section: 'Analytique' },
       { page: 'sales', icon: 'history', label: 'Historique Ventes', roles: ['admin', 'pharmacien', 'caissier'] },
-      { page: 'returns', icon: 'undo-2', label: 'Retours Médicaments', roles: ['admin', 'pharmacien'] },
+      { page: 'returns', icon: 'undo-2', label: 'Retours MÃ©dicaments', roles: ['admin', 'pharmacien'] },
       { page: 'reports', icon: 'bar-chart-3', label: 'Rapports & Analytique', roles: ['admin', 'pharmacien'] },
-      { page: 'metrics', icon: 'bar-chart-2', label: 'Métriques Business', roles: ['admin', 'pharmacien'] },
+      { page: 'metrics', icon: 'bar-chart-2', label: 'MÃ©triques Business', roles: ['admin', 'pharmacien'] },
       { section: 'Administration' },
       { page: 'print', icon: 'printer', label: "Centre d'Impression", roles: ['admin', 'pharmacien'] },
       { page: 'alerts', icon: 'bell', label: 'Alertes', roles: ['admin', 'pharmacien', 'caissier'] },
-      { page: 'settings', icon: 'settings-2', label: 'Paramètres', roles: ['admin', 'manager'] },
+      { page: 'settings', icon: 'settings-2', label: 'ParamÃ¨tres', roles: ['admin', 'manager'] },
     ];
 
     const PAGE_TITLES = {
-      dashboard: 'Tableau de Bord', pos: 'Point de Vente', caisse: 'Caisse Journalière',
-      products: 'Catalogue Médicaments', stock: 'Gestion des Stocks', reorder: 'Réapprovisionnement',
+      dashboard: 'Tableau de Bord', pos: 'Point de Vente', caisse: 'Caisse JournaliÃ¨re',
+      products: 'Catalogue MÃ©dicaments', stock: 'Gestion des Stocks', reorder: 'RÃ©approvisionnement',
       prescriptions: 'Gestion des Ordonnances', patients: 'Dossiers Patients',
       suppliers: 'Fournisseurs', 'purchase-orders': 'Bons de Commande', invoices: 'Factures Fournisseurs',
-      traceability: 'Traçabilité & Pharmacovigilance',
-      sales: 'Historique des Ventes', returns: 'Retours de Médicaments', reports: 'Rapports & Analytique',
-      metrics: 'Métriques Business', onboarding: 'Configuration Initiale',
-      print: "Centre d'Impression", alerts: 'Alertes Système', settings: 'Paramètres & Administration',
+      traceability: 'TraÃ§abilitÃ© & Pharmacovigilance',
+      sales: 'Historique des Ventes', returns: 'Retours de MÃ©dicaments', reports: 'Rapports & Analytique',
+      metrics: 'MÃ©triques Business', onboarding: 'Configuration Initiale',
+      print: "Centre d'Impression", alerts: 'Alertes SystÃ¨me', settings: 'ParamÃ¨tres & Administration',
     };
 
     function initSidebar() {
@@ -363,8 +363,8 @@
       if (text) text.textContent = online ? 'En ligne' : 'Hors ligne';
       DB.AppState.isOnline = online;
     }
-    window.addEventListener('online', () => { updateNetworkStatus(); UI.toast('Connexion rétablie', 'success'); });
-    window.addEventListener('offline', () => { updateNetworkStatus(); UI.toast('Mode hors ligne activé', 'warning'); });
+    window.addEventListener('online', () => { updateNetworkStatus(); UI.toast('Connexion rÃ©tablie', 'success'); });
+    window.addEventListener('offline', () => { updateNetworkStatus(); UI.toast('Mode hors ligne activÃ©', 'warning'); });
 
     async function updateAlertBadge() {
       try {
@@ -378,12 +378,12 @@
     Router.register('metrics', (container) => renderMetrics(container));
     Router.register('onboarding', (container) => renderOnboarding(container));
 
-    // Route 'alerts' enregistrée dans js/pages/alerts.js
+    // Route 'alerts' enregistrÃ©e dans js/pages/alerts.js
 
     async function clearAllAlerts() {
       const all = await DB.dbGetAll('alerts');
       for (const a of all.filter(a => a.status === 'unread')) await DB.dbPut('alerts', { ...a, status: 'read' });
-      UI.toast('Toutes les alertes marquées comme lues', 'success');
+      UI.toast('Toutes les alertes marquÃ©es comme lues', 'success');
       await updateAlertBadge();
       Router.navigate('alerts');
     }
@@ -426,11 +426,11 @@
     window.dismissPWABanner = dismissPWABanner;
 
     async function installPWA() {
-      if (!_pwaPrompt) { UI.toast('Application déjÃ  installée ou non disponible', 'info'); return; }
+      if (!_pwaPrompt) { UI.toast('Application dÃ©jÃƒÂ  installÃ©e ou non disponible', 'info'); return; }
       _pwaPrompt.prompt();
       const r = await _pwaPrompt.userChoice;
       if (r.outcome === 'accepted') {
-        UI.toast('OrdiveX installé ! L\'app se lancera sans barre du navigateur.', 'success', 5000);
+        UI.toast('OrdiveX installÃ© ! L\'app se lancera sans barre du navigateur.', 'success', 5000);
         document.getElementById('pwa-install-btn').style.display = 'none';
         dismissPWABanner();
       }
@@ -439,12 +439,151 @@
     window.installPWA = installPWA;
     window.closeSidebarMobile = closeSidebarMobile;
 
+    // ═══════════════════════════════════════════════════════════════════
+    // SYSTÈME DE MISE À JOUR PROFESSIONNEL — v9.5.0
+    // Détecte une vraie nouvelle version via le Service Worker,
+    // compare avec version.json, et affiche une bannière moderne
+    // uniquement quand une mise à jour est réellement disponible.
+    // ═══════════════════════════════════════════════════════════════════
+    const ORDIVEX_CURRENT_VERSION = '9.5.0';
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js')
-        .then(r => { console.log('[SW] OK:', r.scope); })
+        .then(reg => {
+          console.log('[SW] OK:', reg.scope);
+
+          // ── Détection d'un nouveau Service Worker ──
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (!newWorker) return;
+
+            newWorker.addEventListener('statechange', () => {
+              // Le nouveau SW est installé et prêt à prendre le relais
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // Il y a un ancien SW actif + un nouveau prêt → vraie mise à jour
+                _checkAndShowUpdateBanner(newWorker);
+              }
+            });
+          });
+        })
         .catch(e => console.warn('[SW] Erreur:', e));
+
+      // Si le SW se recharge tout seul (après activation), recharger la page
+      let _swRefreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_swRefreshing) return;
+        _swRefreshing = true;
+        window.location.reload();
+      });
     }
 
+    /**
+     * Vérifie si la version distante est supérieure et affiche la bannière
+     */
+    async function _checkAndShowUpdateBanner(newWorker) {
+      let remoteVersion = null;
+      let changelog = '';
+      try {
+        const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          remoteVersion = data.version;
+          changelog = data.changelog || '';
+        }
+      } catch(e) { /* offline — on affiche quand même la bannière générique */ }
+
+      // Si on a pu lire la version distante ET qu'elle est identique → pas de mise à jour
+      if (remoteVersion && remoteVersion === ORDIVEX_CURRENT_VERSION) {
+        console.log('[Update] Versions identiques (' + ORDIVEX_CURRENT_VERSION + '). Pas de bannière.');
+        return;
+      }
+
+      // ── Construire et afficher la bannière ──
+      const versionLabel = remoteVersion || 'nouvelle version';
+      const existing = document.getElementById('ordivex-update-banner');
+      if (existing) existing.remove();
+
+      const banner = document.createElement('div');
+      banner.id = 'ordivex-update-banner';
+      banner.innerHTML = `
+        <div style="position:fixed;bottom:0;left:0;right:0;z-index:99999;animation:slideUpBanner 0.5s cubic-bezier(0.16,1,0.3,1) forwards">
+          <div style="max-width:600px;margin:0 auto 20px;padding:20px 24px;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:16px;backdrop-filter:blur(20px);margin-left:16px;margin-right:16px">
+            <div style="flex-shrink:0;width:48px;height:48px;background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;display:flex;align-items:center;justify-content:center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:2px">OrdiveX ${versionLabel} disponible</div>
+              <div style="font-size:12px;color:#94a3b8;line-height:1.4">${changelog || 'Nouvelles fonctionnalités et améliorations de performance.'}</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+              <button onclick="document.getElementById('ordivex-update-banner').remove()" style="padding:8px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s">Plus tard</button>
+              <button onclick="_applyUpdate()" style="padding:8px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,0.3);transition:all 0.2s;display:flex;align-items:center;gap:6px">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                Installer
+              </button>
+            </div>
+          </div>
+        </div>
+        <style>
+          @keyframes slideUpBanner {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0); opacity: 1; }
+          }
+        </style>
+      `;
+      document.body.appendChild(banner);
+
+      // Stocker la référence au nouveau worker
+      window._pendingUpdateWorker = newWorker;
+    }
+
+    /**
+     * Active le nouveau Service Worker et recharge la page
+     */
+    function _applyUpdate() {
+      const banner = document.getElementById('ordivex-update-banner');
+      if (banner) {
+        // Remplacer le contenu par un loader
+        banner.querySelector('div > div').innerHTML = `
+          <div style="max-width:600px;margin:0 auto 20px;padding:24px;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.4);text-align:center;margin-left:16px;margin-right:16px">
+            <div style="display:inline-block;width:28px;height:28px;border:3px solid rgba(255,255,255,0.15);border-top-color:#10b981;border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:10px"></div>
+            <div style="color:#fff;font-weight:700;font-size:14px">Installation en cours…</div>
+            <div style="color:#64748b;font-size:12px;margin-top:4px">L'application va redémarrer automatiquement.</div>
+          </div>
+          <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+        `;
+      }
+
+      // Envoyer le signal au nouveau SW pour qu'il prenne le contrôle
+      if (window._pendingUpdateWorker) {
+        window._pendingUpdateWorker.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        // Fallback : forcer le reload
+        if ('caches' in window) {
+          caches.keys().then(names => names.forEach(name => caches.delete(name)));
+        }
+        setTimeout(() => window.location.reload(true), 800);
+      }
+    }
+    window._applyUpdate = _applyUpdate;
+
+    // ── Vérification proactive au chargement (toutes les 30 min après) ──
+    window.addEventListener('load', () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(reg => {
+          if (reg && reg.active) {
+            try { reg.update(); } catch (e) { console.warn('[SW] Update skipped:', e); }
+          }
+        }).catch(() => { });
+
+        // Revérifier toutes les 30 min
+        setInterval(() => {
+          navigator.serviceWorker.getRegistration().then(reg => {
+            if (reg) { try { reg.update(); } catch(e) {} }
+          }).catch(() => {});
+        }, 30 * 60 * 1000);
+      }
+    });
     document.addEventListener('keydown', e => {
       if (!DB.AppState.currentUser) return;
       if ((e.ctrlKey || e.metaKey)) {
@@ -510,16 +649,16 @@
         updateNetworkStatus();
         setInterval(updateAlertBadge, 120000);
 
-        // â”€â”€ Auto-backup (toutes les 30 min) et auto-pull cloud (toutes les 5 min) â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Auto-backup (toutes les 30 min) et auto-pull cloud (toutes les 5 min) Ã¢â€â‚¬Ã¢â€â‚¬
         if (DB.startAutoBackup) DB.startAutoBackup();
         if (DB.startAutoPull) DB.startAutoPull();
 
-        // â”€â”€ Rafraîchir le dashboard quand l'utilisateur revient après une longue absence â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ RafraÃ®chir le dashboard quand l'utilisateur revient aprÃ¨s une longue absence Ã¢â€â‚¬Ã¢â€â‚¬
         let _lastVisible = Date.now();
         document.addEventListener('visibilitychange', () => {
           if (document.visibilityState === 'visible') {
             const elapsed = Date.now() - _lastVisible;
-            // Si absent > 5 min ET sur le dashboard â†’ re-rendre
+            // Si absent > 5 min ET sur le dashboard Ã¢â€ â€™ re-rendre
             if (elapsed > 300000 && Router.currentPage === 'dashboard') {
               Router.navigate('dashboard');
             }
@@ -529,7 +668,7 @@
       } catch (err) {
         console.error('Init failed:', err);
         document.getElementById('app-content').innerHTML =
-          '<div class="error-state"><div style="font-size:48px"><i data-lucide="alert-triangle"></i></div><h2>Erreur de démarrage</h2>'
+          '<div class="error-state"><div style="font-size:48px"><i data-lucide="alert-triangle"></i></div><h2>Erreur de dÃ©marrage</h2>'
           + '<p>' + err.message + '</p><button class="btn btn-primary" style="margin-top:16px" onclick="location.reload()">Recharger</button></div>';
         if (window.lucide) lucide.createIcons();
       }
@@ -541,16 +680,7 @@
     window.toggleSidebar = toggleSidebar;
     window.updateAlertBadge = updateAlertBadge;
 
-    // Force SW update on load
-    window.addEventListener('load', () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistration().then(reg => {
-          if (reg && reg.active) {
-            try { reg.update(); } catch (e) { console.warn('[SW] Update skipped:', e); }
-          }
-        }).catch(() => { });
-      }
-    });
+
 
     initApp();
     if (window.lucide) {
@@ -560,3 +690,4 @@
 </body>
 
 </html>
+
