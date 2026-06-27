@@ -9,7 +9,7 @@
  */
 
 // ─── Constantes ────────────────────────────────────────────────────
-const SHIFT_TYPES = {
+let SHIFT_TYPES = {
   matin: { label: 'Equipe Matin', icon: 'sunrise', color: '#f59e0b', hours: '07h00 - 14h00', gradient: 'linear-gradient(135deg,#fbbf24,#f59e0b)' },
   soir:  { label: 'Equipe Soir',  icon: 'sunset',  color: '#6366f1', hours: '14h00 - 22h00', gradient: 'linear-gradient(135deg,#818cf8,#6366f1)' },
   nuit:  { label: 'Equipe Nuit',  icon: 'moon',    color: '#0ea5e9', hours: '22h00 - 07h00', gradient: 'linear-gradient(135deg,#38bdf8,#0ea5e9)' },
@@ -35,6 +35,12 @@ async function renderShifts(container) {
   const todayShifts = allShifts.filter(s => (s.date || '').startsWith(today));
   const weekAgo = Date.now() - 7 * 86400000;
   const recentShifts = allShifts.filter(s => (s.openedAt || 0) > weekAgo).sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
+
+  // Load custom shift config
+  const shiftSettings = settings.find(s => s.id === 'shift_config');
+  if (shiftSettings && shiftSettings.data) {
+    SHIFT_TYPES = { ...SHIFT_TYPES, ...shiftSettings.data };
+  }
 
   function calcKPIs(shift) {
     if (!shift) return { sales: 0, total: 0, items: 0 };
@@ -219,9 +225,15 @@ function _renderTeamsTab(d) {
         <i data-lucide="users-round" style="width:18px;height:18px;color:var(--primary)"></i>
         Employes et Affectations
       </h3>
-      ${d.isAdmin ? `<button class="btn btn-primary btn-sm" onclick="_showAssignDialog()" style="display:flex;align-items:center;gap:6px">
-        <i data-lucide="user-plus" style="width:14px;height:14px"></i> Affecter a une equipe
-      </button>` : ''}
+      ${d.isAdmin ? `
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="_configureShifts()" style="display:flex;align-items:center;gap:6px">
+          <i data-lucide="settings" style="width:14px;height:14px"></i> Configurer heures
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="_showAssignDialog()" style="display:flex;align-items:center;gap:6px">
+          <i data-lucide="user-plus" style="width:14px;height:14px"></i> Affecter a une equipe
+        </button>
+      </div>` : ''}
     </div>
     <div style="overflow-x:auto">
       <table class="data-table" style="width:100%">
@@ -458,9 +470,15 @@ function openShiftDialog() {
         </div>
         <div class="form-group">
           <label style="font-weight:600;font-size:13px;margin-bottom:6px;display:block">Membres de l'equipe</label>
+          <input type="text" id="shift-user-search" class="form-control" placeholder="Rechercher un membre..." style="margin-bottom:8px" onkeyup="
+            const term = this.value.toLowerCase();
+            document.querySelectorAll('.shift-member-lbl').forEach(lbl => {
+              lbl.style.display = lbl.textContent.toLowerCase().includes(term) ? 'flex' : 'none';
+            });
+          ">
           <div style="display:flex;flex-wrap:wrap;gap:8px;max-height:200px;overflow-y:auto;padding:8px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
             ${managers.map(u => `
-            <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:12px;font-weight:500">
+            <label class="shift-member-lbl" style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:100px;cursor:pointer;font-size:12px;font-weight:500">
               <input type="checkbox" class="shift-member-cb" value="${u.name || u.username}">
               ${u.name || u.username}
             </label>`).join('')}
@@ -470,7 +488,6 @@ function openShiftDialog() {
           <label style="font-weight:600;font-size:13px;margin-bottom:6px;display:block">Note (optionnel)</label>
           <input type="text" id="shift-note" class="form-control" placeholder="Ex: Effectif reduit, formation...">
         </div>
-      </div>
       </div>
     `, {
       footer: `
@@ -571,8 +588,6 @@ function _addShiftTask() {
         </div>
       </div>
     </div>
-      </div>
-    </div>
   `, {
     footer: `
       <button class="btn btn-ghost" onclick="UI.closeModal()">Annuler</button>
@@ -628,7 +643,6 @@ function _declareAbsence() {
           ${d.allUsers.map(u => `<option value="${u.name || u.username}">${u.name || u.username}</option>`).join('')}
         </select>
       </div>
-      </div>
     </div>
   `, {
     footer: `
@@ -658,6 +672,45 @@ function _removeAbsence(idx) {
   _renderShiftsTab('absences');
 }
 
+// ─── Configuration ────────────────────────────────────────────────
+function _configureShifts() {
+  UI.modal('Configuration des Heures', `
+    <div style="display:flex;flex-direction:column;gap:14px">
+      ${Object.entries(SHIFT_TYPES).map(([key, t]) => `
+      <div class="form-group">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:6px">Heures ${t.label}</label>
+        <input type="text" id="conf-hours-${key}" class="form-control" value="${t.hours}" placeholder="Ex: 07h00 - 14h00">
+      </div>
+      `).join('')}
+    </div>
+  `, {
+    footer: `
+      <button class="btn btn-ghost" onclick="UI.closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="_saveShiftConfig()">Enregistrer</button>
+    `
+  });
+}
+
+async function _saveShiftConfig() {
+  const newConfig = JSON.parse(JSON.stringify(SHIFT_TYPES));
+  Object.keys(newConfig).forEach(key => {
+    const val = document.getElementById(`conf-hours-${key}`)?.value;
+    if (val) newConfig[key].hours = val;
+  });
+  
+  try {
+    const shiftSettings = await DB.dbGet('settings', 'shift_config') || { id: 'shift_config' };
+    shiftSettings.data = newConfig;
+    await DB.dbPut('settings', shiftSettings);
+    SHIFT_TYPES = newConfig;
+    UI.closeModal();
+    UI.toast('Configuration des heures enregistree.', 'success');
+    _renderShiftsTab(_shiftsState.tab);
+  } catch(e) {
+    UI.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
 // ─── Exports ──────────────────────────────────────────────────────
 window.openShiftDialog = openShiftDialog;
 window.saveOpenShift = saveOpenShift;
@@ -672,5 +725,7 @@ window._removeShiftTask = _removeShiftTask;
 window._declareAbsence = _declareAbsence;
 window._confirmDeclareAbsence = _confirmDeclareAbsence;
 window._removeAbsence = _removeAbsence;
+window._configureShifts = _configureShifts;
+window._saveShiftConfig = _saveShiftConfig;
 
 Router.register('shifts', renderShifts);
