@@ -471,10 +471,13 @@ function openShiftDialog() {
           <input type="text" id="shift-note" class="form-control" placeholder="Ex: Effectif reduit, formation...">
         </div>
       </div>
-    `, [
-      { label: 'Annuler', class: 'btn-ghost', action: () => UI.closeModal() },
-      { label: 'Ouvrir la session', class: 'btn-primary', action: () => saveOpenShift() },
-    ]);
+      </div>
+    `, {
+      footer: `
+        <button class="btn btn-ghost" onclick="UI.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveOpenShift()">Ouvrir la session</button>
+      `
+    });
   });
 }
 
@@ -568,19 +571,25 @@ function _addShiftTask() {
         </div>
       </div>
     </div>
-  `, [
-    { label: 'Annuler', class: 'btn-ghost', action: () => UI.closeModal() },
-    { label: 'Ajouter', class: 'btn-primary', action: () => {
-      const text = document.getElementById('task-text')?.value;
-      if (!text) { UI.toast('Description requise', 'warning'); return; }
-      const tasks = JSON.parse(localStorage.getItem('ordivex_shift_tasks') || '[]');
-      tasks.push({ text, shift: document.getElementById('task-shift')?.value || 'matin', priority: document.getElementById('task-priority')?.value || 'medium', done: false, date: new Date().toISOString() });
-      localStorage.setItem('ordivex_shift_tasks', JSON.stringify(tasks));
-      UI.closeModal();
-      UI.toast('Tache ajoutee', 'success');
-      _renderShiftsTab('tasks');
-    }},
-  ]);
+      </div>
+    </div>
+  `, {
+    footer: `
+      <button class="btn btn-ghost" onclick="UI.closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="_confirmAddShiftTask()">Ajouter</button>
+    `
+  });
+}
+
+function _confirmAddShiftTask() {
+  const text = document.getElementById('task-text')?.value;
+  if (!text) { UI.toast('Description requise', 'warning'); return; }
+  const tasks = JSON.parse(localStorage.getItem('ordivex_shift_tasks') || '[]');
+  tasks.push({ text, shift: document.getElementById('task-shift')?.value || 'matin', priority: document.getElementById('task-priority')?.value || 'medium', done: false, date: new Date().toISOString() });
+  localStorage.setItem('ordivex_shift_tasks', JSON.stringify(tasks));
+  UI.closeModal();
+  UI.toast('Tache ajoutee', 'success');
+  _renderShiftsTab('tasks');
 }
 
 function _toggleShiftTask(idx) {
@@ -619,22 +628,27 @@ function _declareAbsence() {
           ${d.allUsers.map(u => `<option value="${u.name || u.username}">${u.name || u.username}</option>`).join('')}
         </select>
       </div>
+      </div>
     </div>
-  `, [
-    { label: 'Annuler', class: 'btn-ghost', action: () => UI.closeModal() },
-    { label: 'Confirmer', class: 'btn-primary', action: () => {
-      const name = document.getElementById('abs-user')?.value;
-      const reason = document.getElementById('abs-reason')?.value;
-      const replacement = document.getElementById('abs-replacement')?.value;
-      if (!name) { UI.toast('Selectionnez un employe', 'warning'); return; }
-      const absences = JSON.parse(localStorage.getItem('ordivex_absences') || '[]');
-      absences.push({ name, reason, replacement, date: new Date().toISOString().split('T')[0] });
-      localStorage.setItem('ordivex_absences', JSON.stringify(absences));
-      UI.closeModal();
-      UI.toast(`Absence declaree pour ${name}`, 'success');
-      _renderShiftsTab('absences');
-    }},
-  ]);
+  `, {
+    footer: `
+      <button class="btn btn-ghost" onclick="UI.closeModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="_confirmDeclareAbsence()">Confirmer</button>
+    `
+  });
+}
+
+function _confirmDeclareAbsence() {
+  const name = document.getElementById('abs-user')?.value;
+  const reason = document.getElementById('abs-reason')?.value;
+  const replacement = document.getElementById('abs-replacement')?.value;
+  if (!name) { UI.toast('Selectionnez un employe', 'warning'); return; }
+  const absences = JSON.parse(localStorage.getItem('ordivex_absences') || '[]');
+  absences.push({ name, reason, replacement, date: new Date().toISOString().split('T')[0] });
+  localStorage.setItem('ordivex_absences', JSON.stringify(absences));
+  UI.closeModal();
+  UI.toast(`Absence declaree pour ${name}`, 'success');
+  _renderShiftsTab('absences');
 }
 
 function _removeAbsence(idx) {
@@ -652,9 +666,11 @@ window._switchShiftsTab = _switchShiftsTab;
 window._assignUserToTeam = _assignUserToTeam;
 window._showAssignDialog = _showAssignDialog;
 window._addShiftTask = _addShiftTask;
+window._confirmAddShiftTask = _confirmAddShiftTask;
 window._toggleShiftTask = _toggleShiftTask;
 window._removeShiftTask = _removeShiftTask;
 window._declareAbsence = _declareAbsence;
+window._confirmDeclareAbsence = _confirmDeclareAbsence;
 window._removeAbsence = _removeAbsence;
 
 Router.register('shifts', renderShifts);
