@@ -1214,3 +1214,252 @@ window.askQuestion = askQuestion;
 window.initSupportWidget = initSupportWidget;
 window.hideSupportWidget = hideSupportWidget;
 window.CONVERSATIONS = CONVERSATIONS;
+
+// ═══════════════════════════════════════════════════════════════════
+// AMÉLIORATION 2 — CONSEILLER SUPPLY CHAIN INTÉGRÉ DANS NAOMIE
+// Moteur de recommandation transparent, explicatif et non-bloquant.
+// Calcule : vélocité, couverture stock, ruptures, produits dormants,
+// valeur stock, recommandation commande chiffrée et justifiée.
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Moteur d'analyse Supply Chain
+ * Calcule toutes les métriques financières et logistiques nécessaires
+ * pour conseiller le pharmacien sur sa prochaine commande fournisseur.
+ */
+async function _analyzeSupplyChain() {
+  const [products, stockAll, lots, sales, movements, purchaseOrders] = await Promise.all([
+    DB.dbGetAll('products'),
+    DB.dbGetAll('stock'),
+    DB.dbGetAll('lots'),
+    DB.dbGetAll('sales'),
+    DB.dbGetAll('movements').catch(() => []),
+    DB.dbGetAll('purchaseOrders').catch(() => []),
+  ]);
+
+  const now = Date.now();
+  const MS_30D = 30 * 24 * 60 * 60 * 1000;
+  const MS_7D  = 7  * 24 * 60 * 60 * 1000;
+  const MS_90D = 90 * 24 * 60 * 60 * 1000;
+
+  // ── Index stock par produit ──
+  const stockMap = {};
+  stockAll.forEach(s => { stockMap[s.productId] = (stockMap[s.productId] || 0) + (s.quantity || 0); });
+
+  // ── Ventes par produit par période ──
+  const salesMap7  = {}; // 7 derniers jours
+  const salesMap30 = {}; // 30 derniers jours
+  const salesMap90 = {}; // 90 derniers jours
+  const since7  = now - MS_7D;
+  const since30 = now - MS_30D;
+  const since90 = now - MS_90D;
+
+  sales.forEach(sale => {
+    const saleDate = new Date(sale.createdAt || sale.date || 0).getTime();
+    const items = sale.items || [];
+    items.forEach(item => {
+      const pid = item.productId;
+      if (!pid) return;
+      if (saleDate >= since7)  salesMap7[pid]  = (salesMap7[pid]  || 0) + (item.qty || item.quantity || 0);
+      if (saleDate >= since30) salesMap30[pid] = (salesMap30[pid] || 0) + (item.qty || item.quantity || 0);
+      if (saleDate >= since90) salesMap90[pid] = (salesMap90[pid] || 0) + (item.qty || item.quantity || 0);
+    });
+  });
+
+  // ── Calcul des KPIs globaux ──
+  let totalStockValue   = 0; // Valeur stock au prix d'achat
+  let totalSales30      = 0; // CA des 30 derniers jours
+  let ruptures          = []; // Produits à 0
+  let stockBas          = []; // Stock < seuil min
+  let dormants          = []; // Produits sans vente depuis 90j
+  let topMouvements     = []; // Produits les plus vendus (30j)
+
+  const recentSales30 = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since30);
+  recentSales30.forEach(s => { totalSales30 += (s.total || 0); });
+
+  products.forEach(p => {
+    const qty   = stockMap[p.id] || 0;
+    const vente30 = salesMap30[p.id] || 0;
+    const vente7  = salesMap7[p.id]  || 0;
+    const vente90 = salesMap90[p.id] || 0;
+
+    // Valeur du stock
+    totalStockValue += qty * (p.purchasePrice || 0);
+
+    // Vélocité quotidienne (VMR) sur 30 jours
+    const vmr30 = vente30 / 30; // Ventes moyennes par jour
+    const vmr7  = vente7  / 7;
+
+    // Ruptures et stock bas
+    if (qty === 0 && vente30 > 0) ruptures.push({ ...p, qty, vente30, vmr30 });
+    else if (qty > 0 && qty <= (p.minStock || 5) && vente30 > 0) stockBas.push({ ...p, qty, vente30, vmr30 });
+
+    // Produits dormants (jamais vendu depuis 90j mais en stock)
+    if (qty > 0 && vente90 === 0) dormants.push({ ...p, qty, stockValue: qty * (p.purchasePrice || 0) });
+
+    // Top mouvements
+    if (vente30 > 0) topMouvements.push({ ...p, qty, vente30, vmr30, vente7 });
+  });
+
+  // Tri
+  ruptures.sort((a, b) => b.vente30 - a.vente30);
+  stockBas.sort((a, b) => (a.qty / (a.vmr30 || 0.1)) - (b.qty / (b.vmr30 || 0.1)));
+  dormants.sort((a, b) => b.stockValue - a.stockValue);
+  topMouvements.sort((a, b) => b.vente30 - a.vente30);
+
+  // ── Recommandation commande fournisseur ──
+  // Objectif : maintenir 30j de stock cible
+  // Formule : Qté à commander = (VMR * 30j cible) - Stock actuel
+  const COUVERTURE_CIBLE_JOURS = 30;
+  const produitsACommanderUrgent = [...ruptures.slice(0, 5), ...stockBas.slice(0, 8)];
+
+  let valeurCommandeMin = 0;
+  let valeurCommandeMax = 0;
+  let itemsCommande = [];
+
+  produitsACommanderUrgent.forEach(p => {
+    const vmr = salesMap30[p.id] ? salesMap30[p.id] / 30 : 1;
+    const stockActuel = stockMap[p.id] || 0;
+    const qtyNecessaire = Math.max(0, Math.ceil((vmr * COUVERTURE_CIBLE_JOURS) - stockActuel));
+    const qtyConservateur = Math.ceil(qtyNecessaire * 0.8);
+    const qtyOptimiste    = Math.ceil(qtyNecessaire * 1.2);
+    const montantMin = qtyConservateur * (p.purchasePrice || 0);
+    const montantMax = qtyOptimiste    * (p.purchasePrice || 0);
+    valeurCommandeMin += montantMin;
+    valeurCommandeMax += montantMax;
+    if (qtyNecessaire > 0) {
+      itemsCommande.push({ name: p.name, qtyMin: qtyConservateur, qtyMax: qtyOptimiste, vmr: vmr.toFixed(1), stockActuel });
+    }
+  });
+
+  // Ratio stock/CA : norme pharmaceutique = 15-25% du CA mensuel
+  const ratioStock = totalSales30 > 0 ? (totalStockValue / totalSales30) * 100 : 0;
+  const dormantValue = dormants.reduce((a, p) => a + p.stockValue, 0);
+
+  return {
+    totalStockValue, totalSales30, ruptures, stockBas, dormants, topMouvements,
+    valeurCommandeMin, valeurCommandeMax, itemsCommande,
+    ratioStock, dormantValue, produits: products.length,
+    dataPoints: { sales30: recentSales30.length }
+  };
+}
+
+/**
+ * Formatte un montant en GNF de façon lisible
+ */
+function _fmtGNF(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace('.', ',') + ' M GNF';
+  if (n >= 1000) return Math.round(n / 1000) + ' k GNF';
+  return Math.round(n) + ' GNF';
+}
+
+// ── Ajout de la conversation dynamique Supply Chain dans Naomie ──
+CONVERSATIONS.push({
+  triggers: [
+    'commande fournisseur', 'combien commander', 'conseil commande', 'reapprovisionner',
+    'recommandation achat', 'conseil achat', 'budget commande', 'que commander',
+    'rupture a venir', 'stock optimal', 'analyser mon stock', 'analyse supply',
+    'gestionnaire achats', 'conseiller achat', 'plan de commande', 'bilan stock'
+  ],
+  dynamic: true,
+  getResponse: async function() {
+    try {
+      const d = await _analyzeSupplyChain();
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long' });
+
+      // Évaluation du ratio stock/CA
+      let ratioEval = '';
+      if (d.ratioStock < 80)       ratioEval = '✅ <span style="color:#16a34a">Excellent ratio (stock léger et agile)</span>';
+      else if (d.ratioStock < 150) ratioEval = '⚠️ <span style="color:#d97706">Ratio acceptable (stock moyen)</span>';
+      else                          ratioEval = '🔴 <span style="color:#dc2626">Ratio élevé — Risque d\'immobilisation de trésorerie</span>';
+
+      // Top 3 produits urgents
+      const urgentsHtml = d.itemsCommande.slice(0, 5).map(p =>
+        `<div style="padding:6px 0;border-bottom:1px solid #f0f0f0">
+          <strong>${p.name}</strong> —
+          Stock actuel : <strong>${p.stockActuel}</strong> unités |
+          Vélocité : <strong>${p.vmr}</strong>/j |
+          Commander : <strong>${p.qtyMin}–${p.qtyMax}</strong> unités
+        </div>`
+      ).join('') || '<em>Aucun produit critique identifié.</em>';
+
+      // Top 3 dormants (immobilisation trésorerie)
+      const dormantsHtml = d.dormants.slice(0, 3).map(p =>
+        `<strong>${p.name}</strong> (${p.qty} unités = ${_fmtGNF(p.stockValue)})`
+      ).join(', ') || 'Aucun';
+
+      return `
+        <div style="font-weight:700;font-size:14px;margin-bottom:10px">
+          📊 Analyse Supply Chain — ${dateStr}
+        </div>
+
+        <div style="background:#f0f9ff;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #0284c7">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#0284c7;margin-bottom:6px">📦 ÉTAT DU STOCK</div>
+          <b>Valeur stock :</b> ${_fmtGNF(d.totalStockValue)}<br>
+          <b>CA 30 derniers jours :</b> ${_fmtGNF(d.totalSales30)}<br>
+          <b>Ratio Stock/CA :</b> ${d.ratioStock.toFixed(0)}% — ${ratioEval}<br>
+          <b>Produits dormants :</b> ${d.dormants.length} produits (≈ ${_fmtGNF(d.dormantValue)} immobilisés)
+        </div>
+
+        <div style="background:#fff7ed;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #ea580c">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#ea580c;margin-bottom:6px">🚨 ALERTES (${d.ruptures.length} ruptures, ${d.stockBas.length} stocks bas)</div>
+          ${urgentsHtml}
+        </div>
+
+        <div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #16a34a">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#16a34a;margin-bottom:4px">💡 MA RECOMMANDATION</div>
+          Pour maintenir <strong>30 jours de couverture</strong> sur vos produits actifs, je recommande une commande comprise entre :<br>
+          <div style="font-size:18px;font-weight:900;text-align:center;margin:8px 0;color:#1a2332">
+            ${_fmtGNF(d.valeurCommandeMin)} — ${_fmtGNF(d.valeurCommandeMax)}
+          </div>
+          <em style="font-size:11px">Calculé sur la base de la vélocité des ventes des 30 derniers jours.</em>
+        </div>
+
+        ${d.dormants.length > 0 ? `
+        <div style="background:#fefce8;border-radius:8px;padding:8px 12px;border-left:3px solid #ca8a04">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#ca8a04;margin-bottom:4px">💤 PRODUITS DORMANTS À SURVEILLER</div>
+          ${dormantsHtml}<br>
+          <em style="font-size:11px">Ces produits n'ont pas été vendus depuis 90 jours. Envisagez des promotions ou retours fournisseur.</em>
+        </div>` : ''}
+
+        <div style="font-size:11px;color:#94a3b8;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:6px">
+          ℹ️ Analyse basée sur ${d.dataPoints.sales30} ventes | ${d.produits} produits au catalogue | Objectif : 30j de couverture
+        </div>
+      `;
+    } catch(e) {
+      return 'Je n\'ai pas pu accéder aux données pour générer l\'analyse, {name}. Assurez-vous d\'avoir des ventes enregistrées.';
+    }
+  }
+});
+
+// Ajouter le bouton "Conseil Commande" dans les quick options de Naomie
+const _origShowQuickOptions = showQuickOptions;
+function showQuickOptions() {
+  const body = document.getElementById('support-chat-body');
+  if (!body) return;
+  const acts = document.createElement('div');
+  acts.className = 'support-actions';
+  const quickTopics = [
+    { label: '<i data-lucide="compass" style="width:14px;height:14px"></i> Navigation', idx: 18 },
+    { label: '<i data-lucide="credit-card" style="width:14px;height:14px"></i> Crédits', idx: 0 },
+    { label: '<i data-lucide="truck" style="width:14px;height:14px"></i> Commandes', idx: 6 },
+    { label: '<i data-lucide="package" style="width:14px;height:14px"></i> Stocks', idx: 5 },
+    { label: '<i data-lucide="printer" style="width:14px;height:14px"></i> Impression', idx: 22 },
+    { label: '<i data-lucide="bar-chart-2" style="width:14px;height:14px"></i> KPIs', idx: 24 },
+    { label: '<i data-lucide="shield" style="width:14px;height:14px"></i> Assurance', idx: 2 },
+    { label: '<i data-lucide="cloud" style="width:14px;height:14px"></i> Synchro', idx: 12 },
+  ];
+  acts.innerHTML = quickTopics.map(t =>
+    `<button class="support-btn" onclick="askByIndex(${t.idx})">${t.label}</button>`
+  ).join('') +
+  `<button class="support-btn" onclick="window.submitFreeQuestion && document.getElementById('support-free-input') && (document.getElementById('support-free-input').value = 'conseil commande fournisseur', submitFreeQuestion())" style="background:linear-gradient(135deg,#0f4c81,#1a7bc4);color:#fff;border:none;font-weight:700">
+    <i data-lucide="brain-circuit" style="width:14px;height:14px"></i> 📦 Conseil Commande IA
+  </button>`;
+  body.appendChild(acts);
+  body.scrollTop = body.scrollHeight;
+  if (window.lucide) {
+    setTimeout(() => lucide.createIcons(), 50);
+  }
+}
+window.showQuickOptions = showQuickOptions;

@@ -365,7 +365,7 @@ function renderFullPOSUI(container) {
             <div class="pos-searchfield">
               <span class="pos-searchicon"><i data-lucide="search"></i></span>
               <input id="pos-search" type="text" class="pos-searchinput"
-                placeholder="Nom, DCI, code-barres…" autocomplete="off">
+                placeholder="🔍 Rechercher par nom, DCI, code-barres, référence…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
               <button id="pos-clearsearch" class="pos-clearbtn" onclick="clearPosSearch()" style="display:none"><i data-lucide="x"></i></button>
             </div>
             <button class="btn btn-sm btn-ghost" onclick="startBarcodeScan()" title="Scanner (F2)"><i data-lucide="camera"></i></button>
@@ -582,6 +582,9 @@ function renderFullPOSUI(container) {
           <button class="btn btn-ghost pos-btn-hold" onclick="voirPaniersEnAttente()" title="Voir les paniers en attente">
             <i data-lucide="list"></i>
           </button>
+          <button class="btn btn-outline pos-btn-devis" onclick="printProformaReceipt()" title="Imprimer un devis (non encaissé)" style="border-color:var(--warning,#f59e0b);color:var(--warning,#f59e0b);flex-shrink:0">
+            <i data-lucide="file-output" style="width:16px;height:16px"></i><span style="font-size:11px">Devis</span>
+          </button>
           <button id="btn-valider" class="btn btn-success pos-btn-validate" onclick="validerVente()">
             <i data-lucide="check-circle"></i><span>Valider (F5)</span>
           </button>
@@ -713,26 +716,167 @@ function filterCat(btn, cat) {
   refreshGrid();
 }
 
+// ══════════════════════════════════════════════════════════════
+// MOTEUR DE RECHERCHE INTELLIGENT — Fuzzy Search + Scoring
+// Tolérance aux fautes, recherche phonétique, scoring par pertinence
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * Normalise une chaîne pour la recherche : minuscules, sans accents, sans tirets
+ */
+function _normalizeSearch(str) {
+  if (!str) return '';
+  return str.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // supprime accents
+    .replace(/[-_\.]/g, ' ')                           // normalise séparateurs
+    .trim();
+}
+
+/**
+ * Calcule la distance de Levenshtein entre deux chaînes (tolérance aux fautes)
+ * Optimisé pour les chaînes courtes (noms de médicaments)
+ */
+function _levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  if (a.length > 20 || b.length > 20) return 99; // Skip pour perf
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      matrix[i][j] = b[i-1] === a[j-1]
+        ? matrix[i-1][j-1]
+        : 1 + Math.min(matrix[i-1][j-1], matrix[i][j-1], matrix[i-1][j]);
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+/**
+ * Score de pertinence d'un produit pour une requête donnée.
+ * Retourne un nombre (plus grand = plus pertinent), ou -1 si aucune correspondance.
+ */
+function _scoreProduct(product, query) {
+  if (!query) return 100;
+  const q = _normalizeSearch(query);
+  if (!q) return 100;
+  const name  = _normalizeSearch(product.name  || '');
+  const dci   = _normalizeSearch(product.dci   || '');
+  const code  = _normalizeSearch(product.code  || '');
+  const ean   = _normalizeSearch(product.ean   || '');
+  const cip   = _normalizeSearch(product.cip   || '');
+  const cat   = _normalizeSearch(product.category || '');
+
+  // 1. Correspondance exacte code-barres / référence (priorité absolue)
+  if (code === q || ean === q || cip === q) return 1000;
+  if (code.startsWith(q) || ean.startsWith(q) || cip.startsWith(q)) return 950;
+
+  // 2. Correspondance exacte nom ou DCI
+  if (name === q) return 900;
+  if (dci  === q) return 880;
+
+  // 3. Le nom commence par la requête
+  if (name.startsWith(q)) return 800;
+  if (dci.startsWith(q))  return 780;
+
+  // 4. La requête est contenue dans le nom ou DCI
+  if (name.includes(q)) return 700;
+  if (dci.includes(q))  return 680;
+
+  // 5. Tolérance aux fautes : Levenshtein sur les mots du nom
+  const nameWords = name.split(' ');
+  const qWords    = q.split(' ');
+  let fuzzyScore  = 0;
+  for (const qw of qWords) {
+    if (qw.length < 3) continue; // Ignore les mots trop courts
+    for (const nw of nameWords) {
+      if (nw.length < 3) continue;
+      const dist = _levenshtein(qw, nw);
+      const maxLen = Math.max(qw.length, nw.length);
+      const similarity = 1 - dist / maxLen;
+      if (similarity >= 0.65) fuzzyScore = Math.max(fuzzyScore, Math.round(similarity * 500));
+    }
+  }
+  if (fuzzyScore > 0) return fuzzyScore;
+
+  // 6. Correspondance dans la catégorie
+  if (cat.includes(q)) return 100;
+
+  return -1; // Aucune correspondance
+}
+
+/**
+ * Met en évidence les correspondances dans un texte pour l'affichage
+ */
+function _highlightMatch(text, query) {
+  if (!query || !text) return text || '';
+  const q = _normalizeSearch(query);
+  const t = _normalizeSearch(text);
+  const idx = t.indexOf(q);
+  if (idx === -1) return text;
+  return text.substring(0, idx)
+    + '<mark class="pos-search-highlight">' + text.substring(idx, idx + query.length) + '</mark>'
+    + text.substring(idx + query.length);
+}
+window._highlightMatch = _highlightMatch;
+window._scoreProduct   = _scoreProduct;
+
+// Historique de recherche (stocké en session)
+let _posSearchHistory = JSON.parse(sessionStorage.getItem('pos_search_history') || '[]');
+function _addToSearchHistory(term) {
+  if (!term || term.length < 2) return;
+  _posSearchHistory = [term, ..._posSearchHistory.filter(h => h !== term)].slice(0, 8);
+  sessionStorage.setItem('pos_search_history', JSON.stringify(_posSearchHistory));
+}
+
 let _posSearchTimer = null;
 function initPosSearch() {
   const input = document.getElementById('pos-search');
   if (!input) return;
+
   input.addEventListener('input', e => {
-    posSearch = e.target.value.toLowerCase();
+    posSearch = e.target.value;
+    const normalized = _normalizeSearch(posSearch);
     document.getElementById('pos-clearsearch').style.display = posSearch ? 'flex' : 'none';
-    posCurrentPage = 0; // Reset à la page 1 quand on cherche
-    // Debounce: attend 250ms après la dernière frappe avant de filtrer
+    posCurrentPage = 0;
     clearTimeout(_posSearchTimer);
     _posSearchTimer = setTimeout(async () => {
       const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
       if (isMobile) {
-        const res = await DB.dbSearchProducts(posSearch, 100);
+        const res = await DB.dbSearchProducts(normalized, 100);
         posProducts = res;
         posProducts.forEach(p => posProductsCache.set(p.id, p));
       }
       refreshGrid();
-    }, 250);
+    }, 150); // 150ms debounce (plus réactif que 250ms)
   });
+
+  // Navigation clavier dans la grille
+  input.addEventListener('keydown', e => {
+    const cards = document.querySelectorAll('.prod-card:not(.is-rupture)');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      if (cards.length > 0) { cards[0].focus(); }
+    } else if (e.key === 'Enter' && cards.length > 0) {
+      e.preventDefault();
+      // Ajouter le premier résultat au panier
+      const firstCard = cards[0];
+      if (firstCard) { firstCard.click(); input.focus(); input.select(); }
+    }
+  });
+
+  // Raccourci global F3 → focus sur la recherche
+  document.addEventListener('keydown', _posF3Handler);
+}
+
+function _posF3Handler(e) {
+  if (e.key === 'F3' && !e.ctrlKey && !e.altKey) {
+    e.preventDefault();
+    const inp = document.getElementById('pos-search');
+    if (inp) { inp.focus(); inp.select(); }
+  }
 }
 
 function clearPosSearch() {
@@ -775,13 +919,12 @@ function refreshGrid() {
   let list = posProducts;
   if (posActiveCategory) list = list.filter(p => p.category === posActiveCategory);
   if (posSearch) {
-    list = list.filter(p =>
-      (p.name || '').toLowerCase().includes(posSearch) ||
-      (p.dci || '').toLowerCase().includes(posSearch) ||
-      (p.code || '').toLowerCase().includes(posSearch) ||
-      (p.ean || '').toLowerCase().includes(posSearch) ||
-      (p.cip || '').toLowerCase().includes(posSearch)
-    );
+    // Moteur de recherche intelligent avec scoring de pertinence
+    const scoredList = list
+      .map(p => ({ product: p, score: _scoreProduct(p, posSearch) }))
+      .filter(item => item.score > -1)
+      .sort((a, b) => b.score - a.score); // Les plus pertinents en premier
+    list = scoredList.map(item => item.product);
   }
 
   list = [...list].sort((a, b) => {
@@ -3057,3 +3200,202 @@ window.mobileUpdateCartBadge = mobileUpdateCartBadge;
 window._posLoadSession = _posLoadSession;
 window.posAddSession = posAddSession;
 window.posCloseSession = posCloseSession;
+
+// ═══════════════════════════════════════════════════════════════════
+// AMÉLIORATION 1 — DEVIS PROFORMA (Impression avant paiement)
+// Sécurité anti-fraude : filigrane "NON ENCAISSÉ", audit log,
+// pas de numéro de facture séquentiel, pas de création de vente.
+// ═══════════════════════════════════════════════════════════════════
+async function printProformaReceipt() {
+  if (!posCart || posCart.length === 0) {
+    UI.toast('Le panier est vide. Ajoutez des médicaments avant d\'imprimer un devis.', 'warning');
+    return;
+  }
+
+  // Calculer les totaux
+  const subtotal = posCart.reduce((a, c) => a + (c.total || 0), 0);
+  const discountVal = parseFloat(document.getElementById('pos-discount')?.value || 0) || 0;
+  const total = Math.max(0, subtotal - discountVal);
+  const pharmacyName = DB.AppState.settings?.pharmacyName || DB.AppState.settings?.name || 'Pharmacie';
+  const pharmacyAddress = DB.AppState.settings?.address || '';
+  const pharmacyPhone = DB.AppState.settings?.phone || '';
+  const user = DB.AppState.currentUser;
+  const patient = posCurrentPatient;
+  const now = new Date();
+  const proformaId = 'DEV-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+
+  // Enregistrer dans l'audit log pour traçabilité
+  try {
+    await DB.writeAudit('PROFORMA_PRINT', 'pos', null, {
+      proformaId,
+      cartItems: posCart.length,
+      total,
+      patient: patient?.name || 'Anonyme',
+      operator: user?.name || user?.username || '?'
+    }, user?.id);
+  } catch(e) { /* non bloquant */ }
+
+  const dateStr = now.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  const itemsHtml = posCart.map(item => `
+    <tr>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0">
+        <div style="font-weight:600;color:#1a2332">${item.name}</div>
+        ${item.dci ? `<div style="font-size:11px;color:#888">${item.dci}</div>` : ''}
+      </td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:center;color:#555">${item.qty}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:right;color:#555">${(item.price || 0).toLocaleString('fr-FR')} GNF</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:700;color:#1a2332">${(item.total || 0).toLocaleString('fr-FR')} GNF</td>
+    </tr>
+  `).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <title>Devis Proforma — ${proformaId}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Arial', sans-serif; color: #333; background: #fff; padding: 20px; }
+    .proforma-wrap { max-width: 700px; margin: 0 auto; position: relative; }
+
+    /* ══ FILIGRANE ANTI-FRAUDE ══ */
+    .watermark {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-35deg);
+      font-size: 72px; font-weight: 900; color: rgba(220, 38, 38, 0.08);
+      pointer-events: none; white-space: nowrap; letter-spacing: 4px;
+      z-index: 0; user-select: none;
+    }
+
+    /* ══ BANDEAU ALERTE ══ */
+    .alert-banner {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border: 2px solid #f59e0b; border-radius: 10px;
+      padding: 12px 20px; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .alert-icon { font-size: 24px; }
+    .alert-text { font-size: 13px; font-weight: 600; color: #78350f; line-height: 1.4; }
+    .alert-ref { font-size: 11px; color: #92400e; margin-top: 2px; }
+
+    /* ══ EN-TÊTE ══ */
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .pharmacy-info h1 { font-size: 22px; font-weight: 800; color: #1a2332; }
+    .pharmacy-info p { font-size: 12px; color: #666; margin-top: 2px; }
+    .doc-label {
+      background: #1a2332; color: #fff; padding: 10px 20px;
+      border-radius: 8px; text-align: center;
+    }
+    .doc-label .doc-type { font-size: 14px; font-weight: 800; letter-spacing: 2px; }
+    .doc-label .doc-id { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    .doc-label .doc-date { font-size: 11px; color: #94a3b8; }
+
+    /* ══ BLOC BÉNÉFICIAIRE ══ */
+    .meta-row { display: flex; gap: 16px; margin-bottom: 20px; }
+    .meta-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
+    .meta-box label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; }
+    .meta-box p { font-size: 13px; font-weight: 600; color: #1e293b; margin-top: 4px; }
+
+    /* ══ TABLEAU ARTICLES ══ */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    thead th { background: #1a2332; color: #fff; padding: 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
+    thead th:last-child, thead th:nth-child(3), thead th:nth-child(2) { text-align: right; }
+    thead th:nth-child(2) { text-align: center; }
+
+    /* ══ TOTAUX ══ */
+    .totals { margin-left: auto; width: 280px; }
+    .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
+    .total-final { font-weight: 800; font-size: 16px; color: #1a2332; border-bottom: 2px solid #1a2332; padding-bottom: 8px; margin-bottom: 8px; }
+
+    /* ══ PIED DE PAGE ══ */
+    .footer { margin-top: 30px; border-top: 1px dashed #cbd5e1; padding-top: 16px; text-align: center; }
+    .footer p { font-size: 11px; color: #94a3b8; line-height: 1.6; }
+    .footer .validity { font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 8px; }
+
+    @media print {
+      body { padding: 0; }
+      @page { margin: 1cm; }
+    }
+  </style></head><body>
+  <div class="proforma-wrap">
+    <div class="watermark">NON ENCAISSÉ</div>
+
+    <!-- Bandeau alerte -->
+    <div class="alert-banner">
+      <div class="alert-icon">⚠️</div>
+      <div>
+        <div class="alert-text">DEVIS PROFORMA — CE DOCUMENT NE CONSTITUE PAS UN REÇU DE PAIEMENT</div>
+        <div class="alert-ref">Aucun encaissement effectué • Aucune sortie de stock enregistrée • Référence : ${proformaId}</div>
+      </div>
+    </div>
+
+    <!-- En-tête -->
+    <div class="header">
+      <div class="pharmacy-info">
+        <h1>💊 ${pharmacyName}</h1>
+        ${pharmacyAddress ? `<p>📍 ${pharmacyAddress}</p>` : ''}
+        ${pharmacyPhone ? `<p>📞 ${pharmacyPhone}</p>` : ''}
+      </div>
+      <div class="doc-label">
+        <div class="doc-type">DEVIS PROFORMA</div>
+        <div class="doc-id">${proformaId}</div>
+        <div class="doc-date">${dateStr}</div>
+        <div class="doc-date">${timeStr}</div>
+      </div>
+    </div>
+
+    <!-- Infos bénéficiaire & opérateur -->
+    <div class="meta-row">
+      <div class="meta-box">
+        <label>Bénéficiaire</label>
+        <p>${patient?.name || 'Client anonyme'}</p>
+        ${patient?.phone ? `<p style="font-size:12px;color:#64748b;font-weight:400">${patient.phone}</p>` : ''}
+      </div>
+      <div class="meta-box">
+        <label>Conseiller</label>
+        <p>${user?.name || user?.username || 'N/A'}</p>
+      </div>
+      <div class="meta-box">
+        <label>Validité du devis</label>
+        <p>24 heures</p>
+      </div>
+    </div>
+
+    <!-- Articles -->
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align:left">Désignation</th>
+          <th style="text-align:center">Qté</th>
+          <th style="text-align:right">Prix unit.</th>
+          <th style="text-align:right">Montant</th>
+        </tr>
+      </thead>
+      <tbody>${itemsHtml}</tbody>
+    </table>
+
+    <!-- Totaux -->
+    <div class="totals">
+      <div class="total-row"><span>Sous-total</span><span>${subtotal.toLocaleString('fr-FR')} GNF</span></div>
+      ${discountVal > 0 ? `<div class="total-row" style="color:#16a34a"><span>Remise</span><span>-${discountVal.toLocaleString('fr-FR')} GNF</span></div>` : ''}
+      <div class="total-row total-final"><span>TOTAL ESTIMÉ</span><span>${total.toLocaleString('fr-FR')} GNF</span></div>
+    </div>
+
+    <!-- Pied de page -->
+    <div class="footer">
+      <p class="validity">⏱️ Ce devis est valable 24h à compter de son émission.</p>
+      <p>Ce document est un devis à titre indicatif uniquement.<br>
+      Le règlement et la délivrance des médicaments s'effectuent au comptoir.<br>
+      Généré par <strong>OrdiveX ERP</strong> · ${pharmacyName} · ${dateStr} à ${timeStr}</p>
+    </div>
+  </div>
+  <script>window.onload = () => setTimeout(() => window.print(), 300);</script>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=760,height=900');
+  if (!w) {
+    UI.toast('Impossible d\'ouvrir la fenêtre d\'impression. Autorisez les popups pour ce site.', 'warning');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+}
+window.printProformaReceipt = printProformaReceipt;
