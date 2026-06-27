@@ -1496,6 +1496,21 @@ async function generateAuditReport() {
     AUDIT_STARTED: 'Audit Démarré', AUDIT_COMPLETED: 'Audit Terminé',
     AUDIT_CANCELLED: 'Audit Annulé', AUDIT_REPORT_GENERATED: 'Rapport Généré',
     RECEIVE_ORDER: 'Commande Reçue', CREATE_ORDER: 'Commande Créée', BULK_IMPORT: 'Import Massif',
+    // Nouvelles traductions v9.5.0
+    ADMIN_STOCK_ADJUST: 'Ajustement Stock', PROFORMA_PRINT: 'Devis Proforma Imprimé',
+    SEND_ORDER: 'Commande Envoyée', CANCEL_ORDER: 'Commande Annulée',
+    INVENTORY: 'Inventaire', VALIDATE_INVOICE: 'Facture Validée',
+    CREATE_INVOICE_DRAFT: 'Brouillon Facture', IMPORT_ORDER: 'Import Commande',
+    ADD_PRODUCT: 'Produit Ajouté', EDIT_PRODUCT: 'Produit Modifié', DEACTIVATE_PRODUCT: 'Produit Désactivé',
+    ADD_PATIENT: 'Patient Ajouté', EDIT_PATIENT: 'Patient Modifié', VIEW_PATIENT: 'Consultation Dossier',
+    BULK_IMPORT_PATIENTS: 'Import Patients', ADD_SUPPLIER: 'Fournisseur Ajouté',
+    EDIT_SUPPLIER: 'Fournisseur Modifié', ADD_COMPLAINT: 'Réclamation Fournisseur',
+    RESOLVE_COMPLAINT: 'Réclamation Résolue', ADD_PRESCRIPTION: 'Ordonnance Créée',
+    VALIDATE_PRESCRIPTION: 'Ordonnance Validée', DISPENSE_PRESCRIPTION: 'Ordonnance Dispensée',
+    AUTO_ORDER: 'Commande Auto', CREATE_BULK_ORDER: 'Commande Groupée',
+    BACKUP_DOWNLOADED: 'Sauvegarde Téléchargée', EXPORT_CSV: 'Export CSV',
+    SAVE_SMS_CONFIG: 'Config SMS', LOT_RECALL_COMPLETED: 'Rappel Clôturé',
+    SHIFT_OPEN: 'Ouverture Équipe', SHIFT_CLOSE: 'Clôture Équipe',
   };
 
   // Charger infos pharmacie

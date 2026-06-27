@@ -26,7 +26,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-touch-fullscreen" content="yes">
   <meta name="apple-mobile-web-app-title" content="OrdiveX">
-  <link rel="apple-touch-icon" href="https://johnny-jonnes.github.io/ordivex/assets/icon.svg">
+  <link rel="apple-touch-icon" href="./icon.png">
   <script src="js/vendor/supabase.min.js"></script>
   <script src="js/vendor/lucide.min.js"></script>
   <script>
@@ -212,6 +212,7 @@
   <script src="js/ui/feedback.js?v=9.5.0"></script>
   <script src="js/utils/animations.js?v=9.5.0"></script>
   <script src="js/components/supportWidget.js?v=9.5.0"></script>
+  <script src="js/pages/shifts.js?v=9.5.0"></script>
   <script src="js/utils/stability.js?v=9.5.0"></script>
   <script src="js/utils/devtools-guard.js?v=9.5.0"></script>
 
@@ -242,7 +243,8 @@
       { section: 'Administration' },
       { page: 'print', icon: 'printer', label: "Centre d'Impression", roles: ['admin', 'pharmacien'] },
       { page: 'alerts', icon: 'bell', label: 'Alertes', roles: ['admin', 'pharmacien', 'caissier'] },
-      { page: 'settings', icon: 'settings-2', label: 'ParamÃ¨tres', roles: ['admin', 'manager'] },
+      { page: 'shifts', icon: 'clock-3', label: 'Équipes Matin / Soir', roles: ['admin', 'pharmacien'] },
+      { page: 'settings', icon: 'settings-2', label: 'Paramètres', roles: ['admin', 'manager'] },
     ];
 
     const PAGE_TITLES = {
@@ -252,8 +254,9 @@
       suppliers: 'Fournisseurs', 'purchase-orders': 'Bons de Commande', invoices: 'Factures Fournisseurs',
       traceability: 'TraÃ§abilitÃ© & Pharmacovigilance',
       sales: 'Historique des Ventes', returns: 'Retours de MÃ©dicaments', reports: 'Rapports & Analytique',
-      metrics: 'MÃ©triques Business', onboarding: 'Configuration Initiale',
-      print: "Centre d'Impression", alerts: 'Alertes SystÃ¨me', settings: 'ParamÃ¨tres & Administration',
+      metrics: 'Métriques Business', onboarding: 'Configuration Initiale',
+      print: "Centre d'Impression", alerts: 'Alertes Système', settings: 'Paramètres & Administration',
+      shifts: 'Équipes Matin / Soir',
     };
 
     function initSidebar() {
@@ -492,10 +495,17 @@
         }
       } catch(e) { /* offline — on affiche quand même la bannière générique */ }
 
-      // Si on a pu lire la version distante ET qu'elle est identique → pas de mise à jour
-      if (remoteVersion && remoteVersion === ORDIVEX_CURRENT_VERSION) {
-        console.log('[Update] Versions identiques (' + ORDIVEX_CURRENT_VERSION + '). Pas de bannière.');
-        return;
+      // Si on a pu lire la version distante ET qu'elle est identique ou inférieure → pas de mise à jour
+      if (remoteVersion) {
+        // Comparer les versions (semver simple : split par point, comparer chaque segment)
+        const parseVer = v => v.split('.').map(Number);
+        const [rM, rm, rp] = parseVer(remoteVersion);
+        const [cM, cm, cp] = parseVer(ORDIVEX_CURRENT_VERSION);
+        const isNewer = rM > cM || (rM === cM && rm > cm) || (rM === cM && rm === cm && rp > cp);
+        if (!isNewer) {
+          console.log('[Update] Version distante (' + remoteVersion + ') <= version locale (' + ORDIVEX_CURRENT_VERSION + '). Pas de bannière.');
+          return;
+        }
       }
 
       // ── Construire et afficher la bannière ──

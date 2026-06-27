@@ -3320,19 +3320,24 @@ async function printProformaReceipt() {
 
     <!-- Bandeau alerte -->
     <div class="alert-banner">
-      <div class="alert-icon">⚠️</div>
+      <div class="alert-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      </div>
       <div>
-        <div class="alert-text">DEVIS PROFORMA — CE DOCUMENT NE CONSTITUE PAS UN REÇU DE PAIEMENT</div>
-        <div class="alert-ref">Aucun encaissement effectué • Aucune sortie de stock enregistrée • Référence : ${proformaId}</div>
+        <div class="alert-text">DEVIS PROFORMA — CE DOCUMENT NE CONSTITUE PAS UN RE&Ccedil;U DE PAIEMENT</div>
+        <div class="alert-ref">Aucun encaissement effectu&eacute; &bull; Aucune sortie de stock enregistr&eacute;e &bull; R&eacute;f&eacute;rence : ${proformaId}</div>
       </div>
     </div>
 
     <!-- En-tête -->
     <div class="header">
       <div class="pharmacy-info">
-        <h1>💊 ${pharmacyName}</h1>
-        ${pharmacyAddress ? `<p>📍 ${pharmacyAddress}</p>` : ''}
-        ${pharmacyPhone ? `<p>📞 ${pharmacyPhone}</p>` : ''}
+        <h1>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a2332" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          ${pharmacyName}
+        </h1>
+        ${pharmacyAddress ? `<p><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>${pharmacyAddress}</p>` : ''}
+        ${pharmacyPhone ? `<p><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.99 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.92 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${pharmacyPhone}</p>` : ''}
       </div>
       <div class="doc-label">
         <div class="doc-type">DEVIS PROFORMA</div>
@@ -3381,7 +3386,10 @@ async function printProformaReceipt() {
 
     <!-- Pied de page -->
     <div class="footer">
-      <p class="validity">⏱️ Ce devis est valable 24h à compter de son émission.</p>
+      <p class="validity">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Ce devis est valable 24h &agrave; compter de son &eacute;mission.
+      </p>
       <p>Ce document est un devis à titre indicatif uniquement.<br>
       Le règlement et la délivrance des médicaments s'effectuent au comptoir.<br>
       Généré par <strong>OrdiveX ERP</strong> · ${pharmacyName} · ${dateStr} à ${timeStr}</p>

@@ -67,7 +67,7 @@
 })();
 
 const DB_NAME = 'OrdiveXDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const STORES = {
   products: 'products',
@@ -89,6 +89,7 @@ const STORES = {
   cashRegister: 'cashRegister',
   returns: 'returns',
   invoices: 'invoices',
+  shifts: 'shifts',
 };
 
 let db = null;
@@ -349,7 +350,7 @@ function _setupRealtime(sbClient) {
   const _validStores = new Set([
     'users', 'settings', 'products', 'lots', 'stock', 'movements',
     'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients',
-    'prescriptions', 'alerts', 'cashRegister', 'auditLog', 'returns', 'invoices'
+    'prescriptions', 'alerts', 'cashRegister', 'auditLog', 'returns', 'invoices', 'shifts'
   ]);
 
   _realtimeSubscription = sbClient.channel('flash-sync-channel')
@@ -671,6 +672,15 @@ async function initDB() {
         inv.createIndex('supplierId', 'supplierId');
         inv.createIndex('date', 'date');
         inv.createIndex('status', 'status');
+      }
+
+      // Shifts — Gestion des équipes Matin/Soir (v9.5.0)
+      if (!database.objectStoreNames.contains('shifts')) {
+        const sh = database.createObjectStore('shifts', { keyPath: 'id' });
+        sh.createIndex('status', 'status');
+        sh.createIndex('date', 'date');
+        sh.createIndex('managerId', 'managerId');
+        sh.createIndex('type', 'type');
       }
     };
   });

@@ -37,6 +37,7 @@ const ASSETS = [
   './js/utils/animations.js',
   './js/utils/devtools-guard.js',
   './js/components/supportWidget.js',
+  './js/pages/shifts.js',
   './js/vendor/lucide.min.js',
   './js/vendor/supabase.min.js',
 ];

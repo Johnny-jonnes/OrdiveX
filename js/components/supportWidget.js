@@ -1453,8 +1453,9 @@ function showQuickOptions() {
   acts.innerHTML = quickTopics.map(t =>
     `<button class="support-btn" onclick="askByIndex(${t.idx})">${t.label}</button>`
   ).join('') +
-  `<button class="support-btn" onclick="window.submitFreeQuestion && document.getElementById('support-free-input') && (document.getElementById('support-free-input').value = 'conseil commande fournisseur', submitFreeQuestion())" style="background:linear-gradient(135deg,#0f4c81,#1a7bc4);color:#fff;border:none;font-weight:700">
-    <i data-lucide="brain-circuit" style="width:14px;height:14px"></i> 📦 Conseil Commande IA
+  `<button class="support-btn" onclick="window.submitFreeQuestion && document.getElementById('support-free-input') && (document.getElementById('support-free-input').value = 'conseil commande fournisseur', submitFreeQuestion())" style="background:linear-gradient(135deg,#0f4c81,#1a7bc4);color:#fff;border:none;font-weight:700;display:flex;align-items:center;gap:6px;justify-content:center">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
+    Conseil Commande IA
   </button>`;
   body.appendChild(acts);
   body.scrollTop = body.scrollHeight;
