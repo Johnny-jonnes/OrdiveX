@@ -326,9 +326,8 @@ async function getSupabaseClient() {
         }
       } catch (e) { /* silencieux */ }
 
-      // Lancer le realtime + broadcast APRÈS 3s pour laisser l'auth se stabiliser
+      // Lancer le broadcast APRÈS 3s pour laisser l'auth se stabiliser
       setTimeout(() => {
-        try { _setupRealtime(_supabaseInstance); } catch (e) { /* WebSocket optionnel */ }
         try { _setupBroadcast(_supabaseInstance); } catch (e) { /* Broadcast optionnel */ }
       }, 3000);
       return _supabaseInstance;
@@ -1877,12 +1876,22 @@ function startAutoPull() {
     _autoPullTimer = setTimeout(loop, 120000);
   });
 
+  function scheduleNext(delay) {
+    if (_autoPullTimer) clearTimeout(_autoPullTimer);
+    // Utiliser window.setTimeout simple pour briser la pile d'appels async (stack trace accumulation)
+    _autoPullTimer = window.setTimeout(function() {
+      loop().catch(function(err) {
+        console.warn('[AutoPull] Erreur de boucle (ignorée):', err.message);
+      });
+    }, delay);
+  }
+
   const loop = async () => {
     _autoPullTimer = null;
-    // SKIP TOTAL si hors-ligne — zéro requête, zéro log
+    // SKIP TOTAL si hors-ligne (détecté par l'OS)
     if (!navigator.onLine) {
       AppState.isOnline = false;
-      _autoPullTimer = setTimeout(loop, 120000);
+      scheduleNext(120000);
       return;
     }
     try {
@@ -1891,18 +1900,18 @@ function startAutoPull() {
     } catch (e) {
       _pullFailCount++;
     }
-    // Backoff progressif en cas d'échec, 60s si tout va bien
+    // Backoff progressif en cas d'échec
     let delay;
     if (_pullFailCount > 0) {
       delay = Math.min(300000, 120000 * Math.pow(1.5, Math.min(_pullFailCount - 1, 4)));
     } else {
       delay = 60000;
     }
-    _autoPullTimer = setTimeout(loop, delay);
+    scheduleNext(delay);
   };
 
-  // Démarrage après 8s pour laisser le UI charger
-  _autoPullTimer = setTimeout(loop, 8000);
+  // Démarrage initial
+  scheduleNext(8000);
 }
 
 /**
