@@ -1108,7 +1108,7 @@ async function syncToSupabase() {
     if (!sb) return;
     if (!navigator.onLine) return;
 
-    const storesToSync = ['products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients', 'prescriptions', 'alerts', 'cashRegister', 'users', 'settings', 'returns', 'invoices', 'shifts'];
+    const storesToSync = ['products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients', 'prescriptions', 'alerts', 'cashRegister', 'users', 'settings', 'returns', 'invoices'];
 
     let totalPendingCount = 0;
 
@@ -1411,7 +1411,7 @@ async function pullFromSupabase(isManual = false) {
       'users', 'settings',
       'products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders',
       'sales', 'saleItems', 'patients', 'prescriptions', 'alerts',
-      'cashRegister', 'returns', 'invoices', 'shifts'
+      'cashRegister', 'returns', 'invoices'
     ];
 
     // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
