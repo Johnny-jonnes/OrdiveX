@@ -326,8 +326,9 @@ async function getSupabaseClient() {
         }
       } catch (e) { /* silencieux */ }
 
-      // Lancer le broadcast APRÈS 3s pour laisser l'auth se stabiliser
+      // Lancer le broadcast APRÈS 3s — uniquement si connexion active
       setTimeout(() => {
+        if (!navigator.onLine || AppState._confirmedOffline) return;
         try { _setupBroadcast(_supabaseInstance); } catch (e) { /* Broadcast optionnel */ }
       }, 3000);
       return _supabaseInstance;
@@ -1427,7 +1428,16 @@ async function pullFromSupabase(isManual = false) {
       AppState._confirmedOffline = false;
     } catch (err) {
       AppState.isOnline = false;
-      return;
+      AppState._confirmedOffline = true;
+      // Détruire l'instance Supabase pour tuer TOUS ses timers internes (auth refresh, WS...)
+      if (_supabaseInstance) {
+        try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch(e) {}
+        try { _supabaseInstance.realtime?.disconnect?.(); } catch(e) {}
+        if (_realtimeSubscription) { try { _supabaseInstance.removeChannel(_realtimeSubscription).catch(()=>{}); } catch(e){} _realtimeSubscription = null; }
+        if (_broadcastChannel) { try { _supabaseInstance.removeChannel(_broadcastChannel).catch(()=>{}); } catch(e){} _broadcastChannel = null; }
+        _supabaseInstance = null;
+      }
+      throw new Error('probe_offline'); // THROW (pas return) pour que runPull.catch() se déclenche
     }
 
     // ── PULL INCRÉMENTAL (Delta Sync) ──
@@ -1902,20 +1912,15 @@ function startAutoPull() {
     var p;
     try { p = pullFromSupabase(); } catch(e) { p = Promise.reject(e); }
     p.then(function() {
-      // Succès — reset
+      // Succès — réveil complet
       _pullFailCount = 0;
       AppState._confirmedOffline = false;
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
+      // Échec (probe offline) → silence immédiat de 5 minutes
       _pullFailCount++;
-      // Après 2 échecs → mode hors-ligne confirmé, 5 min de silence
-      if (_pullFailCount >= 2) {
-        AppState._confirmedOffline = true;
-        _autoPullTimer = window.setTimeout(runPull, 300000);
-      } else {
-        // Premier échec → réessai dans 2 min
-        _autoPullTimer = window.setTimeout(runPull, 120000);
-      }
+      AppState._confirmedOffline = true;
+      _autoPullTimer = window.setTimeout(runPull, 300000);
     });
   }
 
