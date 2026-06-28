@@ -1415,6 +1415,8 @@ async function pullFromSupabase(isManual = false) {
 
     // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
     if (!navigator.onLine) { AppState.isOnline = false; return; }
+    // Si on est en mode hors-ligne confirmé, éviter le probe réseau
+    if (AppState._confirmedOffline) { return; }
     try {
       var _probeCtrl2 = new AbortController();
       var _probeTimeout2 = setTimeout(function() { _probeCtrl2.abort(); }, 8000);
@@ -1422,6 +1424,7 @@ async function pullFromSupabase(isManual = false) {
       clearTimeout(_probeTimeout2);
       if (probeReq.error) throw probeReq.error;
       AppState.isOnline = true;
+      AppState._confirmedOffline = false;
     } catch (err) {
       AppState.isOnline = false;
       return;
@@ -1854,64 +1857,70 @@ let _autoPullTimer = null;
 let _pullFailCount = 0;
 /**
  * AUTO-PULL : Synchronisation cloud → local automatique
- * - navigator.onLine = false → SKIP total, aucune requête, aucun log
- * - Backoff exponentiel : 60s → 2min → 3min → 5min max si échecs réseau
- * - Reset instantané dès qu'un pull réussit
+ * - Utilise des callbacks purs (pas d'async/await) pour éviter
+ *   l'accumulation de traces asynchrones dans Chrome DevTools
+ * - Après 2 échecs consécutifs → silence total pendant 5 min
+ * - Reset instantané dès qu'un pull réussit ou que 'online' se déclenche
  */
 function startAutoPull() {
   if (_autoPullTimer) clearTimeout(_autoPullTimer);
 
   // Écouter les changements réseau pour réagir instantanément
   window.addEventListener('online', function() {
-    // Réseau revient : reset le backoff et tenter un pull dans 3s
     _pullFailCount = 0;
     AppState.isOnline = true;
+    AppState._confirmedOffline = false;
     if (_autoPullTimer) clearTimeout(_autoPullTimer);
-    _autoPullTimer = setTimeout(loop, 3000);
+    _autoPullTimer = window.setTimeout(runPull, 3000);
   });
   window.addEventListener('offline', function() {
     AppState.isOnline = false;
+    AppState._confirmedOffline = true;
     if (_autoPullTimer) clearTimeout(_autoPullTimer);
-    // Pas de retry avant que 'online' se déclenche
-    _autoPullTimer = setTimeout(loop, 120000);
+    _autoPullTimer = window.setTimeout(runPull, 120000);
   });
 
-  function scheduleNext(delay) {
-    if (_autoPullTimer) clearTimeout(_autoPullTimer);
-    // Utiliser window.setTimeout simple pour briser la pile d'appels async (stack trace accumulation)
-    _autoPullTimer = window.setTimeout(function() {
-      loop().catch(function(err) {
-        console.warn('[AutoPull] Erreur de boucle (ignorée):', err.message);
-      });
-    }, delay);
-  }
-
-  const loop = async () => {
+  // runPull : fonction NON-async — callbacks purs pour briser la trace Chrome
+  function runPull() {
     _autoPullTimer = null;
-    // SKIP TOTAL si hors-ligne (détecté par l'OS)
+
+    // Hors-ligne OS → silence total
     if (!navigator.onLine) {
       AppState.isOnline = false;
-      scheduleNext(120000);
+      AppState._confirmedOffline = true;
+      _autoPullTimer = window.setTimeout(runPull, 120000);
       return;
     }
-    try {
-      await pullFromSupabase();
-      _pullFailCount = 0;
-    } catch (e) {
-      _pullFailCount++;
-    }
-    // Backoff progressif en cas d'échec
-    let delay;
-    if (_pullFailCount > 0) {
-      delay = Math.min(300000, 120000 * Math.pow(1.5, Math.min(_pullFailCount - 1, 4)));
-    } else {
-      delay = 60000;
-    }
-    scheduleNext(delay);
-  };
 
-  // Démarrage initial
-  scheduleNext(8000);
+    // En mode hors-ligne confirmé (après 2+ échecs) → attendre 5 min
+    if (AppState._confirmedOffline) {
+      _autoPullTimer = window.setTimeout(runPull, 300000);
+      return;
+    }
+
+    // Lancer le pull via Promise, mais sans créer de chaîne async traceable
+    var p;
+    try { p = pullFromSupabase(); } catch(e) { p = Promise.reject(e); }
+    p.then(function() {
+      // Succès — reset
+      _pullFailCount = 0;
+      AppState._confirmedOffline = false;
+      _autoPullTimer = window.setTimeout(runPull, 60000);
+    }).catch(function() {
+      _pullFailCount++;
+      // Après 2 échecs → mode hors-ligne confirmé, 5 min de silence
+      if (_pullFailCount >= 2) {
+        AppState._confirmedOffline = true;
+        _autoPullTimer = window.setTimeout(runPull, 300000);
+      } else {
+        // Premier échec → réessai dans 2 min
+        _autoPullTimer = window.setTimeout(runPull, 120000);
+      }
+    });
+  }
+
+  // Démarrage initial après 8s
+  _autoPullTimer = window.setTimeout(runPull, 8000);
 }
 
 /**
