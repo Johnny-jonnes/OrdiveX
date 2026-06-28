@@ -1069,6 +1069,37 @@ ADD COLUMN IF NOT EXISTS data JSONB DEFAULT NULL;
 -- 3. Corriger le type de entityId dans auditLog (bigint → text)
 ALTER TABLE "auditLog" 
 ALTER COLUMN "entityId" TYPE TEXT USING "entityId"::TEXT;
+
+-- ═══════════════════════════════════════════════
+-- TABLE : shifts — Gestion des équipes OrdiveX
+-- ═══════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS public.shifts (
+  id          TEXT PRIMARY KEY,
+  type        TEXT,                    -- 'matin', 'soir', 'nuit'
+  "managerName" TEXT,
+  "managerId"   TEXT,
+  members     JSONB DEFAULT '[]',     -- tableau d'IDs utilisateurs
+  note        TEXT DEFAULT '',
+  status      TEXT DEFAULT 'open',    -- 'open' ou 'closed'
+  "openedAt"  BIGINT,                 -- timestamp ms
+  "closedAt"  BIGINT,                 -- timestamp ms (null si ouvert)
+  date        TEXT,                   -- ISO date string
+  "updatedAt" BIGINT DEFAULT 0       -- requis pour la sync delta OrdiveX
+);
+
+-- Index pour les requêtes de sync delta (performance)
+CREATE INDEX IF NOT EXISTS idx_shifts_updated ON public.shifts ("updatedAt");
+CREATE INDEX IF NOT EXISTS idx_shifts_status ON public.shifts (status);
+CREATE INDEX IF NOT EXISTS idx_shifts_date ON public.shifts (date);
+
+-- Politique RLS : accès total pour les clés anon/service (comme les autres tables OrdiveX)
+ALTER TABLE public.shifts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "shifts_full_access" ON public.shifts
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- IMPORTANT : Après exécution de cette migration, VIDER le cache navigateur :
 -- Dans la console du navigateur : localStorage.removeItem('pharma_bad_columns');
