@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.6.4';
+const CACHE_NAME = 'pharma-cache-v9.6.5';
 const ASSETS = [
   './',
   './index.html',
@@ -85,19 +85,10 @@ self.addEventListener('fetch', event => {
 
   // 🛡️ REQUÊTES EXTERNES (Supabase, fonts, CDN)
   if (!url.startsWith(self.location.origin)) {
-    // FONTS : NE PAS intercepter — laisser le navigateur gérer nativement
-    if (url.includes('fonts.g') || url.endsWith('.woff2') || url.endsWith('.woff') || url.endsWith('.ttf')) {
-      return;
-    }
-    // APIS (Supabase, etc.) : réseau seul, jamais de cache
-    event.respondWith(
-      fetch(event.request).catch(() =>
-        new Response(JSON.stringify({ data: null, error: 'offline' }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
-        })
-      )
-    );
-    return;
+    // Ne JAMAIS intercepter les requêtes Supabase ou autres API externes.
+    // Laisser le navigateur planter naturellement si le réseau coupe,
+    // ce qui permet à db.js de détecter la coupure et de s'arrêter proprement.
+    return; 
   }
 
   // Skip non-GET and chrome-extension for normal caching
