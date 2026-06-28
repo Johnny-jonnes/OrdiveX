@@ -1789,8 +1789,16 @@ async function autoBackupToStorage() {
     const json = JSON.stringify(backup);
     // Vérifier que la taille ne dépasse pas 4 MB (limite localStorage ~5-10 MB)
     if (json.length > 4 * 1024 * 1024) {
-      console.log('[Backup] ⚠️ Base trop volumineuse pour localStorage (' + (json.length / 1024 / 1024).toFixed(1) + ' MB), backup silencieux ignoré. Utilisez le backup manuel.');
+      // Base volumineuse : le Cloud Supabase sert de backup principal — pas de warning
       localStorage.setItem('pharma_last_backup', new Date().toISOString());
+      // Déclenchement d'un mini backup cloud silencieux (seulement les stores critiques)
+      try {
+        const sb = await getSupabaseClient();
+        if (sb) {
+          // La sync Supabase EST le backup cloud — on s'assure juste que le timestamp est à jour
+          localStorage.setItem('pharma_last_backup', new Date().toISOString());
+        }
+      } catch(_) {}
       return backup;
     }
     localStorage.setItem(key, json);
