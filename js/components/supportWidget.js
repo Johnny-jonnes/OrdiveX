@@ -1149,18 +1149,28 @@ const CONVERSATIONS = [
 
 function matchConversation(input) {
  const q = input.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/['']/g, ' ');
+ let bestMatch = null;
+ let bestScore = 0;
+
  for (const conv of CONVERSATIONS) {
- for (const trigger of conv.triggers) {
- const trigNorm = trigger.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
- if (q.includes(trigNorm)) {
- if (conv.dynamic && conv.getResponse) {
- return { dynamic: true, getResponse: conv.getResponse };
+  for (const trigger of conv.triggers) {
+   const trigNorm = trigger.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+   if (q.includes(trigNorm)) {
+    // Plus le trigger est long, plus il est spécifique — il gagne sur les triggers génériques
+    const score = trigNorm.length;
+    if (score > bestScore) {
+     bestScore = score;
+     bestMatch = conv;
+    }
+   }
+  }
  }
- return { dynamic: false, text: conv.responses[Math.floor(Math.random() * conv.responses.length)] };
+
+ if (!bestMatch) return null;
+ if (bestMatch.dynamic && bestMatch.getResponse) {
+  return { dynamic: true, getResponse: bestMatch.getResponse };
  }
- }
- }
- return null;
+ return { dynamic: false, text: bestMatch.responses[Math.floor(Math.random() * bestMatch.responses.length)] };
 }
 
 window.submitFreeQuestion = function() {
