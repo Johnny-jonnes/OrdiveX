@@ -1098,7 +1098,7 @@ const CONVERSATIONS = [
  ]
  },
  {
- triggers: ['etat', 'resume', 'bilan', 'info pharmacie', 'donnees pharmacie', 'tout savoir', 'situation', 'recap', 'synthese', 'combien de medicament', 'chiffre d affaires', 'ca'],
+ triggers: ['__deprecated_old_bilan_trigger__'],
  dynamic: true,
  responses: [],
  getResponse: async function() {
@@ -1179,15 +1179,16 @@ window.submitFreeQuestion = function() {
  body.innerHTML += `<div class="chat-bubble chat-user">${safeText}</div>`;
  body.scrollTop = body.scrollHeight;
 
- // 1. Chercher dans la FAQ (use raw text for matching, safe text for display)
- const match = matchFAQ(rawText);
- if (match) {
- askQuestion(safeText, match);
+ // 1. Chercher d'abord dans la conversation naturelle (Intents précis et CFO)
+ const convReply = matchConversation(rawText);
+
+ // 2. Si aucune intention précise, chercher dans la FAQ
+ const matchFAQResult = matchFAQ(rawText);
+
+ if (!convReply && matchFAQResult) {
+ askQuestion(safeText, matchFAQResult);
  return;
  }
-
- // 2. Chercher dans la conversation naturelle
- const convReply = matchConversation(rawText);
  const typingId = 'typing-' + Date.now();
 
  setTimeout(() => {
@@ -1490,6 +1491,8 @@ CONVERSATIONS.push({
     'gestionnaire achats', 'conseiller achat', 'plan de commande', 'bilan stock',
     'analyse financiere', 'rapport financier', 'analyse complete', 'bilan complet',
     'tresorerie', 'marge', 'rotation', 'prevision', 'forecast',
+    'etat', 'resume', 'bilan', 'info pharmacie', 'donnees pharmacie', 'tout savoir', 
+    'situation', 'recap', 'synthese', 'chiffre d affaires', 'ca',
   ],
   dynamic: true,
   getResponse: async function() {
