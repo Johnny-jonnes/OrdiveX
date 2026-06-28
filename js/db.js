@@ -1714,6 +1714,12 @@ async function pullFromSupabase(isManual = false) {
       await refreshPOSData();
     }
 
+    // Auto-reconnexion des canaux temps réel si déconnectés suite à une mise en veille (mobile)
+    if (sb && navigator.onLine) {
+      if (!_realtimeSubscription) { try { _setupRealtime(sb); } catch(e){} }
+      if (!_broadcastChannel) { try { _setupBroadcast(sb); } catch(e){} }
+    }
+
   } catch (e) {
     const msg = e.message || '';
     if (!msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('network error')) {
