@@ -4433,50 +4433,116 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   margin-top: 6px;
 }
 
-/* Actions bas */
+/* Actions bas — Responsive */
 .pos-actions-bar {
   display: flex;
-  gap: 6px;
-  padding: 10px 14px 14px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
   flex-shrink: 0;
   border-top: 2px solid var(--bg);
+  background: var(--surface);
 }
 
-.pos-btn-cancel {
-  padding: 10px 12px;
-  font-size: 12px;
+.pos-actions-row-1 {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.pos-btn-icon {
+  flex: 0 0 auto;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
 }
 
 .pos-btn-hold {
-  padding: 10px 12px;
-  font-size: 12px;
+  flex: 1;
+  min-height: 42px;
+  padding: 8px 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
-.pos-btn-validate {
+.pos-btn-devis {
   flex: 1;
-  padding: 13px;
-  font-size: 14px;
-  font-weight: 700;
-  border: none;
-  background: var(--success);
-  color: #fff;
+  min-height: 42px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  background: transparent;
+  border: 1.5px solid var(--warning, #f59e0b);
+  color: var(--warning, #f59e0b);
   border-radius: var(--radius);
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 3px 12px rgba(39, 174, 96, .3);
-  letter-spacing: .3px;
 }
 
-.pos-btn-validate:hover {
-  background: #229954;
-  box-shadow: 0 5px 18px rgba(39, 174, 96, .45);
-  transform: translateY(-1px);
+.pos-btn-devis:hover {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.pos-btn-validate {
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  background: var(--gradient-accent, linear-gradient(135deg, #0d9b6c, #1abc9c));
+  color: #fff;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(13, 155, 108, 0.3);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pos-btn-validate:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(13, 155, 108, 0.45);
 }
 
 .pos-btn-validate:disabled {
-  opacity: .65;
+  opacity: .55;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
+}
+
+/* Grand ecran: mettre tout sur une ligne */
+@media (min-width: 900px) {
+  .pos-actions-bar {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .pos-actions-row-1 {
+    flex: 0 0 auto;
+  }
+  .pos-btn-validate {
+    flex: 1;
+    width: auto;
+    min-height: 42px;
+  }
 }
 
 /* â”€â”€ REÃ‡U PROFESSIONNEL â”€â”€ */
@@ -6108,7 +6174,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   border-top-color: var(--primary) !important;
 }
 
-/* â”€â”€ Loading Skeleton â”€â”€ */
+/* ── Loading Skeleton ── */
 .loading-skeleton {
   background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
   background-size: 200% 100%;
@@ -6116,7 +6182,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   border-radius: 8px;
 }
 
-/* â”€â”€ Barcode Scanner Styles â”€â”€ */
+/* ── Barcode Scanner Styles ── */
 .barcode-scanner-module {
   display: flex;
   flex-direction: column;
@@ -6169,7 +6235,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   animation: pulseGlow 1.5s infinite;
 }
 
-/* â”€â”€ Inventory Module Styles â”€â”€ */
+/* ── Inventory Module Styles ── */
 .inventory-module {
   display: flex;
   flex-direction: column;
@@ -6207,7 +6273,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   border-radius: 10px !important;
 }
 
-/* â”€â”€ Premium Scrollbar â”€â”€ */
+/* ── Premium Scrollbar ── */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
@@ -6222,7 +6288,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   background: rgba(148, 163, 184, 0.6);
 }
 
-/* â”€â”€ POS Validate Button Premium Effect â”€â”€ */
+/* ── POS Validate Button Premium Effect ── */
 .pos-btn-validate {
   background: var(--gradient-accent) !important;
   border: none !important;
@@ -6239,7 +6305,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   box-shadow: 0 8px 25px rgba(26, 188, 156, 0.45) !important;
 }
 
-/* â”€â”€ Product Card Premium Hover â”€â”€ */
+/* ── Product Card Premium Hover ── */
 .prod-card,
 .product-card {
   transition: all 0.25s var(--anim-spring) !important;
@@ -6251,7 +6317,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* â”€â”€ Supplier Card Premium â”€â”€ */
+/* ── Supplier Card Premium ── */
 .supplier-card {
   transition: all 0.3s var(--anim-spring) !important;
 }
@@ -6261,7 +6327,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* â”€â”€ Print Card Premium Hover â”€â”€ */
+/* ── Print Card Premium Hover ── */
 .print-card {
   transition: all 0.3s var(--anim-spring) !important;
 }
@@ -6279,7 +6345,7 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   transform: scale(1.2);
 }
 
-/* â”€â”€ Stat Chips Premium â”€â”€ */
+/* ── Stat Chips Premium ── */
 .stat-chip {
   transition: all 0.25s var(--anim-spring) !important;
 }
@@ -6289,11 +6355,11 @@ input[type="checkbox"]:checked~.switch-track .switch-thumb {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
-/* Dark mode removed â€” application uses light theme only
+/* Dark mode removed — application uses light theme only
    For future dark mode support, use a class-based toggle (e.g. body.dark-mode)
    instead of prefers-color-scheme to give users control */
 
-/* â”€â”€ Focus Visible for Accessibility â”€â”€ */
+/* ── Focus Visible for Accessibility ── */
 :focus-visible {
   outline: 2px solid var(--primary-light);
   outline-offset: 2px;
@@ -6306,15 +6372,15 @@ a:focus-visible {
   border-radius: 4px;
 }
 
-/* â”€â”€ Selection Color â”€â”€ */
+/* ── Selection Color ── */
 ::selection {
   background: rgba(74, 159, 217, 0.25);
   color: inherit;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   POS v3 â€” Point de Vente Complet
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ────────────────────────────────────────────────────────── 
+   POS v3 — Point de Vente Complet
+   ────────────────────────────────────────────────────────── */
 
 /* Layout principal POS 2 colonnes */
 .pos-wrap {
@@ -6349,7 +6415,7 @@ a:focus-visible {
   overflow-y: auto;
   scrollbar-width: thin;
   padding-bottom: 100px;
-  /* Espace de sÃ©curitÃ© en bas pour Ã©viter le masquage */
+  /* Espace de sécurité en bas pour éviter le masquage */
 }
 
 /* Barre de recherche POS */
@@ -6417,7 +6483,7 @@ a:focus-visible {
   color: var(--danger);
 }
 
-/* Barre de catÃ©gories POS */
+/* Barre de catégories POS */
 .pos-catbar {
   display: flex;
   gap: 6px;
@@ -6619,7 +6685,7 @@ a:focus-visible {
   font-size: 14px;
 }
 
-/* â”€â”€ Sections du panneau droit POS â”€â”€ */
+/* ── Sections du panneau droit POS ── */
 .pos-section {
   padding: 16px 20px;
   background: white;
@@ -6649,7 +6715,7 @@ a:focus-visible {
   letter-spacing: 1px;
 }
 
-/* â”€â”€ Section Client â”€â”€ */
+/* ── Section Client ── */
 .client-search-wrap {
   margin-top: 10px;
 }
@@ -6775,7 +6841,7 @@ a:focus-visible {
   background: rgba(74, 159, 217, 0.06);
 }
 
-/* Badge Client sÃ©lectionnÃ© */
+/* Badge Client sélectionné */
 .client-badge-card {
   display: flex;
   align-items: center;
@@ -6875,12 +6941,7 @@ a:focus-visible {
   color: var(--danger);
 }
 
-/* â”€â”€ Section Ordonnance â”€â”€ */
-.pos-section-rx {
-  background: rgba(74, 159, 217, 0.03);
-}
-
-/* Section Ordonnance PROFESSIONNELLE â€” UNIFIÃ‰E */
+/* ── Section Ordonnance ── */
 .pos-section-rx {
   background: var(--surface);
   border-left: 4px solid var(--primary-light);
@@ -6889,7 +6950,6 @@ a:focus-visible {
 
 .pos-section-rx-active {
   background: rgba(74, 159, 217, 0.08);
-  /* Effet bleutÃ© lors de l'activation */
   border-left-color: var(--primary);
 }
 
@@ -6897,11 +6957,8 @@ a:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* RÃ©duit */
   margin: 6px 10px;
-  /* RÃ©duit */
   padding: 10px;
-  /* RÃ©duit */
   background: rgba(74, 159, 217, 0.05);
   border: 1.5px dashed var(--primary-light);
   border-radius: var(--radius);
@@ -6937,25 +6994,13 @@ a:focus-visible {
   transform: translateX(18px);
 }
 
-/* DÃ©tail Ordonnance */
-.rx-info-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 12px;
-  background: rgba(74, 159, 217, 0.05);
-  border: 1.5px dashed var(--primary-light);
-  border-radius: var(--radius-sm);
-}
-
 .rx-info-text {
   font-size: 12px;
   color: var(--text-muted);
   flex: 1;
 }
 
-/* Ordonnance liÃ©e */
+/* Ordonnance liée */
 .rx-linked-pill {
   display: flex;
   align-items: center;
@@ -7055,22 +7100,18 @@ a:focus-visible {
   font-weight: 500;
 }
 
-/* â”€â”€ Panier dans POS v3 â”€â”€ */
+/* ── Panier dans POS v3 ── */
 .pos-section-cart {
   flex: 2;
-  /* PrioritÃ© plus haute */
   display: flex;
   flex-direction: column;
   min-height: 280px;
-  /* GARANTIE DE VISIBILITÃ‰ CRITIQUE */
 }
 
 .pos-cart-body {
   flex: 1;
   padding: 6px 12px;
-  /* Plus compact */
   min-height: 200px;
-  /* Espace interne minimal */
   overflow-y: auto;
 }
 
@@ -7230,14 +7271,13 @@ a:focus-visible {
   opacity: 1;
 }
 
-/* â”€â”€ Totaux & Paiement POS PROFESSIONNEL (Elite) â€” UNIFIÃ‰ â”€â”€ */
+/* ── Totaux & Paiement POS PROFESSIONNEL (Elite) ── */
 .pos-totals-block {
   padding: 20px 24px;
   background: linear-gradient(135deg, var(--primary) 0%, #155589 100%);
   color: white;
   border-top: none;
   flex-shrink: 0;
-  /* Toujours visible en bas */
 }
 
 .totals-row {

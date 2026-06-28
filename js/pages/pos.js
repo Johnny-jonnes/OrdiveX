@@ -573,20 +573,22 @@ function renderFullPOSUI(container) {
 
         <!-- ACTIONS -->
         <div class="pos-actions-bar">
-          <button class="btn btn-ghost pos-btn-cancel" onclick="viderPanier()" title="Vider le panier (Échap)">
-            <i data-lucide="trash-2"></i>
-          </button>
-          <button class="btn btn-secondary pos-btn-hold" onclick="mettreEnAttente()" title="Mettre le panier en attente">
-            <i data-lucide="pause"></i><span>Attente</span>
-          </button>
-          <button class="btn btn-ghost pos-btn-hold" onclick="voirPaniersEnAttente()" title="Voir les paniers en attente">
-            <i data-lucide="list"></i>
-          </button>
-          <button class="btn btn-outline pos-btn-devis" onclick="printProformaReceipt()" title="Imprimer un devis (non encaissé)" style="border-color:var(--warning,#f59e0b);color:var(--warning,#f59e0b);flex-shrink:0">
-            <i data-lucide="file-output" style="width:16px;height:16px"></i><span style="font-size:11px">Devis</span>
-          </button>
-          <button id="btn-valider" class="btn btn-success pos-btn-validate" onclick="validerVente()">
-            <i data-lucide="check-circle"></i><span>Valider (F5)</span>
+          <div class="pos-actions-row-1">
+            <button class="btn btn-ghost pos-btn-icon" onclick="viderPanier()" title="Vider le panier (Echap)">
+              <i data-lucide="trash-2"></i>
+            </button>
+            <button class="btn btn-secondary pos-btn-hold" onclick="mettreEnAttente()" title="Mettre en attente">
+              <i data-lucide="pause"></i><span class="pos-btn-label">Attente</span>
+            </button>
+            <button class="btn btn-ghost pos-btn-icon" onclick="voirPaniersEnAttente()" title="Paniers en attente">
+              <i data-lucide="layers"></i>
+            </button>
+            <button class="pos-btn-devis" onclick="printProformaReceipt()" title="Imprimer un devis">
+              <i data-lucide="file-output"></i><span class="pos-btn-label">Devis</span>
+            </button>
+          </div>
+          <button id="btn-valider" class="btn pos-btn-validate" onclick="validerVente()">
+            <i data-lucide="check-circle"></i><span>Valider</span>
           </button>
         </div>
 

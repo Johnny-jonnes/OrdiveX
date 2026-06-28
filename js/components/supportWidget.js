@@ -362,16 +362,60 @@ function initSupportWidget() {
  40% { transform: scale(1); }
  }
  
- @media (max-width: 480px) {
+ @media (max-width: 600px) {
  #support-widget-container {
- bottom: 80px;
- right: 16px;
+ bottom: 0;
+ right: 0;
+ left: 0;
+ top: 0;
+ width: 100%;
+ height: 100%;
+ pointer-events: none;
+ z-index: 10000;
  }
  .support-window {
+ position: fixed;
+ bottom: 0;
  right: 0;
- bottom: 74px;
- width: calc(100vw - 32px);
+ left: 0;
+ top: 0;
+ width: 100% !important;
+ height: 100% !important;
+ border-radius: 0;
+ transform-origin: bottom center;
  }
+ .support-fab {
+ position: fixed;
+ bottom: 20px;
+ right: 20px;
+ pointer-events: auto;
+ z-index: 10001;
+ }
+ .support-window.open {
+ pointer-events: auto;
+ }
+ .support-close {
+ width: 40px;
+ height: 40px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ background: rgba(255,255,255,0.15);
+ border-radius: 50%;
+ }
+ }
+
+ #naomi-backdrop {
+ display: none;
+ position: fixed;
+ inset: 0;
+ background: rgba(0,0,0,0.5);
+ z-index: 9998;
+ backdrop-filter: blur(2px);
+ }
+
+ #naomi-backdrop.active {
+ display: block;
  }
  `;
 
@@ -430,9 +474,18 @@ function initSupportWidget() {
  </div>
  `;
 
+ document.body.insertAdjacentHTML('beforeend', '<div id="naomi-backdrop" onclick="toggleSupportWindow()"></div>');
  document.body.insertAdjacentHTML('beforeend', html);
  _widgetInitialized = true;
  showQuickOptions();
+
+ // Bouton Retour Android (popstate)
+ window.addEventListener('popstate', function(e) {
+ if (supportChatOpen) {
+ e.preventDefault();
+ toggleSupportWindow();
+ }
+ });
 }
 
 function hideSupportWidget() {
@@ -446,18 +499,25 @@ function hideSupportWidget() {
 window.toggleSupportWindow = function() {
  const w = document.getElementById('support-window');
  const p = document.getElementById('support-pulse');
+ const backdrop = document.getElementById('naomi-backdrop');
  if (supportChatOpen) {
  w.classList.remove('open');
  if (p) p.style.display = 'block';
+ if (backdrop) backdrop.classList.remove('active');
+ // Retour Android : ne pas empiler l'historique à la fermeture
  } else {
  w.classList.add('open');
  if (p) p.style.display = 'none';
+ if (backdrop) backdrop.classList.add('active');
  const oldFab = document.getElementById('support-chat-fab');
  if(oldFab) oldFab.style.display = 'none';
+ // Push history pour capturer le bouton Retour Android
+ history.pushState({ naomiOpen: true }, '');
  // Focus sur l'input
  setTimeout(() => {
  const inp = document.getElementById('support-free-input');
  if (inp) inp.focus();
+
  }, 350);
  }
  supportChatOpen =!supportChatOpen;
@@ -1228,31 +1288,87 @@ window.CONVERSATIONS = CONVERSATIONS;
  * pour conseiller le pharmacien sur sa prochaine commande fournisseur.
  */
 async function _analyzeSupplyChain() {
-  const [products, stockAll, lots, sales, movements, purchaseOrders] = await Promise.all([
+  const [products, stockAll, lots, salesRaw, movements, purchaseOrders, saleItems] = await Promise.all([
     DB.dbGetAll('products'),
     DB.dbGetAll('stock'),
     DB.dbGetAll('lots'),
     DB.dbGetAll('sales'),
     DB.dbGetAll('movements').catch(() => []),
     DB.dbGetAll('purchaseOrders').catch(() => []),
+    DB.dbGetAll('saleItems').catch(() => []),
   ]);
 
-  const now = Date.now();
-  const MS_30D = 30 * 24 * 60 * 60 * 1000;
-  const MS_7D  = 7  * 24 * 60 * 60 * 1000;
-  const MS_90D = 90 * 24 * 60 * 60 * 1000;
+  const sales = salesRaw.filter(s => ['completed', 'paid', 'credit'].includes(s.status));
 
-  // ── Index stock par produit ──
+  const now = Date.now();
+  const MS_1D  = 86400000;
+  const MS_7D  = 7  * MS_1D;
+  const MS_30D = 30 * MS_1D;
+  const MS_60D = 60 * MS_1D;
+  const MS_90D = 90 * MS_1D;
+
+  const today = new Date().toISOString().split('T')[0];
+  const since7  = now - MS_7D;
+  const since30 = now - MS_30D;
+  const since60 = now - MS_60D;
+  const since90 = now - MS_90D;
+  const startOfDay = new Date(today).getTime();
+
+  // ── Index stock ──
   const stockMap = {};
   stockAll.forEach(s => { stockMap[s.productId] = (stockMap[s.productId] || 0) + (s.quantity || 0); });
 
-  // ── Ventes par produit par période ──
-  const salesMap7  = {}; // 7 derniers jours
-  const salesMap30 = {}; // 30 derniers jours
-  const salesMap90 = {}; // 90 derniers jours
-  const since7  = now - MS_7D;
-  const since30 = now - MS_30D;
-  const since90 = now - MS_90D;
+  // ── CA par periode ──
+  const salesDay   = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= startOfDay);
+  const sales7     = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since7);
+  const sales30    = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since30);
+  const sales30_60 = sales.filter(s => { const t = new Date(s.createdAt || s.date || 0).getTime(); return t >= since60 && t < since30; });
+  const sales90    = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since90);
+
+  const caDay   = salesDay.reduce((a, s) => a + (s.total || 0), 0);
+  const ca7     = sales7.reduce((a, s) => a + (s.total || 0), 0);
+  const ca30    = sales30.reduce((a, s) => a + (s.total || 0), 0);
+  const caPrev30 = sales30_60.reduce((a, s) => a + (s.total || 0), 0);
+  const ca90    = sales90.reduce((a, s) => a + (s.total || 0), 0);
+
+  const avgDayCA    = sales7.length > 0 ? ca7 / 7 : 0;
+  const prevAvgDay  = caPrev30 > 0 ? caPrev30 / 30 : 0;
+  const evolutionMoM = caPrev30 > 0 ? ((ca30 - caPrev30) / caPrev30 * 100) : null;
+  const evolutionWoW = prevAvgDay > 0 ? ((avgDayCA - prevAvgDay) / prevAvgDay * 100) : null;
+
+  // ── COGS et marge (30 jours) ──
+  const saleIds30 = new Set(sales30.map(s => s.id));
+  const items30 = saleItems.filter(si => saleIds30.has(si.saleId));
+  const cogs30 = items30.reduce((a, si) => a + (si.purchasePrice || 0) * (si.quantity || 0), 0);
+  const grossProfit30 = ca30 - cogs30;
+  const marginPct = ca30 > 0 ? (grossProfit30 / ca30 * 100) : 0;
+
+  // ── Valeur du stock ──
+  let totalStockValue = 0, totalStockSaleValue = 0;
+  products.forEach(p => {
+    const qty = stockMap[p.id] || 0;
+    totalStockValue += qty * (p.purchasePrice || 0);
+    totalStockSaleValue += qty * (p.salePrice || 0);
+  });
+  const potentialProfit = totalStockSaleValue - totalStockValue;
+
+  // ── Rotation du stock (COGS/Valeur stock) ──
+  const stockRotation = totalStockValue > 0 ? (cogs30 * 12 / totalStockValue) : 0; // annualisee
+
+  // ── Duree de couverture globale (jours) ──
+  const avgDailyConsumption = cogs30 / 30; // valeur consommee/j
+  const coverageDays = avgDailyConsumption > 0 ? Math.round(totalStockValue / avgDailyConsumption) : 999;
+
+  // ── Prevision CA a 7 jours ──
+  const forecast7 = Math.round(avgDayCA * 7);
+
+  // ── Niveau de tresorerie conseille ──
+  const recommandedCash = Math.round(ca30 * 0.15); // 15% du CA mensuel
+
+  // ── Ventes par produit ──
+  const salesMap7  = {};
+  const salesMap30 = {};
+  const salesMap90 = {};
 
   sales.forEach(sale => {
     const saleDate = new Date(sale.createdAt || sale.date || 0).getTime();
@@ -1266,81 +1382,72 @@ async function _analyzeSupplyChain() {
     });
   });
 
-  // ── Calcul des KPIs globaux ──
-  let totalStockValue   = 0; // Valeur stock au prix d'achat
-  let totalSales30      = 0; // CA des 30 derniers jours
-  let ruptures          = []; // Produits à 0
-  let stockBas          = []; // Stock < seuil min
-  let dormants          = []; // Produits sans vente depuis 90j
-  let topMouvements     = []; // Produits les plus vendus (30j)
-
-  const recentSales30 = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since30);
-  recentSales30.forEach(s => { totalSales30 += (s.total || 0); });
+  // ── KPIs produits ──
+  let ruptures = [], stockBas = [], dormants = [], topMouvements = [];
+  let alerteRupture7j = []; // produits qui vont rompre dans 7 jours
 
   products.forEach(p => {
-    const qty   = stockMap[p.id] || 0;
+    const qty     = stockMap[p.id] || 0;
     const vente30 = salesMap30[p.id] || 0;
     const vente7  = salesMap7[p.id]  || 0;
     const vente90 = salesMap90[p.id] || 0;
+    const vmr30   = vente30 / 30;
+    const vmr7    = vente7  / 7;
+    const jours   = vmr7 > 0 ? Math.floor(qty / vmr7) : 999;
 
-    // Valeur du stock
-    totalStockValue += qty * (p.purchasePrice || 0);
-
-    // Vélocité quotidienne (VMR) sur 30 jours
-    const vmr30 = vente30 / 30; // Ventes moyennes par jour
-    const vmr7  = vente7  / 7;
-
-    // Ruptures et stock bas
-    if (qty === 0 && vente30 > 0) ruptures.push({ ...p, qty, vente30, vmr30 });
-    else if (qty > 0 && qty <= (p.minStock || 5) && vente30 > 0) stockBas.push({ ...p, qty, vente30, vmr30 });
-
-    // Produits dormants (jamais vendu depuis 90j mais en stock)
+    if (qty === 0 && vente30 > 0) ruptures.push({ ...p, qty, vente30, vmr30, jours: 0 });
+    else if (qty > 0 && qty <= (p.minStock || 5) && vente30 > 0) stockBas.push({ ...p, qty, vente30, vmr30, jours });
+    if (qty > 0 && vente7 > 0 && jours <= 7) alerteRupture7j.push({ ...p, qty, vmr7: vmr7.toFixed(1), jours });
     if (qty > 0 && vente90 === 0) dormants.push({ ...p, qty, stockValue: qty * (p.purchasePrice || 0) });
-
-    // Top mouvements
     if (vente30 > 0) topMouvements.push({ ...p, qty, vente30, vmr30, vente7 });
   });
 
-  // Tri
   ruptures.sort((a, b) => b.vente30 - a.vente30);
-  stockBas.sort((a, b) => (a.qty / (a.vmr30 || 0.1)) - (b.qty / (b.vmr30 || 0.1)));
+  stockBas.sort((a, b) => a.jours - b.jours);
   dormants.sort((a, b) => b.stockValue - a.stockValue);
   topMouvements.sort((a, b) => b.vente30 - a.vente30);
+  alerteRupture7j.sort((a, b) => a.jours - b.jours);
 
   // ── Recommandation commande fournisseur ──
-  // Objectif : maintenir 30j de stock cible
-  // Formule : Qté à commander = (VMR * 30j cible) - Stock actuel
   const COUVERTURE_CIBLE_JOURS = 30;
-  const produitsACommanderUrgent = [...ruptures.slice(0, 5), ...stockBas.slice(0, 8)];
+  const produitsACommander = [...ruptures.slice(0, 5), ...stockBas.slice(0, 8)];
 
-  let valeurCommandeMin = 0;
-  let valeurCommandeMax = 0;
+  let valeurCommandeMin = 0, valeurCommandeMax = 0;
   let itemsCommande = [];
 
-  produitsACommanderUrgent.forEach(p => {
+  produitsACommander.forEach(p => {
     const vmr = salesMap30[p.id] ? salesMap30[p.id] / 30 : 1;
     const stockActuel = stockMap[p.id] || 0;
     const qtyNecessaire = Math.max(0, Math.ceil((vmr * COUVERTURE_CIBLE_JOURS) - stockActuel));
-    const qtyConservateur = Math.ceil(qtyNecessaire * 0.8);
-    const qtyOptimiste    = Math.ceil(qtyNecessaire * 1.2);
-    const montantMin = qtyConservateur * (p.purchasePrice || 0);
-    const montantMax = qtyOptimiste    * (p.purchasePrice || 0);
-    valeurCommandeMin += montantMin;
-    valeurCommandeMax += montantMax;
-    if (qtyNecessaire > 0) {
-      itemsCommande.push({ name: p.name, qtyMin: qtyConservateur, qtyMax: qtyOptimiste, vmr: vmr.toFixed(1), stockActuel });
-    }
+    const qtyMin = Math.ceil(qtyNecessaire * 0.8);
+    const qtyMax = Math.ceil(qtyNecessaire * 1.2);
+    valeurCommandeMin += qtyMin * (p.purchasePrice || 0);
+    valeurCommandeMax += qtyMax * (p.purchasePrice || 0);
+    if (qtyNecessaire > 0) itemsCommande.push({ name: p.name, qtyMin, qtyMax, vmr: vmr.toFixed(1), stockActuel, jours: stockActuel > 0 ? Math.floor(stockActuel / vmr) : 0 });
   });
 
-  // Ratio stock/CA : norme pharmaceutique = 15-25% du CA mensuel
-  const ratioStock = totalSales30 > 0 ? (totalStockValue / totalSales30) * 100 : 0;
+  const ratioStock = ca30 > 0 ? (totalStockValue / ca30 * 100) : 0;
   const dormantValue = dormants.reduce((a, p) => a + p.stockValue, 0);
 
   return {
-    totalStockValue, totalSales30, ruptures, stockBas, dormants, topMouvements,
-    valeurCommandeMin, valeurCommandeMax, itemsCommande,
-    ratioStock, dormantValue, produits: products.length,
-    dataPoints: { sales30: recentSales30.length }
+    // CA
+    caDay, ca7, ca30, caPrev30, ca90, avgDayCA, prevAvgDay,
+    evolutionMoM, evolutionWoW, forecast7,
+    // Marge
+    cogs30, grossProfit30, marginPct,
+    // Stock
+    totalStockValue, totalStockSaleValue, potentialProfit,
+    stockRotation, coverageDays, ratioStock, dormantValue,
+    // Tresorerie
+    recommandedCash,
+    // Produits
+    ruptures, stockBas, dormants, topMouvements, alerteRupture7j,
+    itemsCommande, valeurCommandeMin, valeurCommandeMax,
+    // Meta
+    produits: products.length,
+    nbVentes30: sales30.length,
+    panier30: sales30.length > 0 ? Math.round(ca30 / sales30.length) : 0,
+    dataPoints: { sales30: sales30.length },
   };
 }
 
@@ -1359,76 +1466,129 @@ CONVERSATIONS.push({
     'commande fournisseur', 'combien commander', 'conseil commande', 'reapprovisionner',
     'recommandation achat', 'conseil achat', 'budget commande', 'que commander',
     'rupture a venir', 'stock optimal', 'analyser mon stock', 'analyse supply',
-    'gestionnaire achats', 'conseiller achat', 'plan de commande', 'bilan stock'
+    'gestionnaire achats', 'conseiller achat', 'plan de commande', 'bilan stock',
+    'analyse financiere', 'rapport financier', 'analyse complete', 'bilan complet',
+    'tresorerie', 'marge', 'rotation', 'prevision', 'forecast',
   ],
   dynamic: true,
   getResponse: async function() {
     try {
       const d = await _analyzeSupplyChain();
       const now = new Date();
-      const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long' });
+      const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-      // Évaluation du ratio stock/CA
-      let ratioEval = '';
-      if (d.ratioStock < 80)       ratioEval = '✅ <span style="color:#16a34a">Excellent ratio (stock léger et agile)</span>';
-      else if (d.ratioStock < 150) ratioEval = '⚠️ <span style="color:#d97706">Ratio acceptable (stock moyen)</span>';
-      else                          ratioEval = '🔴 <span style="color:#dc2626">Ratio élevé — Risque d\'immobilisation de trésorerie</span>';
+      const pct = (v, dec=1) => v != null ? (v > 0 ? '+' : '') + v.toFixed(dec) + '%' : 'N/A';
+      const evMoM = d.evolutionMoM != null
+        ? `<span style="color:${d.evolutionMoM >= 0 ? '#16a34a' : '#dc2626'}">${pct(d.evolutionMoM)}</span> vs mois precedent`
+        : 'Insuffisamment de donnees';
+      const evWoW = d.evolutionWoW != null
+        ? `<span style="color:${d.evolutionWoW >= 0 ? '#16a34a' : '#dc2626'}">${pct(d.evolutionWoW)}</span> vs semaine precedente`
+        : '';
 
-      // Top 3 produits urgents
-      const urgentsHtml = d.itemsCommande.slice(0, 5).map(p =>
-        `<div style="padding:6px 0;border-bottom:1px solid #f0f0f0">
-          <strong>${p.name}</strong> —
-          Stock actuel : <strong>${p.stockActuel}</strong> unités |
-          Vélocité : <strong>${p.vmr}</strong>/j |
-          Commander : <strong>${p.qtyMin}–${p.qtyMax}</strong> unités
+      // Evaluation marge
+      const margEval = d.marginPct >= 30
+        ? `<span style="color:#16a34a">✅ Excellente (${d.marginPct.toFixed(1)}%)</span>`
+        : d.marginPct >= 20
+        ? `<span style="color:#d97706">⚠️ Acceptable (${d.marginPct.toFixed(1)}%)</span>`
+        : `<span style="color:#dc2626">🔴 Faible (${d.marginPct.toFixed(1)}%) — Prix d'achat eleves ou remises excessives</span>`;
+
+      // Evaluation rotation
+      const rotEval = d.stockRotation >= 8
+        ? `<span style="color:#16a34a">✅ Excellente rotation (${d.stockRotation.toFixed(1)}x/an)</span>`
+        : d.stockRotation >= 4
+        ? `<span style="color:#d97706">⚠️ Rotation moyenne (${d.stockRotation.toFixed(1)}x/an)</span>`
+        : `<span style="color:#dc2626">🔴 Faible rotation (${d.stockRotation.toFixed(1)}x/an) — Stock trop important</span>`;
+
+      // Evaluation couverture
+      const covEval = d.coverageDays <= 45
+        ? `<span style="color:#16a34a">✅ Optimal (${d.coverageDays}j de stock)</span>`
+        : d.coverageDays <= 90
+        ? `<span style="color:#d97706">⚠️ Correct (${d.coverageDays}j)</span>`
+        : `<span style="color:#dc2626">🔴 Surstock (${d.coverageDays}j) — Immobilisation de tresorerie</span>`;
+
+      // Alerte baisse CA
+      const alerteBaisseCA = d.avgDayCA < d.prevAvgDay * 0.8 && d.prevAvgDay > 0
+        ? `<div style="background:#fef2f2;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #dc2626">
+            <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#dc2626;margin-bottom:4px">🚨 ALERTE BAISSE CA INHABITUELLE</div>
+            La moyenne journaliere cette semaine (${_fmtGNF(d.avgDayCA)}/j) est inferieure de <strong>${Math.round((1 - d.avgDayCA/d.prevAvgDay)*100)}%</strong> 
+            a la periode precedente (${_fmtGNF(d.prevAvgDay)}/j). Verifiez : ruptures de stock, absenteisme, concurrence.
+           </div>` : '';
+
+      // Top 5 produits urgents
+      const urgentsHtml = d.itemsCommande.slice(0, 6).map(p =>
+        `<div style="padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
+          <strong>${p.name}</strong> — Stock: <strong>${p.stockActuel}</strong> u. (${p.jours}j restants) | Velocite: <strong>${p.vmr}</strong>/j | Commander: <strong>${p.qtyMin}–${p.qtyMax}</strong> u.
         </div>`
-      ).join('') || '<em>Aucun produit critique identifié.</em>';
+      ).join('') || '<em>Aucun produit critique.</em>';
 
-      // Top 3 dormants (immobilisation trésorerie)
-      const dormantsHtml = d.dormants.slice(0, 3).map(p =>
-        `<strong>${p.name}</strong> (${p.qty} unités = ${_fmtGNF(p.stockValue)})`
-      ).join(', ') || 'Aucun';
+      // Alerte rupture 7j
+      const rupture7Html = d.alerteRupture7j.length > 0
+        ? `<div style="background:#fff7ed;border-radius:8px;padding:8px 12px;margin-bottom:10px;border-left:3px solid #ea580c">
+            <div style="font-size:11px;font-weight:700;color:#ea580c;margin-bottom:4px">⏰ RUPTURES IMMINENTES (< 7 jours)</div>
+            ${d.alerteRupture7j.slice(0,4).map(p => `<strong>${p.name}</strong>: ${p.jours}j restants (${p.qty} u., ${p.vmr7}/j)`).join('<br>')}
+           </div>` : '';
 
       return `
-        <div style="font-weight:700;font-size:14px;margin-bottom:10px">
-          📊 Analyse Supply Chain — ${dateStr}
+        <div style="font-weight:800;font-size:14px;margin-bottom:12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">
+          📊 Analyse Financiere — ${dateStr}
         </div>
 
+        ${alerteBaisseCA}
+        ${rupture7Html}
+
         <div style="background:#f0f9ff;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #0284c7">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#0284c7;margin-bottom:6px">📦 ÉTAT DU STOCK</div>
-          <b>Valeur stock :</b> ${_fmtGNF(d.totalStockValue)}<br>
-          <b>CA 30 derniers jours :</b> ${_fmtGNF(d.totalSales30)}<br>
-          <b>Ratio Stock/CA :</b> ${d.ratioStock.toFixed(0)}% — ${ratioEval}<br>
-          <b>Produits dormants :</b> ${d.dormants.length} produits (≈ ${_fmtGNF(d.dormantValue)} immobilisés)
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#0284c7;margin-bottom:6px">📈 PERFORMANCE COMMERCIALE</div>
+          <b>CA aujourd'hui :</b> ${_fmtGNF(d.caDay)}<br>
+          <b>CA 7 derniers jours :</b> ${_fmtGNF(d.ca7)} (moy. ${_fmtGNF(Math.round(d.avgDayCA))}/j) ${evWoW ? '— ' + evWoW : ''}<br>
+          <b>CA 30 derniers jours :</b> ${_fmtGNF(d.ca30)} — ${evMoM}<br>
+          <b>Nb transactions (30j) :</b> ${d.nbVentes30} | Panier moyen : <strong>${_fmtGNF(d.panier30)}</strong><br>
+          <b>Prevision CA 7 prochains jours :</b> <strong style="color:#0284c7">${_fmtGNF(d.forecast7)}</strong>
+          <em style="font-size:10px"> (base sur la velocite des 7 derniers jours)</em>
+        </div>
+
+        <div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #16a34a">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#16a34a;margin-bottom:6px">💹 MARGE ET RENTABILITE</div>
+          <b>CA 30j :</b> ${_fmtGNF(d.ca30)} | COGS : ${_fmtGNF(d.cogs30)}<br>
+          <b>Marge brute :</b> ${_fmtGNF(d.grossProfit30)} — ${margEval}<br>
+          <em style="font-size:10px">Une marge pharmaceutique saine se situe entre 25% et 40%.</em>
+        </div>
+
+        <div style="background:#faf5ff;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #7c3aed">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#7c3aed;margin-bottom:6px">📦 GESTION DU STOCK</div>
+          <b>Valeur stock (achat) :</b> ${_fmtGNF(d.totalStockValue)}<br>
+          <b>Valeur stock (vente) :</b> ${_fmtGNF(d.totalStockSaleValue)} — Profit potentiel : ${_fmtGNF(d.potentialProfit)}<br>
+          <b>Rotation :</b> ${rotEval}<br>
+          <b>Couverture globale :</b> ${covEval}<br>
+          <b>Stock dormant :</b> ${d.dormants.length} produits immobilisent <strong>${_fmtGNF(d.dormantValue)}</strong>
+          <em style="font-size:10px"> (aucune vente depuis 90j)</em>
         </div>
 
         <div style="background:#fff7ed;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #ea580c">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#ea580c;margin-bottom:6px">🚨 ALERTES (${d.ruptures.length} ruptures, ${d.stockBas.length} stocks bas)</div>
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#ea580c;margin-bottom:6px">🚨 PRODUITS A COMMANDER (${d.ruptures.length} ruptures, ${d.stockBas.length} stocks bas)</div>
           ${urgentsHtml}
         </div>
 
         <div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #16a34a">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#16a34a;margin-bottom:4px">💡 MA RECOMMANDATION</div>
-          Pour maintenir <strong>30 jours de couverture</strong> sur vos produits actifs, je recommande une commande comprise entre :<br>
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#16a34a;margin-bottom:4px">💡 RECOMMANDATION COMMANDE</div>
+          Pour <strong>30 jours de couverture</strong> sur vos produits actifs, investissez :
           <div style="font-size:18px;font-weight:900;text-align:center;margin:8px 0;color:#1a2332">
             ${_fmtGNF(d.valeurCommandeMin)} — ${_fmtGNF(d.valeurCommandeMax)}
           </div>
-          <em style="font-size:11px">Calculé sur la base de la vélocité des ventes des 30 derniers jours.</em>
+          <em style="font-size:11px">Calculé sur la velocite des 30 derniers jours. Scenario conservateur (×0.8) et optimiste (×1.2).</em>
         </div>
 
-        ${d.dormants.length > 0 ? `
-        <div style="background:#fefce8;border-radius:8px;padding:8px 12px;border-left:3px solid #ca8a04">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#ca8a04;margin-bottom:4px">💤 PRODUITS DORMANTS À SURVEILLER</div>
-          ${dormantsHtml}<br>
-          <em style="font-size:11px">Ces produits n'ont pas été vendus depuis 90 jours. Envisagez des promotions ou retours fournisseur.</em>
-        </div>` : ''}
+        <div style="background:#f1f5f9;border-radius:8px;padding:8px 12px;margin-bottom:10px;border-left:3px solid #64748b">
+          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#64748b;margin-bottom:4px">🏦 TRESORERIE RECOMMANDEE</div>
+          Conservez au minimum <strong style="color:#0f172a">${_fmtGNF(d.recommandedCash)}</strong> en caisse
+          (15% du CA mensuel) pour couvrir vos charges operationnelles.
+        </div>
 
         <div style="font-size:11px;color:#94a3b8;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:6px">
-          ℹ️ Analyse basée sur ${d.dataPoints.sales30} ventes | ${d.produits} produits au catalogue | Objectif : 30j de couverture
+          ℹ️ Analyse basee sur ${d.dataPoints.sales30} ventes / ${d.produits} produits | Données en temps réel de votre pharmacie
         </div>
       `;
     } catch(e) {
-      return 'Je n\'ai pas pu accéder aux données pour générer l\'analyse, {name}. Assurez-vous d\'avoir des ventes enregistrées.';
+      return 'Je n\'ai pas pu generer l\'analyse financiere. Assurez-vous d\'avoir des ventes et des produits enregistres.';
     }
   }
 });

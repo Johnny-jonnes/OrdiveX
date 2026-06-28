@@ -1058,6 +1058,17 @@ ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS dci TEXT;
 ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS dosage TEXT;
 ALTER TABLE "saleItems" ADD COLUMN IF NOT EXISTS "requiresPrescription" BOOLEAN DEFAULT false;
 
+-- 1. Ajouter la colonne 'shift' à la table des utilisateurs
+ALTER TABLE app_users 
+ADD COLUMN IF NOT EXISTS shift TEXT DEFAULT NULL;
+
+-- 2. Ajouter la colonne 'data' à la table des paramètres
+ALTER TABLE settings 
+ADD COLUMN IF NOT EXISTS data JSONB DEFAULT NULL;
+
+-- 3. Corriger le type de entityId dans auditLog (bigint → text)
+ALTER TABLE "auditLog" 
+ALTER COLUMN "entityId" TYPE TEXT USING "entityId"::TEXT;
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- IMPORTANT : Après exécution de cette migration, VIDER le cache navigateur :
 -- Dans la console du navigateur : localStorage.removeItem('pharma_bad_columns');
