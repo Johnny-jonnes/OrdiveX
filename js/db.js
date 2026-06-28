@@ -1108,7 +1108,7 @@ async function syncToSupabase() {
     if (!sb) return;
     if (!navigator.onLine) return;
 
-    const storesToSync = ['products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients', 'prescriptions', 'alerts', 'cashRegister', 'auditLog', 'users', 'settings', 'returns', 'invoices'];
+    const storesToSync = ['products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients', 'prescriptions', 'alerts', 'cashRegister', 'users', 'settings', 'returns', 'invoices', 'shifts'];
 
     let totalPendingCount = 0;
 
@@ -1377,23 +1377,8 @@ async function syncToSupabase() {
       } catch (e) { /* silencieux */ }
     }
 
-    // ── TRACKING DU PUSH (SAUVEGARDE) POUR LE SUIVI ADMINISTRATEUR ──
-    if (totalPendingCount > 0) {
-      try {
-        const settings = await dbGetAll('settings');
-        const pharmacyName = settings.find(s => s.key === 'pharmacy_name')?.value || 'Inconnu';
-        await sb.from('push_tracking').insert([{
-          device_id: currentDeviceId,
-          device_name: currentDeviceName,
-          pharmacy_name: pharmacyName,
-          user_name: AppState.currentUser?.name || AppState.currentUser?.username || 'Système',
-          items_pushed: totalPendingCount,
-          pushed_at: new Date().toISOString()
-        }]);
-      } catch (trackErr) {
-        // Silent error pour ne pas bloquer l'UI
-      }
-    }
+    // Tracking désactivé — table push_tracking non présente dans Supabase client
+    // (supprimé pour éviter les erreurs silencieuses en prod)
 
   } catch (globalError) {
     console.error('[Flash] Critical sync error:', globalError);
@@ -1413,6 +1398,8 @@ async function pullFromSupabase(isManual = false) {
   if (!navigator.onLine) return;
   if (_isPulling) return;
   _isPulling = true;
+  // Sécurité : libérer le lock après 45s max (réseau très lent en Guinée)
+  const _pullLockTimeout = setTimeout(() => { _isPulling = false; }, 45000);
   let hasChanges = false;
   let totalItemsPulled = 0;
   try {
@@ -1424,7 +1411,7 @@ async function pullFromSupabase(isManual = false) {
       'users', 'settings',
       'products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders',
       'sales', 'saleItems', 'patients', 'prescriptions', 'alerts',
-      'cashRegister', 'auditLog', 'returns', 'invoices'
+      'cashRegister', 'returns', 'invoices', 'shifts'
     ];
 
     // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
@@ -1685,23 +1672,8 @@ async function pullFromSupabase(isManual = false) {
       } catch (e) { /* silencieux */ }
     }
 
-    // ── TRACKING DU PULL POUR LE SUIVI PHARMACIEN ──
-    if (isManual && totalItemsPulled > 0) {
-      try {
-        const settings = await dbGetAll('settings');
-        const pharmacyName = settings.find(s => s.key === 'pharmacy_name')?.value || 'Inconnu';
-        await sb.from('pull_tracking').insert([{
-          device_id: localStorage.getItem('pharma_device_id') || 'N/A',
-          device_name: localStorage.getItem('pharma_device_name') || 'N/A',
-          pharmacy_name: pharmacyName,
-          user_name: AppState.currentUser?.name || AppState.currentUser?.username || 'Système',
-          items_pulled: totalItemsPulled,
-          pulled_at: new Date().toISOString()
-        }]);
-      } catch (trackErr) {
-        // Silencieux en production — le tracking est non-critique
-      }
-    }
+    // Tracking désactivé — table pull_tracking non présente dans Supabase client
+    // (supprimé pour éviter les erreurs silencieuses en prod)
 
     // Final refresh of display if settings were updated
     if (window.updatePharmacyDisplay) {

@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.6.1';
+const CACHE_NAME = 'pharma-cache-v9.6.2';
 const ASSETS = [
   './',
   './index.html',
@@ -83,25 +83,19 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = event.request.url;
 
-  // ðŸ›¡ï¸ REQUÃŠTES EXTERNES (Supabase, fonts, CDN)
+  // 🛡️ REQUÊTES EXTERNES (Supabase, fonts, CDN)
   if (!url.startsWith(self.location.origin)) {
-    // FONTS : NE PAS intercepter â€” laisser le navigateur gÃ©rer nativement
-    // Le HTTP cache du navigateur les sert en offline, font-display:swap utilise les polices systÃ¨me sinon
-    // Cela Ã©vite les 14x "Failed to decode downloaded font" warnings (browser-level, non-filtrable par JS)
+    // FONTS : NE PAS intercepter — laisser le navigateur gérer nativement
     if (url.includes('fonts.g') || url.endsWith('.woff2') || url.endsWith('.woff') || url.endsWith('.ttf')) {
-      return; // Ne PAS appeler respondWith â€” le navigateur gÃ¨re seul
+      return;
     }
-
-    // APIS (Supabase, etc.) : try-catch silencieux
+    // APIS (Supabase, etc.) : réseau seul, jamais de cache
     event.respondWith(
-      caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        return fetch(event.request).catch(() => {
-          return new Response(JSON.stringify({ data: null, error: 'offline' }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
-          });
-        });
-      })
+      fetch(event.request).catch(() =>
+        new Response(JSON.stringify({ data: null, error: 'offline' }), {
+          status: 200, headers: { 'Content-Type': 'application/json' }
+        })
+      )
     );
     return;
   }
@@ -110,17 +104,26 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (url.startsWith('chrome-extension')) return;
 
+  // Pour les assets locaux (.js, .css) : normaliser l'URL sans query string
+  // Cela évite le double cache entre "./js/db.js" et "./js/db.js?v=9.6.2"
+  const urlObj = new URL(url);
+  const isLocalAsset = /\.(js|css|html|json|png|svg|ico|webp)(\?|$)/.test(urlObj.pathname);
+  const cacheKey = isLocalAsset
+    ? new Request(urlObj.origin + urlObj.pathname) // URL sans ?v=xxx
+    : event.request;
+
   event.respondWith(
-    caches.match(event.request).then(cached => {
+    caches.match(cacheKey).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
         if (!response || response.status !== 200 || response.type === 'opaque') return response;
         const clone = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        caches.open(CACHE_NAME).then(cache => cache.put(cacheKey, clone));
         return response;
       }).catch(() => {
         if (event.request.mode === 'navigate') {
-          return caches.match('/index.html') || new Response('Offline', { status: 503 });
+          return caches.match(new Request(self.location.origin + '/index.html'))
+            .then(r => r || new Response('Offline', { status: 503 }));
         }
         return new Response('', { status: 200 });
       });
