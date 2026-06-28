@@ -278,8 +278,12 @@ function _silentRefreshPage(page, storeNames) {
 let _lastSessionCheck = 0;
 async function getSupabaseClient() {
   // Guard strict : ne rien faire si hors-ligne
-  if (!navigator.onLine) {
-    if (_supabaseInstance) { try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch (e) { } _supabaseInstance = null; }
+  if (!navigator.onLine || AppState._confirmedOffline) {
+    if (_supabaseInstance) {
+      try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch (e) { }
+      try { _supabaseInstance.realtime?.disconnect?.(); } catch(e) {}
+      _supabaseInstance = null;
+    }
     return null;
   }
 
@@ -1701,9 +1705,12 @@ async function pullFromSupabase(isManual = false) {
 
   } catch (e) {
     const msg = e.message || '';
-    if (!msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('network error')) {
-      console.warn('[Flash] Pull general error:', e);
+    if (!msg.includes('probe_offline')) {
+      if (!msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('network error')) {
+        console.warn('[Flash] Pull general error:', e);
+      }
     }
+    throw e; // IMPORTANT: Re-throw l'erreur pour que runPull.catch() la capte
   } finally {
     _isPulling = false;
   }
