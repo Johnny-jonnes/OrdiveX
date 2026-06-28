@@ -341,9 +341,9 @@ function _setupRealtime(sbClient) {
   // Gardes strictes : ne pas reconnecter si déjà connecté, hors-ligne, ou en cooldown
   if (_realtimeSubscription || !navigator.onLine || _realtimeCooldown) return;
 
-  // Activer le cooldown pour éviter les boucles de reconnexion WebSocket
+  // Cooldown de 30s pour éviter les boucles de reconnexion WebSocket sur réseau instable
   _realtimeCooldown = true;
-  setTimeout(() => { _realtimeCooldown = false; }, 10000); // 10s de cooldown
+  setTimeout(() => { _realtimeCooldown = false; }, 30000);
 
   // Mapping table Supabase → store IndexedDB
   const _tableToStore = { app_users: 'users' };
@@ -1714,11 +1714,6 @@ async function pullFromSupabase(isManual = false) {
       await refreshPOSData();
     }
 
-    // Auto-reconnexion des canaux temps réel si déconnectés suite à une mise en veille (mobile)
-    if (sb && navigator.onLine) {
-      if (!_realtimeSubscription) { try { _setupRealtime(sb); } catch(e){} }
-      if (!_broadcastChannel) { try { _setupBroadcast(sb); } catch(e){} }
-    }
 
   } catch (e) {
     const msg = e.message || '';
