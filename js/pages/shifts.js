@@ -98,12 +98,13 @@ async function renderShifts(container) {
       <p style="font-size:13px;margin-top:4px">Cliquez sur <strong>"Ouvrir une session"</strong> pour demarrer.</p>
     </div>`}
 
-    <div style="display:flex;gap:4px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px" id="shifts-tabs">
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px" id="shifts-tabs">
       ${tabs.map(t => `
         <button onclick="_switchShiftsTab('${t.id}')" id="shifts-tab-${t.id}"
           class="btn ${_shiftsState.tab === t.id ? 'btn-primary' : 'btn-ghost'}"
-          style="display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px;padding:8px 16px;border-radius:10px">
-          <i data-lucide="${t.icon}" style="width:15px;height:15px"></i> ${t.label}
+          style="display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:12px;padding:8px 12px;border-radius:10px;flex-shrink:0">
+          <i data-lucide="${t.icon}" style="width:14px;height:14px;flex-shrink:0"></i>
+          <span class="shifts-tab-label">${t.label}</span>
         </button>`).join('')}
     </div>
 

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — onboarding.js
  * Comprehensive pharmacy setup wizard
  */
@@ -331,7 +331,28 @@ const Onboarding = {
     }
 
     UI.closeModal();
-    UI.loading(this.container, 'Lien détecté ! Récupération de vos données Cloud...');
+
+    // Afficher un écran de progression détaillé
+    this.container.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:80vh">
+        <div style="text-align:center;max-width:400px;padding:40px">
+          <div style="width:64px;height:64px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 20px"></div>
+          <h2 style="font-size:20px;font-weight:700;margin-bottom:8px">Synchronisation en cours</h2>
+          <p id="restore-status" style="color:var(--text-muted);font-size:14px;margin-bottom:16px">
+            Connexion au serveur cloud...
+          </p>
+          <p style="color:var(--text-muted);font-size:12px">
+            Ne fermez pas l'application.<br>Cette opération peut prendre quelques minutes.
+          </p>
+        </div>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    `;
+
+    const updateStatus = (msg) => {
+      const el = document.getElementById('restore-status');
+      if (el) el.textContent = msg;
+    };
 
     try {
       const url = new URL(link);
@@ -340,23 +361,44 @@ const Onboarding = {
       const sbKey = params.get('sb_key');
 
       if (sbUrl && sbKey) {
+        updateStatus('Configuration de la connexion cloud...');
         await DB.dbPut('settings', { key: 'supabase_url', value: sbUrl });
         await DB.dbPut('settings', { key: 'supabase_key', value: sbKey });
         DB.resetSupabaseClient();
 
-        await DB.pullFromSupabase();
+        // IMPORTANT : supprimer le timestamp de dernier pull pour forcer un pull COMPLET
+        localStorage.removeItem('pharma_last_pull_ts');
 
-        // Check if we actually got ANY data
-        const allSettings = await DB.dbGetAll('settings');
-        const allProducts = await DB.dbGetAll('products');
-        const allSales = await DB.dbGetAll('sales');
+        updateStatus('Téléchargement de toutes les données...');
 
-        const hasData = allSettings.length > 2 || allProducts.length > 0 || allSales.length > 0;
+        // Pull COMPLET (isManual=true) pour récupérer TOUT : produits, ventes, stock, etc.
+        await DB.pullFromSupabase(true);
+
+        updateStatus('Vérification des données récupérées...');
+
+        // Vérification complète : on vérifie les stores critiques
+        const [allSettings, allProducts, allUsers, allSales, allStock] = await Promise.all([
+          DB.dbGetAll('settings'),
+          DB.dbGetAll('products'),
+          DB.dbGetAll('users'),
+          DB.dbGetAll('sales'),
+          DB.dbGetAll('stock'),
+        ]);
+
+        const hasData = allSettings.length > 2 || allProducts.length > 0 || allUsers.length > 0 || allSales.length > 0;
 
         if (hasData) {
           await DB.dbPut('settings', { key: 'onboarding_done', value: true });
           localStorage.setItem('onboarding_done', 'true');
-          UI.toast('Synchronisation réussie ! Vos données ont été récupérées.', 'success', 5000);
+
+          const stats = [];
+          if (allProducts.length > 0) stats.push(`${allProducts.length.toLocaleString()} produits`);
+          if (allUsers.length > 0) stats.push(`${allUsers.length} utilisateurs`);
+          if (allSales.length > 0) stats.push(`${allSales.length} ventes`);
+          if (allStock.length > 0) stats.push(`${allStock.length} stocks`);
+          const statsMsg = stats.length > 0 ? ` (${stats.join(', ')})` : '';
+
+          UI.toast(`Synchronisation réussie !${statsMsg}`, 'success', 8000);
 
           document.getElementById('app-sidebar')?.style.removeProperty('display');
           document.getElementById('app-topbar')?.style.removeProperty('display');

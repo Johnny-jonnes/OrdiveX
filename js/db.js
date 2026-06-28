@@ -511,6 +511,9 @@ async function initDB() {
           // Clean URL to hide keys and avoid re-triggering
           window.history.replaceState({}, document.title, window.location.pathname);
 
+          // Forcer un pull complet en supprimant le timestamp du dernier pull
+          localStorage.removeItem('pharma_last_pull_ts');
+
           _supabaseInstance = null; // Force recreation
           await getSupabaseClient();
         } catch (e) {
