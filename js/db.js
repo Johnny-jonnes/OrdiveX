@@ -1116,7 +1116,14 @@ async function syncToSupabase() {
     if (!sb) return;
     if (!navigator.onLine) return;
 
-    const storesToSync = ['products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders', 'sales', 'saleItems', 'patients', 'prescriptions', 'alerts', 'cashRegister', 'users', 'settings', 'returns', 'invoices', 'shifts'];
+    // Envoi SÉQUENTIEL et par ordre de priorité absolue (ventes d'abord, catalogues ensuite)
+    const storesToSync = [
+      'sales', 'saleItems', 'cashRegister', 'movements', 'returns', 'invoices',
+      'patients', 'prescriptions', 'alerts', 'shifts',
+      'stock', 'lots', 'purchaseOrders', 'suppliers',
+      'users', 'settings',
+      'products' // Très lourd (33k+), toujours en dernier !
+    ];
 
     let totalPendingCount = 0;
 
@@ -1162,8 +1169,8 @@ async function syncToSupabase() {
       return;
     }
 
-    // ⚡ FLASH SEND — Envoi parallèle de toutes les tables simultanément
-    await Promise.all(storesToSync.map(async (storeName) => {
+    // ⚡ FLASH SEND — Envoi séquentiel pour ne pas étouffer le réseau (surtout avec 30k produits)
+    for (const storeName of storesToSync) {
       try {
         const all = await dbGetAll(storeName);
         const pending = all.filter(item => item._synced === false);
@@ -1321,7 +1328,7 @@ async function syncToSupabase() {
         // Silencieux si hors-ligne
         if (navigator.onLine) console.error(`[Flash] Exception ${storeName}:`, storeError);
       }
-    }));
+    }
 
     // 📡 Push Device Heartbeat — permet aux autres appareils de voir notre état
     try {
