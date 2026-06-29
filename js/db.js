@@ -1102,7 +1102,7 @@ function _showSyncIndicator(active) {
 async function syncToSupabase() {
   // Garde : empêcher doublons et hors-ligne
   if (_syncInProgress) return;
-  if (!navigator.onLine) return;
+  if (!navigator.onLine || AppState._confirmedOffline) return;
   _syncInProgress = true;
   // Phase 9 — Indicateur visuel furtif
   _showSyncIndicator(true);
@@ -1407,6 +1407,28 @@ async function pullFromSupabase(isManual = false) {
   let hasChanges = false;
   let totalItemsPulled = 0;
   try {
+    // --- SILENT NATIVE PROBE ---
+    // Evite de réveiller le SDK Supabase (et ses timers) si on est déjà confirmé offline
+    if (AppState._confirmedOffline) {
+      const settings = await dbGetAll('settings');
+      const url = settings.find(s => s.key === 'supabase_url')?.value;
+      if (url) {
+        try {
+          var _nativeCtrl = new AbortController();
+          var _nativeTimeout = setTimeout(function() { _nativeCtrl.abort(); }, 5000);
+          // Un HEAD request en mode no-cors ne lève une erreur QUE si le réseau est mort (DNS/TCP fail)
+          await fetch(url.trim() + '/rest/v1/', { method: 'HEAD', mode: 'no-cors', cache: 'no-store', signal: _nativeCtrl.signal });
+          clearTimeout(_nativeTimeout);
+          // Si on est là, c'est que la requête est passée ! Le réseau est de retour.
+          AppState._confirmedOffline = false;
+        } catch (e) {
+          throw new Error('probe_offline');
+        }
+      } else {
+        throw new Error('probe_offline');
+      }
+    }
+
     const sb = await getSupabaseClient();
     if (!sb) return;
     if (!navigator.onLine) return;
