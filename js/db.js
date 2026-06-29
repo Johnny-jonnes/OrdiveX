@@ -1914,16 +1914,21 @@ function startAutoPull() {
     _autoPullTimer = window.setTimeout(runPull, 3000);
   });
   
-  // Réveil forcé si l'utilisateur revient sur l'onglet (permet un check instantané même après 3 jours)
+  // Réveil sur interaction utilisateur (throttle 2 min pour zéro spam d'erreur HEAD)
+  var _lastWakeUp = 0;
   function wakeUpCheck() {
     if (AppState._confirmedOffline) {
-      _pullFailCount = 0; // Reset l'exponential backoff
+      if (Date.now() - _lastWakeUp < 120000) return; // 1 test max toutes les 2 minutes SI on clique
+      _lastWakeUp = Date.now();
+      _pullFailCount = 0;
       if (_autoPullTimer) clearTimeout(_autoPullTimer);
-      _autoPullTimer = window.setTimeout(runPull, 3000);
+      _autoPullTimer = window.setTimeout(runPull, 1000);
     }
   }
   document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') wakeUpCheck(); });
   window.addEventListener('focus', wakeUpCheck);
+  window.addEventListener('click', wakeUpCheck, { passive: true, capture: true });
+  window.addEventListener('keydown', wakeUpCheck, { passive: true, capture: true });
   window.addEventListener('offline', function() {
     AppState.isOnline = false;
     AppState._confirmedOffline = true;
@@ -1975,12 +1980,12 @@ function startAutoPull() {
 
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
-      // Échec (probe offline) → backoff exponentiel pour préserver la console Chrome
+      // Échec (probe offline) → SILENCE TOTAL ABSOLU
       _pullFailCount++;
       AppState._confirmedOffline = true;
-      // 2min, 4min, 8min, 16min, 32min... max 1 heure.
-      var backoff = Math.min(120000 * Math.pow(2, _pullFailCount - 1), 3600000);
-      _autoPullTimer = window.setTimeout(runPull, backoff);
+      // PAS de timer de retry en boucle ! L'application se met en veille profonde.
+      // Elle ne se réveillera que si 'online' se déclenche au niveau OS,
+      // ou si l'utilisateur interagit physiquement avec la page (wakeUpCheck).
     });
   }
 
