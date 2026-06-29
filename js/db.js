@@ -1885,7 +1885,7 @@ function startAutoPull() {
   // Écouter les changements réseau pour réagir instantanément
   window.addEventListener('online', function() {
     _pullFailCount = 0;
-    AppState.isOnline = true;
+    // Ne pas set AppState.isOnline = true ici, on laisse _handleConnectivityChange le faire
     AppState._confirmedOffline = false;
     if (_autoPullTimer) clearTimeout(_autoPullTimer);
     _autoPullTimer = window.setTimeout(runPull, 3000);
@@ -1921,7 +1921,28 @@ function startAutoPull() {
     p.then(function() {
       // Succès — réveil complet
       _pullFailCount = 0;
+      const wasOffline = AppState._confirmedOffline;
       AppState._confirmedOffline = false;
+
+      // PUSH des données (garantit que ce qui a été fait hors-ligne part vers Supabase)
+      if (typeof syncToSupabase === 'function') {
+        setTimeout(function() { syncToSupabase().catch(function(){}); }, 1000);
+      }
+
+      // Si on revient d'une vraie coupure, on restaure complètement les WebSockets
+      if (wasOffline) {
+        setTimeout(async function() {
+          try {
+            var sb = await getSupabaseClient();
+            if (sb) {
+              if (sb.auth && sb.auth.startAutoRefresh) sb.auth.startAutoRefresh();
+              try { _setupRealtime(sb); } catch(e) {}
+              try { _setupBroadcast(sb); } catch(e) {}
+            }
+          } catch(e) {}
+        }, 1500);
+      }
+
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
       // Échec (probe offline) → silence immédiat de 5 minutes
