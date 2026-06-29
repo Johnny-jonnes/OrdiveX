@@ -53,13 +53,17 @@
 (function () {
   var _origFetch = window.fetch;
   window.fetch = function (url, opts) {
-    // Si offline ET la requête va vers Supabase → retourner une réponse vide silencieuse
-    if (!navigator.onLine) {
+    // Si offline (OS ou confirmé) ET la requête va vers Supabase → réponse vide silencieuse
+    var isOffline = !navigator.onLine || (typeof AppState !== 'undefined' && AppState._confirmedOffline);
+    if (isOffline) {
       var urlStr = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
-      if (urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('iapvppgdqewgqnpisvwq') !== -1) {
-        return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
-        }));
+      if (urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('gohfpvvmxsoujpnbmtcl') !== -1) {
+        // Vérifier si c'est un appel du probe natif (marqué _bypassOfflineGuard)
+        if (!(opts && opts._bypassOfflineGuard)) {
+          return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+          }));
+        }
       }
     }
     return _origFetch.apply(this, arguments);
@@ -1408,23 +1412,20 @@ async function pullFromSupabase(isManual = false) {
   let totalItemsPulled = 0;
   try {
     // --- SILENT NATIVE PROBE ---
-    // Evite de réveiller le SDK Supabase (et ses timers) si on est déjà confirmé offline
+    // Utilise l'URL de l'app elle-même (GitHub Pages) pour éviter les erreurs DNS Supabase
     if (AppState._confirmedOffline) {
-      const settings = await dbGetAll('settings');
-      const url = settings.find(s => s.key === 'supabase_url')?.value;
-      if (url) {
-        try {
-          var _nativeCtrl = new AbortController();
-          var _nativeTimeout = setTimeout(function() { _nativeCtrl.abort(); }, 5000);
-          // Un HEAD request en mode no-cors ne lève une erreur QUE si le réseau est mort (DNS/TCP fail)
-          await fetch(url.trim() + '/rest/v1/', { method: 'HEAD', mode: 'no-cors', cache: 'no-store', signal: _nativeCtrl.signal });
-          clearTimeout(_nativeTimeout);
-          // Si on est là, c'est que la requête est passée ! Le réseau est de retour.
-          AppState._confirmedOffline = false;
-        } catch (e) {
-          throw new Error('probe_offline');
-        }
-      } else {
+      try {
+        var _nativeCtrl = new AbortController();
+        var _nativeTimeout = setTimeout(function() { _nativeCtrl.abort(); }, 5000);
+        // Probe l'app elle-même — si GitHub Pages répond, le réseau est de retour
+        await fetch(location.origin + location.pathname, {
+          method: 'HEAD', cache: 'no-store', signal: _nativeCtrl.signal
+        });
+        clearTimeout(_nativeTimeout);
+        // Si on est là, le réseau est de retour !
+        AppState._confirmedOffline = false;
+        AppState.isOnline = true;
+      } catch (e) {
         throw new Error('probe_offline');
       }
     }
@@ -1931,13 +1932,9 @@ function startAutoPull() {
       return;
     }
 
-    // En mode hors-ligne confirmé (après 2+ échecs) → attendre 5 min
-    if (AppState._confirmedOffline) {
-      _autoPullTimer = window.setTimeout(runPull, 300000);
-      return;
-    }
-
-    // Lancer le pull via Promise, mais sans créer de chaîne async traceable
+    // Lancer le pull via Promise — pullFromSupabase gère son propre probe réseau
+    // NE PAS court-circuiter ici si _confirmedOffline : c'est pullFromSupabase
+    // qui contient le probe natif pour détecter le retour du réseau !
     var p;
     try { p = pullFromSupabase(); } catch(e) { p = Promise.reject(e); }
     p.then(function() {
@@ -1967,10 +1964,12 @@ function startAutoPull() {
 
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
-      // Échec (probe offline) → silence immédiat de 5 minutes
+      // Échec (probe offline) → retry adaptatif
       _pullFailCount++;
       AppState._confirmedOffline = true;
-      _autoPullTimer = window.setTimeout(runPull, 300000);
+      // 30s pour les 10 premiers essais, puis 2 min (jamais 5 min)
+      var retryDelay = _pullFailCount <= 10 ? 30000 : 120000;
+      _autoPullTimer = window.setTimeout(runPull, retryDelay);
     });
   }
 
