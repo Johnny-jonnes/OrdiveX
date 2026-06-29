@@ -1126,6 +1126,7 @@ async function syncToSupabase() {
     ];
 
     let totalPendingCount = 0;
+    let _hasMorePending = false;
 
     // Cache des colonnes invalides : éviter les 400 inutiles
     // Colonnes CONNUES comme inexistantes dans Supabase (fallback hardcodé)
@@ -1173,9 +1174,17 @@ async function syncToSupabase() {
     for (const storeName of storesToSync) {
       try {
         const all = await dbGetAll(storeName);
-        const pending = all.filter(item => item._synced === false);
+        let pending = all.filter(item => item._synced === false);
 
-        if (pending.length === 0) return;
+        if (pending.length === 0) continue;
+        
+        // Chunking (Anti-Head-of-Line Blocking) : 
+        // Traiter max 500 items par table par passe pour laisser la place aux ventes urgentes
+        if (pending.length > 500) {
+          pending = pending.slice(0, 500);
+          _hasMorePending = true;
+        }
+        
         totalPendingCount += pending.length;
 
         const payloads = pending.map(item => {
