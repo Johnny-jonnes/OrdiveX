@@ -1456,13 +1456,13 @@ async function pullFromSupabase(isManual = false) {
     } catch (err) {
       AppState.isOnline = false;
       AppState._confirmedOffline = true;
-      // Détruire l'instance Supabase pour tuer TOUS ses timers internes (auth refresh, WS...)
+      // Arrêter les timers et WebSockets du SDK pour le silence, mais GARDER l'instance
+      // pour éviter le warning "Multiple GoTrueClient instances" à la reconnexion
       if (_supabaseInstance) {
         try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch(e) {}
         try { _supabaseInstance.realtime?.disconnect?.(); } catch(e) {}
         if (_realtimeSubscription) { try { _supabaseInstance.removeChannel(_realtimeSubscription).catch(()=>{}); } catch(e){} _realtimeSubscription = null; }
         if (_broadcastChannel) { try { _supabaseInstance.removeChannel(_broadcastChannel).catch(()=>{}); } catch(e){} _broadcastChannel = null; }
-        _supabaseInstance = null;
       }
       throw new Error('probe_offline'); // THROW (pas return) pour que runPull.catch() se déclenche
     }
@@ -1964,12 +1964,11 @@ function startAutoPull() {
 
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
-      // Échec (probe offline) → retry adaptatif
+      // Échec (probe offline) → silence
       _pullFailCount++;
       AppState._confirmedOffline = true;
-      // 30s pour les 10 premiers essais, puis 2 min (jamais 5 min)
-      var retryDelay = _pullFailCount <= 10 ? 30000 : 120000;
-      _autoPullTimer = window.setTimeout(runPull, retryDelay);
+      // Pour éviter l'empilement des erreurs HEAD dans la console : test toutes les 2 min
+      _autoPullTimer = window.setTimeout(runPull, 120000);
     });
   }
 
