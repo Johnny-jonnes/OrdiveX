@@ -1913,6 +1913,17 @@ function startAutoPull() {
     if (_autoPullTimer) clearTimeout(_autoPullTimer);
     _autoPullTimer = window.setTimeout(runPull, 3000);
   });
+  
+  // Réveil forcé si l'utilisateur revient sur l'onglet (permet un check instantané même après 3 jours)
+  function wakeUpCheck() {
+    if (AppState._confirmedOffline) {
+      _pullFailCount = 0; // Reset l'exponential backoff
+      if (_autoPullTimer) clearTimeout(_autoPullTimer);
+      _autoPullTimer = window.setTimeout(runPull, 3000);
+    }
+  }
+  document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') wakeUpCheck(); });
+  window.addEventListener('focus', wakeUpCheck);
   window.addEventListener('offline', function() {
     AppState.isOnline = false;
     AppState._confirmedOffline = true;
@@ -1964,11 +1975,12 @@ function startAutoPull() {
 
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
-      // Échec (probe offline) → silence
+      // Échec (probe offline) → backoff exponentiel pour préserver la console Chrome
       _pullFailCount++;
       AppState._confirmedOffline = true;
-      // Pour éviter l'empilement des erreurs HEAD dans la console : test toutes les 2 min
-      _autoPullTimer = window.setTimeout(runPull, 120000);
+      // 2min, 4min, 8min, 16min, 32min... max 1 heure.
+      var backoff = Math.min(120000 * Math.pow(2, _pullFailCount - 1), 3600000);
+      _autoPullTimer = window.setTimeout(runPull, backoff);
     });
   }
 
