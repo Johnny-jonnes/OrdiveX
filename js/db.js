@@ -639,11 +639,11 @@ async function initDB() {
         als.createIndex('date', 'date');
       }
 
-      // Sync queue
+      // Sync queue — cle string generee par OperationQueue
       if (!database.objectStoreNames.contains('syncQueue')) {
-        const sq = database.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
+        const sq = database.createObjectStore('syncQueue', { keyPath: 'id' });
         sq.createIndex('status', 'status');
-        sq.createIndex('timestamp', 'timestamp');
+        sq.createIndex('createdAt', 'createdAt');
       }
 
       // Audit log
@@ -1917,7 +1917,17 @@ function startAutoBackup() {
     });
   }, 30 * 60 * 1000);
 
-  console.log('[Backup] ✅ Auto-backup démarré (toutes les 30 min)');
+  // Demarrer la file d attente persistante (OperationQueue)
+  if (window.OperationQueue && typeof window.OperationQueue.start === 'function') {
+    window.OperationQueue.start();
+  } else {
+    // Retry apres chargement complet si queue.js pas encore charge
+    window.addEventListener('load', function() {
+      if (window.OperationQueue) window.OperationQueue.start();
+    });
+  }
+
+  console.log('[Backup] Auto-backup demarre (toutes les 30 min)');
 }
 
 let _autoPullTimer = null;
