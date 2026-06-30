@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Gestion Moderne des Alertes
  * Filtres par mois, type, priorité, statut + Stats + Actions groupées
  */
@@ -158,8 +158,11 @@ const AlertsPage = {
             <p class="page-subtitle">${stats.unread} alerte(s) active(s) · ${stats.todayCount} aujourd'hui</p>
           </div>
           <div class="header-actions">
+            <button class="btn btn-secondary" onclick="AlertsPage.exportPDF()" title="PDF">
+              <i data-lucide="printer"></i> PDF
+            </button>
             <button class="btn btn-secondary" onclick="AlertsPage.exportCSV()" title="Exporter">
-              <i data-lucide="download"></i> Export
+              <i data-lucide="download"></i> CSV
             </button>
             <button class="btn btn-secondary" onclick="AlertsPage.deleteReadAlerts()">
               <i data-lucide="trash-2"></i> Purger les lues
@@ -484,8 +487,22 @@ const AlertsPage = {
     a.download = `alertes_OrdiveX_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    UI.toast('Export CSV téléchargé', 'success');
+    UI.toast('Export téléchargé', 'success');
   },
+
+  exportPDF() {
+    if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+    const data = window._alertsData || [];
+    const rows = data.map(al => [
+      new Date(al.date).toLocaleString('fr-FR'),
+      (AlertsPage.alertTypes[al.type] ? AlertsPage.alertTypes[al.type].label : al.type) || '',
+      (AlertsPage.priorityMap[al.priority] ? AlertsPage.priorityMap[al.priority].label : al.priority) || '',
+      al.message || '',
+      al.status === 'read' ? 'Lu' : 'Non lu'
+    ]);
+    const headers = ["Date", "Type", "Priorité", "Message", "Statut"];
+    window.PDFExport.generate("Centre d'Alertes", headers, rows);
+  }
 };
 
 window.AlertsPage = AlertsPage;

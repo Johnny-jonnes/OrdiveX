@@ -32,6 +32,7 @@ async function renderSuppliers(container) {
         <p class="page-subtitle">${suppliers.length} fournisseurs — ${totalOrders} commandes</p>
       </div>
       <div class="header-actions">
+        <button class="btn btn-secondary" onclick="exportSuppliersPDF()"><i data-lucide="printer"></i> PDF</button>
         <button class="btn btn-secondary" onclick="Router.navigate('purchase-orders')"><i data-lucide="file-text"></i> Bons de Commande</button>
         <button class="btn btn-primary" onclick="showAddSupplier()"><i data-lucide="plus"></i> Nouveau Fournisseur</button>
       </div>
@@ -441,7 +442,8 @@ async function renderPurchaseOrders(container) {
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" onclick="Router.navigate('suppliers')"><i data-lucide="factory"></i> Fournisseurs</button>
-        <button class="btn btn-secondary" onclick="exportAllOrders()"><i data-lucide="download"></i> Exporter</button>
+        <button class="btn btn-secondary" onclick="exportOrdersPDF()"><i data-lucide="printer"></i> PDF</button>
+        <button class="btn btn-secondary" onclick="exportAllOrders()"><i data-lucide="download"></i> Exporter CSV</button>
         <label class="btn btn-secondary" style="cursor:pointer"><i data-lucide="upload"></i> Importer<input type="file" accept=".json,.csv" style="display:none" onchange="importOrdersFile(this.files[0])"></label>
         <button class="btn btn-primary" onclick="showNewOrderForm()"><i data-lucide="plus"></i> Nouvelle Commande</button>
       </div>
@@ -885,7 +887,7 @@ async function confirmReceiveOrder(orderId) {
   for (let idx = 0; idx < (order.items || []).length; idx++) {
     const item = order.items[idx];
     const qtyReceived = parseInt(item._recvQty) || 0;
-    const lotNumber = item._recvLot || `LOT-AUTO-${Date.now()}-${idx}`;
+    const lotNumber = item._recvLot || '';
     const expiryDate = item._recvExpiry || '';
     const conform = item._recvConform === '1';
 
@@ -1301,7 +1303,7 @@ async function importOrdersFile(file) {
             var qtyR = ri.receivedQty || ri.quantity;
             if (qtyR > 0 && ri.productId) {
               try {
-                var lotNum = ri.lotNumber || ('LOT-IMP-' + Date.now() + '-' + si);
+                var lotNum = ri.lotNumber || '';
                 await DB.dbAdd('lots', { productId: ri.productId, lotNumber: lotNum, expiryDate: ri.expiryDate || '', quantity: qtyR, initialQuantity: qtyR, receiptDate: new Date().toISOString().split('T')[0], supplierId: supplierId, status: 'active' });
                 var stockAll = await DB.dbGetAll('stock');
                 var existing = stockAll.find(function(s) { return s.productId === ri.productId; });
@@ -1381,4 +1383,31 @@ function _parseImportCSV(text) {
     return Object.values(orderMap);
   } catch (e) { UI.toast('Erreur lecture CSV : ' + e.message, 'error'); return []; }
 }
+
+window.exportSuppliersPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._suppliersData || []).map(s => [
+    s.name || '',
+    s.contact || s.contactName || '',
+    s.phone || s.contactPhone || '',
+    s.email || '',
+    s.address || ''
+  ]);
+  const headers = ["Fournisseur", "Contact", "Téléphone", "Email", "Adresse"];
+  window.PDFExport.generate("Liste des Fournisseurs", headers, data);
+};
+
+window.exportOrdersPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._ordersData || []).map(o => [
+    o.orderNumber || '',
+    new Date(o.date).toLocaleDateString('fr-FR'),
+    o.supplierName || 'Inconnu',
+    o.status,
+    UI.formatCurrency(o.totalAmount || 0)
+  ]);
+  const headers = ["N° Commande", "Date", "Fournisseur", "Statut", "Montant Total"];
+  window.PDFExport.generate("Bons de Commande", headers, data);
+};
+
 

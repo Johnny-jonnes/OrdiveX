@@ -34,6 +34,7 @@ async function renderInvoices(container) {
       <div class="header-actions">
         <input type="file" id="inv-csv-file" accept=".csv" style="display:none" onchange="importInvoiceCsv(event)">
         <button class="btn btn-secondary" onclick="document.getElementById('inv-csv-file').click()"><i data-lucide="upload-cloud"></i> Importer Facture (CSV)</button>
+        <button class="btn btn-secondary" onclick="exportInvoicesPDF()"><i data-lucide="printer"></i> PDF</button>
         <button class="btn btn-secondary" onclick="exportInvoicesCsv()"><i data-lucide="file-spreadsheet"></i> Exporter CSV</button>
         <button class="btn btn-primary" onclick="showNewInvoiceForm()"><i data-lucide="plus"></i> Nouvelle Facture</button>
       </div>
@@ -1005,6 +1006,19 @@ function printInvoicePDF(invoiceId) {
   `);
   printWin.document.close();
 }
+
+window.exportInvoicesPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._invoicesData || []).map(inv => [
+    inv.invoiceNumber || '',
+    new Date(inv.date).toLocaleDateString('fr-FR'),
+    (window._invoicesSupplierMap[inv.supplierId] ? window._invoicesSupplierMap[inv.supplierId].name : inv.supplierName) || 'Inconnu',
+    UI.formatCurrency(inv.totalAmount || 0),
+    inv.status === 'draft' ? 'Brouillon' : inv.status === 'validated' ? 'Validé' : inv.status
+  ]);
+  const headers = ["N° Facture", "Date", "Fournisseur", "Montant Total", "Statut"];
+  window.PDFExport.generate("Liste des Factures Fournisseurs", headers, data);
+};
 
 window.renderInvoices = renderInvoices;
 window.filterInvoices = filterInvoices;

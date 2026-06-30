@@ -21,7 +21,8 @@ async function renderPatients(container) {
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" onclick="showImportPatientsModal()"><i data-lucide="upload"></i> Importer</button>
-        <button class="btn btn-secondary" onclick="exportPatients()"><i data-lucide="download"></i> Exporter</button>
+        <button class="btn btn-secondary" onclick="exportPatientsPDF()"><i data-lucide="printer"></i> PDF</button>
+        <button class="btn btn-secondary" onclick="exportPatients()"><i data-lucide="download"></i> Exporter CSV</button>
         <button class="btn btn-primary" onclick="showAddPatient()"><i data-lucide="plus"></i> Nouveau Patient</button>
       </div>
     </div>
@@ -583,13 +584,26 @@ async function sendPatientSms(patientId) {
     } else {
       UI.toast('Erreur d\'envoi : ' + (res.error || 'Vérifiez la configuration'), 'error');
     }
-  } catch(e) {
-    UI.toast('Erreur : ' + e.message, 'error');
+  } catch (err) {
+    UI.toast(err.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalHtml;
   }
 }
+
+window.exportPatientsPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._patientsData || []).map(p => [
+    p.name || '',
+    p.phone || '',
+    p.dob ? new Date(p.dob).toLocaleDateString('fr-FR') : '—',
+    p.allergies || 'Aucune',
+    p.address || ''
+  ]);
+  const headers = ["Nom du Patient", "Téléphone", "Date de Naissance", "Allergies", "Adresse"];
+  window.PDFExport.generate("Liste des Patients", headers, data);
+};
 
 /* ══════════════════════════════════════════════════════
  * IMPORT CSV PATIENTS — Architecture Bulk (dbBulkPut)

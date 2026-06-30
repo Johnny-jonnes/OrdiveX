@@ -1,9 +1,9 @@
-/**
- * OrdiveX â€” Service Worker
+﻿/**
+ * OrdiveX Ã¢â‚¬â€ Service Worker
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.7.7';
+const CACHE_NAME = 'pharma-cache-v9.7.8';
 const ASSETS = [
   './',
   './index.html',
@@ -40,6 +40,9 @@ const ASSETS = [
   './js/pages/shifts.js',
   './js/vendor/lucide.min.js',
   './js/vendor/supabase.min.js',
+  './js/vendor/jspdf.umd.min.js',
+  './js/vendor/jspdf.plugin.autotable.min.js',
+  './js/utils/pdf-export.js'
 ];
 
 // Install: cache all assets individually to avoid global failure
@@ -73,7 +76,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => {
-      console.log('[SW] Activated â€” Old caches cleared');
+      console.log('[SW] Activated Ã¢â‚¬â€ Old caches cleared');
       return self.clients.claim();
     })
   );
@@ -83,11 +86,11 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = event.request.url;
 
-  // 🛡️ REQUÊTES EXTERNES (Supabase, fonts, CDN)
+  // ðŸ›¡ï¸ REQUÃŠTES EXTERNES (Supabase, fonts, CDN)
   if (!url.startsWith(self.location.origin)) {
-    // Ne JAMAIS intercepter les requêtes Supabase ou autres API externes.
-    // Laisser le navigateur planter naturellement si le réseau coupe,
-    // ce qui permet à db.js de détecter la coupure et de s'arrêter proprement.
+    // Ne JAMAIS intercepter les requÃªtes Supabase ou autres API externes.
+    // Laisser le navigateur planter naturellement si le rÃ©seau coupe,
+    // ce qui permet Ã  db.js de dÃ©tecter la coupure et de s'arrÃªter proprement.
     return; 
   }
 
@@ -96,7 +99,7 @@ self.addEventListener('fetch', event => {
   if (url.startsWith('chrome-extension')) return;
 
   // Pour les assets locaux (.js, .css) : normaliser l'URL sans query string
-  // Cela évite le double cache entre "./js/db.js" et "./js/db.js?v=9.6.2"
+  // Cela Ã©vite le double cache entre "./js/db.js" et "./js/db.js?v=9.6.2"
   const urlObj = new URL(url);
   const isLocalAsset = /\.(js|css|html|json|png|svg|ico|webp)(\?|$)/.test(urlObj.pathname);
   const cacheKey = isLocalAsset
@@ -140,7 +143,7 @@ self.addEventListener('push', event => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'OrdiveX', {
       body: data.body || 'Nouvelle alerte',
-      icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext y='68' font-size='60' text-anchor='middle' x='50'%3EðŸ’Š%3C/text%3E%3C/svg%3E",
+      icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231B4F72'/%3E%3Ctext y='68' font-size='60' text-anchor='middle' x='50'%3EÃ°Å¸â€™Å %3C/text%3E%3C/svg%3E",
       data: { url: data.url || '/' },
       tag: data.tag || 'pharma-alert',
       requireInteraction: data.critical || false,
@@ -154,10 +157,12 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(clients.openWindow(url));
 });
 
-// ── Réception du signal SKIP_WAITING depuis la bannière de mise à jour ──
+// â”€â”€ RÃ©ception du signal SKIP_WAITING depuis la banniÃ¨re de mise Ã  jour â”€â”€
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 });
+
+
 

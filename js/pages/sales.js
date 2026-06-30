@@ -95,6 +95,7 @@ async function renderSales(container) {
         <option value="partially_returned">Retour partiel</option>
         <option value="fully_returned">Entièrement retourné</option>
       </select>
+      <button class="btn btn-ghost" onclick="exportSalesPDF()"><i data-lucide="printer"></i> PDF</button>
       <button class="btn btn-ghost" onclick="exportSales()"><i data-lucide="download"></i> CSV</button>
     </div>
 
@@ -706,7 +707,22 @@ async function confirmSettleDebt(saleId) {
     console.error(err);
     UI.toast('Erreur : ' + err.message, 'error');
   }
+  DB.writeAudit('EXPORT_CSV', 'sales', null, { count: data.length, filename: a.download });
 }
+
+window.exportSalesPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._salesData || []).map(s => [
+    'V-' + s.id.toString().slice(-6),
+    new Date(s.date).toLocaleString('fr-FR'),
+    UI.formatCurrency(s.total),
+    UI.formatCurrency(s.discount || 0),
+    s.paymentMethod || 'Espèces',
+    s.status === 'completed' ? 'Terminé' : s.status === 'credit' ? 'Crédit' : 'Annulé'
+  ]);
+  const headers = ["N° Vente", "Date & Heure", "Total", "Remise", "Paiement", "Statut"];
+  window.PDFExport.generate("Historique des Ventes", headers, data);
+};
 
 window.filterSales = filterSales;
 window.viewSaleDetail = viewSaleDetail;

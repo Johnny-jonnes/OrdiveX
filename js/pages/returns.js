@@ -36,6 +36,7 @@ async function renderReturns(container) {
         <p class="page-subtitle">Gestion des retours — délai max ${RETURN_DELAY_HOURS}h après la vente</p>
       </div>
       <div class="header-actions">
+        <button class="btn btn-secondary" onclick="exportReturnsPDF()"><i data-lucide="printer"></i> PDF</button>
         <button class="btn btn-primary" onclick="openNewReturn()">
           <i data-lucide="plus-circle"></i> Initier un Retour
         </button>
@@ -713,12 +714,27 @@ window.exportReturns = function () {
     UI.toast('Export CSV téléchargé', 'success');
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// FONCTION UTILITAIRE EXPOSÉE (appelée depuis sales.js)
-// ═══════════════════════════════════════════════════════════════════
+window.exportReturnsPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._returnsData || []).map(r => [
+    'RET-' + r.id.toString().slice(-6),
+    new Date(r.date).toLocaleString('fr-FR'),
+    'V-' + r.saleId.toString().slice(-6),
+    UI.formatCurrency(r.refundAmount || 0),
+    r.reason || 'Non spécifié'
+  ]);
+  const headers = ["N° Retour", "Date", "Vente Initiale", "Montant Remboursé", "Motif"];
+  window.PDFExport.generate("Historique des Retours", headers, data);
+};
+
+// ==========================================
+// REGISTRATION
+// ==========================================
+
 window.openNewReturn = openNewReturn;
 window.processReturn = processReturn;
 window.filterReturns = filterReturns;
 window.renderReturnsTable = renderReturnsTable;
 
 Router.register('returns', renderReturns);
+

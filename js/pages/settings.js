@@ -592,6 +592,7 @@ async function renderSettings(container) {
       <div class="settings-card">
         <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
           <h3 class="settings-card-title"><i data-lucide="users"></i> Gestion des Utilisateurs</h3>
+          <button class="btn btn-sm btn-secondary" onclick="exportUsersPDF()"><i data-lucide="printer"></i> PDF</button>
           <button class="btn btn-sm btn-primary" onclick="showAddUser()"><i data-lucide="plus"></i> Ajouter</button>
         </div>
         <div class="users-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
@@ -1102,7 +1103,19 @@ async function testSmsConnection() {
 
 window.updatePharmacyDisplay = updatePharmacyDisplay;
 window.saveSupabaseConfig = saveSupabaseConfig;
-window.saveSmsConfig = saveSmsConfig;
+window.resetSmsConfig = resetSmsConfig;
+
+window.exportUsersPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._usersData || []).map(u => [
+    u.name,
+    u.username,
+    u.role,
+    u.active ? 'Actif' : 'Inactif'
+  ]);
+  const headers = ["Nom Complet", "Nom d'utilisateur", "Rôle", "Statut"];
+  window.PDFExport.generate("Liste des Utilisateurs", headers, data);
+};
 window.testSmsConnection = testSmsConnection;
 window.handleLogoUpload = handleLogoUpload;
 window.removeLogo = removeLogo;

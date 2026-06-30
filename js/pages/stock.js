@@ -60,6 +60,7 @@ async function renderStock(container) {
         <p class="page-subtitle">Inventaire temps réel — ${totalProducts} produits référencés</p>
       </div>
       <div class="header-actions">
+        <button class="btn btn-secondary" onclick="exportStockPDF()"><i data-lucide="printer"></i> PDF</button>
         <button class="btn btn-secondary" onclick="renderStockInventory()"><i data-lucide="clipboard-list"></i> Inventaire</button>
         <button class="btn btn-secondary" onclick="showImportStockModal()"><i data-lucide="upload"></i> Importer Stock (CSV)</button>
         <input type="file" id="import-stock-file" accept=".csv" style="display:none" onchange="importStockCsv(event)">
@@ -373,8 +374,8 @@ function renderStockEntry() {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>N° de Lot *</label>
-          <input type="text" name="lotNumber" class="form-control" placeholder="LOT-2024-XXX" required>
+          <label>N° Lot (Optionnel)</label>
+          <input type="text" name="lotNumber" class="form-control" placeholder="LOT-2024-XXX">
         </div>
         <div class="form-group">
           <label>Quantité reçue *</label>
@@ -687,6 +688,7 @@ async function renderStockInventory() {
     size: 'large',
     footer: `
       <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+      <button class="btn btn-secondary" onclick="exportInventoryPDF()"><i data-lucide="printer"></i> PDF</button>
       <button class="btn btn-warning" onclick="exportInventory()"><i data-lucide="download"></i> Exporter PV</button>
       <button class="btn btn-primary" onclick="validateInventory()"><i data-lucide="check-circle"></i> Valider l'inventaire</button>
     `
@@ -1016,7 +1018,7 @@ window.importStockCsv = async function(event) {
 
         const buyPrice = cBuyPrice !== -1 ? (parseFloat(cols[cBuyPrice]) || 0) : 0;
         const sellPrice = cSellPrice !== -1 ? (parseFloat(cols[cSellPrice]) || 0) : 0;
-        const lotNumber = cLot !== -1 && cols[cLot] ? cols[cLot] : `LOT-AUTO-${Date.now()}-${i}`;
+        const lotNumber = cLot !== -1 && cols[cLot] ? cols[cLot] : '';
         const expiryStr = cExpiry !== -1 && cols[cExpiry] ? cols[cExpiry] : '2099-12-31';
         let location = cLocation !== -1 && cols[cLocation] ? cols[cLocation].toLowerCase() : 'reserve';
         if (location !== 'rayon' && location !== 'reserve') location = 'reserve';
@@ -1262,6 +1264,33 @@ window._softRefreshStock = async function() {
       filterStock();
     }
   }
+};
+
+window.exportStockPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._stockData || []).map(p => [
+    p.code,
+    p.name,
+    p.currentStock.toString(),
+    p.qtyRayon.toString(),
+    p.qtyReserve.toString(),
+    UI.formatCurrency(p.purchasePrice || 0)
+  ]);
+  const headers = ["Code", "Produit", "Stock Total", "Rayon", "Réserve", "Prix Achat"];
+  window.PDFExport.generate("État du Stock Global", headers, data);
+};
+
+window.exportInventoryPDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const data = (window._inventoryItems || []).map(item => [
+    item.code,
+    item.name,
+    item.systemQty.toString(),
+    (item.physicalQty !== undefined ? item.physicalQty : '').toString(),
+    ((item.physicalQty || 0) - item.systemQty).toString()
+  ]);
+  const headers = ["Code", "Produit", "Stock Système", "Qté Physique", "Écart"];
+  window.PDFExport.generate("Procès-Verbal d'Inventaire", headers, data, { orientation: 'l' });
 };
 
 Router.register('stock', renderStock);

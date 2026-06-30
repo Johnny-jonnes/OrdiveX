@@ -162,6 +162,7 @@ async function renderCaisse(container) {
         <p class="page-subtitle">${new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
       <div class="header-actions">
+        <button class="btn btn-secondary" onclick="exportCaissePDF()"><i data-lucide="printer"></i> PDF</button>
         <button class="btn btn-secondary" onclick="openAddCashEntry()"><i data-lucide="plus"></i> Entrée/Sortie manuelle</button>
         ${['admin', 'pharmacien'].includes(DB.AppState.currentUser?.role)
       ? (!todayClosure
@@ -677,7 +678,6 @@ async function confirmCaisseClose() {
   const physical = parseFloat(document.getElementById('closure-physical')?.value || 0);
   const opening = parseFloat(document.getElementById('closure-opening')?.value || 0);
   const note = document.getElementById('closure-note')?.value || '';
-
   const ok = await UI.confirm(`Confirmer la clôture de caisse du ${today} ?\n\nCette action est irréversible. Aucune vente ne pourra être enregistrée après la clôture.`);
   if (!ok) return;
 
@@ -713,6 +713,19 @@ async function exportDayTransactions(date) {
   UI.toast('Export caisse téléchargé', 'success');
   DB.writeAudit('EXPORT_CSV', 'cashRegister', null, { count: daySales.length, date, filename: a.download });
 }
+
+window.exportCaissePDF = function() {
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+  const tbody = document.getElementById('caisse-mouv-tbody');
+  if(!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const data = rows.map(tr => {
+    const tds = tr.querySelectorAll('td');
+    return Array.from(tds).map(td => td.innerText);
+  });
+  const headers = ["Heure", "Type", "Raison / Réf", "Méthode", "Montant"];
+  window.PDFExport.generate("Mouvements de Caisse Journaliers", headers, data);
+};
 
 window.switchCaisseTab = switchCaisseTab;
 window.openAddCashEntry = openAddCashEntry;

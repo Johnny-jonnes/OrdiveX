@@ -31,7 +31,8 @@ async function renderProducts(container) {
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" onclick="showImportModal()"><i data-lucide="upload"></i> Importer</button>
-        <button class="btn btn-secondary" onclick="exportProducts()"><i data-lucide="download"></i> Exporter</button>
+        <button class="btn btn-secondary" onclick="exportProductsPDF()"><i data-lucide="printer"></i> PDF</button>
+        <button class="btn btn-secondary" onclick="exportProducts()"><i data-lucide="download"></i> CSV</button>
         <button class="btn btn-primary" onclick="showAddProduct()"><i data-lucide="plus"></i> Nouveau Produit</button>
       </div>
     </div>
@@ -691,7 +692,75 @@ function exportProducts() {
   DB.writeAudit('EXPORT_CSV', 'products', null, { count: data.length, filename: a.download });
 }
 
+async function exportProductsPDF() {
+  if (!window.PDFExport) {
+    UI.toast("Le module PDF n'est pas chargé", "error");
+    return;
+  }
+  
+  const products = window._productsData || [];
+  const stockData = await DB.dbGetAll('stock');
+  const stockMap = {};
+  stockData.forEach(s => { stockMap[s.productId] = s.quantity || 0; });
+  
+  let valAchat = 0;
+  let valVente = 0;
+  let rupture = 0;
+  let faible = 0;
+  let expires = 0;
+  let proches = 0;
+  let totalQty = 0;
+  
+  const today = new Date();
+  const nextMonth = new Date();
+  nextMonth.setMonth(nextMonth.getMonth() + 3); // Proche = 3 mois
+  
+  const data = products.map(p => {
+    const qty = stockMap[p.id] || 0;
+    const pa = parseFloat(p.purchasePrice || p.prixAchat || 0);
+    const pv = parseFloat(p.salePrice || p.price || p.prixVente || 0);
+    
+    totalQty += qty;
+    valAchat += pa * qty;
+    valVente += pv * qty;
+    
+    if (qty <= 0) rupture++;
+    else if (qty <= (p.minStock || 10)) faible++;
+    
+    if (p.expiryDate) {
+      const expD = new Date(p.expiryDate);
+      if (expD < today) expires++;
+      else if (expD < nextMonth) proches++;
+    }
+    
+    return [
+      p.code || '',
+      p.name || '',
+      p.category || '',
+      UI.formatCurrency(pv),
+      qty.toString(),
+      p.expiryDate ? new Date(p.expiryDate).toLocaleDateString('fr-FR') : '—'
+    ];
+  });
+  
+  const headers = ["Code", "Nom du Produit", "Catégorie", "Prix Vente", "En Stock", "Péremption"];
+  
+  const summaryBlocks = [
+    { label: "Nombre total de médicaments référencés", value: products.length.toString() },
+    { label: "Quantité totale en stock (tous produits)", value: totalQty.toString() },
+    { label: "Valeur totale du stock (Prix Vente)", value: UI.formatCurrency(valVente) },
+    { label: "Valeur totale du stock (Prix Achat)", value: UI.formatCurrency(valAchat) },
+    { label: "Produits en rupture de stock", value: rupture.toString() },
+    { label: "Produits en stock faible", value: faible.toString() },
+    { label: "Produits expirés", value: expires.toString() },
+    { label: "Produits proches de l'expiration (< 3 mois)", value: proches.toString() }
+  ];
+  
+  await window.PDFExport.generate("Inventaire et État du Stock", headers, data, { orientation: 'p', summaryBlocks });
+}
+
 window.filterProducts = filterProducts;
+window.exportProductsPDF = exportProductsPDF;
 window.viewProduct = viewProduct;
 window.showAddProduct = showAddProduct;
 window.submitProduct = submitProduct;
