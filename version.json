@@ -1,5 +1,5 @@
 {
-  "version": "9.7.15",
+  "version": "9.7.16",
   "date": "2026-06-30",
-  "changelog": "P1.1 File attente persistante (OperationQueue)"
+  "changelog": "P1.3 Timeout AbortController 15s sur tous les appels Supabase"
 }

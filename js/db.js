@@ -1078,6 +1078,34 @@ async function trackInstallation() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// TIMEOUT GUARD — AbortController sur toutes les requetes Supabase
+// Empeche un appel reseau suspendu de bloquer l app indefiniment.
+// ═══════════════════════════════════════════════════════════════════
+const _SUPABASE_TIMEOUT_MS = 15000; // 15s (genereux pour 3G lente)
+
+function _withTimeout(supabaseQuery, ms) {
+  ms = ms || _SUPABASE_TIMEOUT_MS;
+  return new Promise(function(resolve) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function() {
+      ctrl.abort();
+      resolve({ data: null, error: { message: 'timeout', code: 'TIMEOUT' } });
+    }, ms);
+    supabaseQuery
+      .abortSignal(ctrl.signal)
+      .then(function(result) { clearTimeout(timer); resolve(result); })
+      .catch(function(err) {
+        clearTimeout(timer);
+        if (err && err.name === 'AbortError') {
+          resolve({ data: null, error: { message: 'timeout', code: 'TIMEOUT' } });
+        } else {
+          resolve({ data: null, error: err });
+        }
+      });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // PHASE 9 — SYNC FURTIVE INDICATOR
 // Petit indicateur visuel discret dans la topbar pendant la sync
 // ═══════════════════════════════════════════════════════════════════
@@ -1288,12 +1316,14 @@ async function syncToSupabase() {
 
           for (let bi = 0; bi < currentPayloads.length; bi += PUSH_BATCH) {
             const batch = currentPayloads.slice(bi, bi + PUSH_BATCH);
-            const { error } = await sb
-              .from(storeName === 'users' ? 'app_users' : storeName)
-              .upsert(batch, {
-                onConflict: storeName === 'settings' ? 'key' : 'id',
-                ignoreDuplicates: false
-              });
+            const { error } = await _withTimeout(
+              sb
+                .from(storeName === 'users' ? 'app_users' : storeName)
+                .upsert(batch, {
+                  onConflict: storeName === 'settings' ? 'key' : 'id',
+                  ignoreDuplicates: false
+                })
+            );
 
             if (error) {
               lastError = error;
@@ -1473,10 +1503,7 @@ async function pullFromSupabase(isManual = false) {
     // Si on est en mode hors-ligne confirmé, éviter le probe réseau
     if (AppState._confirmedOffline) { return; }
     try {
-      var _probeCtrl2 = new AbortController();
-      var _probeTimeout2 = setTimeout(function() { _probeCtrl2.abort(); }, 8000);
-      const probeReq = await sb.from('settings').select('key').limit(1).abortSignal(_probeCtrl2.signal);
-      clearTimeout(_probeTimeout2);
+      const probeReq = await _withTimeout(sb.from('settings').select('key').limit(1), 8000);
       if (probeReq.error) throw probeReq.error;
       AppState.isOnline = true;
       AppState._confirmedOffline = false;
@@ -1651,11 +1678,13 @@ async function pullFromSupabase(isManual = false) {
 
             const results = await Promise.all(batch.map(async ({ storeName: sn, tableName: tn }) => {
               try {
-                const { data, error } = await sb.from(tn)
+                const { data, error } = await _withTimeout(
+                sb.from(tn)
                   .select('*')
                   .gte('updatedAt', pullSince)
                   .order('updatedAt', { ascending: true })
-                  .limit(5000);
+                  .limit(5000)
+              );
                 if (error) return { sn, data: null, error };
                 return { sn, data, error: null };
               } catch (e) { return { sn, data: null, error: e }; }
@@ -1677,7 +1706,7 @@ async function pullFromSupabase(isManual = false) {
 
         } else {
           // ── PULL COMPLET (manuel ou premier pull) ──
-          const countRes = await sb.from(tableName).select('*', { count: 'exact', head: true });
+          const countRes = await _withTimeout(sb.from(tableName).select('*', { count: 'exact', head: true }));
           const totalCount = countRes.count || 0;
 
           if (totalCount > 0) {
@@ -1689,7 +1718,7 @@ async function pullFromSupabase(isManual = false) {
               const batch = [];
               for (let j = 0; j < 5 && (offset + j * fetchLimit) < totalCount; j++) {
                 const o = offset + j * fetchLimit;
-                batch.push(sb.from(tableName).select('*').range(o, o + fetchLimit - 1));
+                batch.push(_withTimeout(sb.from(tableName).select('*').range(o, o + fetchLimit - 1)));
               }
               const results = await Promise.all(batch);
               for (const res of results) {
