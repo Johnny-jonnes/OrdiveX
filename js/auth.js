@@ -77,24 +77,39 @@ const Auth = {
 const Router = {
   routes: {},
   currentPage: null,
+  _cleanupFns: [],
+
+  // Enregistrer une fonction de cleanup pour la page courante
+  // Appelee automatiquement avant de quitter la page
+  onLeave(fn) {
+    if (typeof fn === 'function') this._cleanupFns.push(fn);
+  },
+
+  _runCleanup() {
+    var fns = this._cleanupFns.slice();
+    this._cleanupFns = [];
+    for (var i = 0; i < fns.length; i++) {
+      try { fns[i](); } catch(e) { /* silencieux */ }
+    }
+  },
 
   register(name, renderFn) {
-
     this.routes[name] = renderFn;
-    // Auto-refresh if we are on this page and it showed "not found"
     if (this.currentPage === name) {
       const main = document.getElementById('app-content');
       if (main && main.innerHTML.includes('Page introuvable')) {
-
         this.render(name);
       }
     }
   },
 
-  navigate(page, params = {}) {
+  navigate(page, params) {
+    params = params || {};
     if (!DB.AppState.currentUser && page !== 'login' && page !== 'onboarding') {
       page = 'login';
     }
+    // Cleanup de la page precedente AVANT de changer
+    this._runCleanup();
     this.currentPage = page;
     DB.AppState.currentPage = page;
     this.render(page, params);
@@ -105,39 +120,39 @@ const Router = {
     const main = document.getElementById('app-content');
     if (!main) return;
 
-    // Nettoyage mémoire des données temporaires de la page précédente
+    // Nettoyage memoire des donnees temporaires de la page precedente
     const tempKeys = ['_stockData', '_salesData', '_saleItemsData', '_ordersData', '_ordersSupplierMap', '_ordersProducts',
       '_reorderSuggestions', '_inventoryItems', '_traceProductMap', '_traceLots', '_traceMovements',
       '_tracePrescriptions', '_tracePatients', '_currentReceiveOrder', '_allProducts'];
-    tempKeys.forEach(k => { try { delete window[k]; } catch(e) {} });
+    tempKeys.forEach(function(k) { try { delete window[k]; } catch(e) {} });
 
     const fn = this.routes[page];
     if (fn) {
       main.innerHTML = '';
       try {
         const result = fn(main, params);
-        // Si la fonction retourne une Promise, capturer les erreurs async
         if (result && typeof result.catch === 'function') {
-          result.catch(err => {
-            console.error(`[Router] Erreur async dans "${page}":`, err);
-            main.innerHTML = `<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">⚠️</div><h2>Erreur de chargement</h2><p style="color:var(--text-muted);margin:8px 0">${err.message || 'Erreur inconnue'}</p><button class="btn btn-primary" style="margin-top:12px" onclick="Router.navigate('${page}')">Réessayer</button><button class="btn btn-secondary" style="margin-top:12px;margin-left:8px" onclick="Router.navigate('dashboard')">Tableau de bord</button></div>`;
+          result.catch(function(err) {
+            console.error('[Router] Erreur async dans "' + page + '":', err);
+            main.innerHTML = '<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">!</div><h2>Erreur de chargement</h2><p style="color:var(--text-muted);margin:8px 0">' + (err.message || 'Erreur inconnue') + '</p><button class="btn btn-primary" style="margin-top:12px" onclick="Router.navigate(\'' + page + '\')">Reessayer</button><button class="btn btn-secondary" style="margin-top:12px;margin-left:8px" onclick="Router.navigate(\'dashboard\')">Tableau de bord</button></div>';
           });
         }
       } catch (err) {
-        console.error(`[Router] Erreur dans "${page}":`, err);
-        main.innerHTML = `<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">⚠️</div><h2>Erreur de chargement</h2><p style="color:var(--text-muted);margin:8px 0">${err.message || 'Erreur inconnue'}</p><button class="btn btn-primary" style="margin-top:12px" onclick="Router.navigate('${page}')">Réessayer</button><button class="btn btn-secondary" style="margin-top:12px;margin-left:8px" onclick="Router.navigate('dashboard')">Tableau de bord</button></div>`;
+        console.error('[Router] Erreur dans "' + page + '":', err);
+        main.innerHTML = '<div class="empty-state"><div style="font-size:48px;margin-bottom:16px">!</div><h2>Erreur de chargement</h2><p style="color:var(--text-muted);margin:8px 0">' + (err.message || 'Erreur inconnue') + '</p><button class="btn btn-primary" style="margin-top:12px" onclick="Router.navigate(\'' + page + '\')">Reessayer</button><button class="btn btn-secondary" style="margin-top:12px;margin-left:8px" onclick="Router.navigate(\'dashboard\')">Tableau de bord</button></div>';
       }
     } else {
-      main.innerHTML = `<div class="empty-state"><h2>Page introuvable : ${page}</h2></div>`;
+      main.innerHTML = '<div class="empty-state"><h2>Page introuvable : ' + page + '</h2></div>';
     }
   },
 
   updateNav(page) {
-    document.querySelectorAll('.nav-item').forEach(el => {
+    document.querySelectorAll('.nav-item').forEach(function(el) {
       el.classList.toggle('active', el.dataset.page === page);
     });
   }
 };
+
 
 window.Auth = Auth;
 window.Router = Router;

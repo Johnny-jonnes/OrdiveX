@@ -189,74 +189,125 @@ const UI = {
     if (window.lucide) lucide.createIcons();
   },
 
-  table(container, columns, rows, options = {}) {
+  table(container, columns, rows, options) {
+    options = options || {};
     if (!rows.length) {
-      this.empty(container, options.emptyMessage || 'Aucun résultat', options.emptyIcon);
+      this.empty(container, options.emptyMessage || 'Aucun resultat', options.emptyIcon);
       return;
     }
 
-    // Auto-pagination pour prévenir les crashs
-    const pageSize = options.pageSize || 100;
-    const isPaginated = options.paginate !== false && rows.length > pageSize;
-    let currentPage = parseInt(container.dataset.page || '1');
-    
-    const totalPages = Math.ceil(rows.length / pageSize);
+    // Pagination : 50 lignes par defaut — previent les crashs sur gros volumes
+    var pageSize = options.pageSize || 50;
+    var isPaginated = options.paginate !== false && rows.length > pageSize;
+    var currentPage = parseInt(container.dataset.page || '1');
+
+    var totalPages = Math.ceil(rows.length / pageSize);
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;
 
-    let displayRows = rows;
+    var displayRows = rows;
     if (isPaginated) {
-      const start = (currentPage - 1) * pageSize;
+      var start = (currentPage - 1) * pageSize;
       displayRows = rows.slice(start, start + pageSize);
     }
 
-    const thead = columns.map(c => `<th>${c.label}</th>`).join('');
-    const tbody = displayRows.map((row, ri) => {
-      const globalIdx = isPaginated ? ((currentPage - 1) * pageSize + ri) : ri;
-      const cells = columns.map(c => {
-        const val = typeof c.render === 'function' ? c.render(row, globalIdx) : (row[c.key] ?? '—');
-        const label = c.label || '';
-        return `<td data-label="${label}">${val}</td>`;
-      }).join('');
-      return `<tr ${options.onRowClick ? `class="clickable" data-idx="${globalIdx}"` : ''}>${cells}</tr>`;
-    }).join('');
+    // ── DocumentFragment : construit le DOM hors-ecran, ZERO reflow intermediaire ──
+    var frag = document.createDocumentFragment();
 
-    const wrapper = document.createElement('div');
+    var wrapper = document.createElement('div');
     wrapper.className = 'table-wrapper';
-    wrapper.innerHTML = `
-      <table class="data-table">
-        <thead><tr>${thead}</tr></thead>
-        <tbody>${tbody}</tbody>
-      </table>`;
-    
-    container.innerHTML = '';
-    container.appendChild(wrapper);
 
+    var table = document.createElement('table');
+    table.className = 'data-table';
+
+    // THEAD
+    var thead = document.createElement('thead');
+    var theadRow = document.createElement('tr');
+    for (var ci = 0; ci < columns.length; ci++) {
+      var th = document.createElement('th');
+      th.textContent = columns[ci].label || '';
+      theadRow.appendChild(th);
+    }
+    thead.appendChild(theadRow);
+    table.appendChild(thead);
+
+    // TBODY via fragment interne
+    var tbody = document.createElement('tbody');
+    var tbodyFrag = document.createDocumentFragment();
+
+    for (var ri = 0; ri < displayRows.length; ri++) {
+      var row = displayRows[ri];
+      var globalIdx = isPaginated ? ((currentPage - 1) * pageSize + ri) : ri;
+      var tr = document.createElement('tr');
+      if (options.onRowClick) {
+        tr.className = 'clickable';
+        tr.dataset.idx = globalIdx;
+      }
+      for (var cj = 0; cj < columns.length; cj++) {
+        var col = columns[cj];
+        var td = document.createElement('td');
+        td.setAttribute('data-label', col.label || '');
+        var val = typeof col.render === 'function' ? col.render(row, globalIdx) : (row[col.key] !== undefined && row[col.key] !== null ? row[col.key] : '-');
+        // Seul innerHTML si la valeur contient du HTML (badges, etc)
+        if (typeof val === 'string' && (val.includes('<') || val.includes('&'))) {
+          td.innerHTML = val;
+        } else {
+          td.textContent = val;
+        }
+        tr.appendChild(td);
+      }
+      tbodyFrag.appendChild(tr);
+    }
+    tbody.appendChild(tbodyFrag);
+    table.appendChild(tbody);
+    wrapper.appendChild(table);
+    frag.appendChild(wrapper);
+
+    // Pagination
     if (isPaginated) {
-      const pagDiv = document.createElement('div');
+      var pagDiv = document.createElement('div');
       pagDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:16px 0;gap:12px;flex-wrap:wrap;';
-      pagDiv.innerHTML = `
-        <span style="font-size:13px;color:var(--text-muted)">${rows.length.toLocaleString()} données — Page ${currentPage}/${totalPages}</span>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-secondary btn-sm" id="ui-btn-prev" ${currentPage <= 1 ? 'disabled' : ''}>◀ Précédent</button>
-          <button class="btn btn-secondary btn-sm" id="ui-btn-next" ${currentPage >= totalPages ? 'disabled' : ''}>Suivant ▶</button>
-        </div>
-      `;
-      container.appendChild(pagDiv);
-      
-      const prevBtn = container.querySelector('#ui-btn-prev');
-      const nextBtn = container.querySelector('#ui-btn-next');
-      if (prevBtn) prevBtn.onclick = () => { container.dataset.page = currentPage - 1; UI.table(container, columns, rows, options); };
-      if (nextBtn) nextBtn.onclick = () => { container.dataset.page = currentPage + 1; UI.table(container, columns, rows, options); };
+
+      var info = document.createElement('span');
+      info.style.cssText = 'font-size:13px;color:var(--text-muted)';
+      info.textContent = rows.length.toLocaleString('fr-FR') + ' donnees - Page ' + currentPage + '/' + totalPages;
+      pagDiv.appendChild(info);
+
+      var btnWrap = document.createElement('div');
+      btnWrap.style.cssText = 'display:flex;gap:8px;';
+
+      var prevBtn = document.createElement('button');
+      prevBtn.className = 'btn btn-secondary btn-sm';
+      prevBtn.textContent = '< Precedent';
+      prevBtn.disabled = currentPage <= 1;
+      prevBtn.onclick = function() { container.dataset.page = currentPage - 1; UI.table(container, columns, rows, options); };
+
+      var nextBtn = document.createElement('button');
+      nextBtn.className = 'btn btn-secondary btn-sm';
+      nextBtn.textContent = 'Suivant >';
+      nextBtn.disabled = currentPage >= totalPages;
+      nextBtn.onclick = function() { container.dataset.page = currentPage + 1; UI.table(container, columns, rows, options); };
+
+      btnWrap.appendChild(prevBtn);
+      btnWrap.appendChild(nextBtn);
+      pagDiv.appendChild(btnWrap);
+      frag.appendChild(pagDiv);
     }
 
+    // Injection unique dans le DOM (1 seul reflow)
+    container.innerHTML = '';
+    container.appendChild(frag);
+
+    // Listeners de clic sur lignes
     if (options.onRowClick) {
-      wrapper.querySelectorAll('tr[data-idx]').forEach(tr => {
-        tr.onclick = () => options.onRowClick(rows[parseInt(tr.dataset.idx)]);
+      tbody.querySelectorAll('tr[data-idx]').forEach(function(tr) {
+        tr.onclick = function() { options.onRowClick(rows[parseInt(tr.dataset.idx)]); };
       });
     }
+
     if (window.lucide) lucide.createIcons({ root: container });
   },
+
 
   paymentMethodBadge(method) {
     const m = { cash: ['banknote', 'Espèces', 'badge-neutral'], orange_money: ['smartphone', 'Orange Money', 'badge-orange'], mtn_momo: ['smartphone', 'MTN MoMo', 'badge-yellow'], credit: ['file-clock', 'Crédit', 'badge-warning'], transfer: ['building-2', 'Virement', 'badge-info'] };

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.17",
+  "version": "9.7.18",
   "date": "2026-06-30",
-  "changelog": "P2.3 UI.showLoader robuste fallback 8s"
+  "changelog": "P3.2 Router.onLeave cleanup + P3.3 DocumentFragment pagination 50 lignes"
 }
