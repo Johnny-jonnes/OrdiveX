@@ -1323,7 +1323,7 @@ async function _analyzeSupplyChain() {
   const [products, stockAll, lots, salesRaw, movements, purchaseOrders, saleItems] = await Promise.all([
     DB.dbGetAll('products'),
     DB.dbGetAll('stock'),
-    DB.dbGetAll('lots'),
+    DB.dbGetAll('lots').catch(() => []),
     DB.dbGetAll('sales'),
     DB.dbGetAll('movements').catch(() => []),
     DB.dbGetAll('purchaseOrders').catch(() => []),
@@ -1337,162 +1337,212 @@ async function _analyzeSupplyChain() {
   const MS_7D  = 7  * MS_1D;
   const MS_30D = 30 * MS_1D;
   const MS_60D = 60 * MS_1D;
-  const MS_90D = 90 * MS_1D;
 
-  const today = new Date().toISOString().split('T')[0];
   const since7  = now - MS_7D;
   const since30 = now - MS_30D;
   const since60 = now - MS_60D;
-  const since90 = now - MS_90D;
-  const startOfDay = new Date(today).getTime();
-
+  
   // ── Index stock ──
   const stockMap = {};
   stockAll.forEach(s => { stockMap[s.productId] = (stockMap[s.productId] || 0) + (s.quantity || 0); });
 
   // ── CA par periode ──
-  const salesDay   = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= startOfDay);
   const sales7     = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since7);
   const sales30    = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since30);
   const sales30_60 = sales.filter(s => { const t = new Date(s.createdAt || s.date || 0).getTime(); return t >= since60 && t < since30; });
-  const sales90    = sales.filter(s => new Date(s.createdAt || s.date || 0).getTime() >= since90);
 
-  const caDay   = salesDay.reduce((a, s) => a + (s.total || 0), 0);
   const ca7     = sales7.reduce((a, s) => a + (s.total || 0), 0);
   const ca30    = sales30.reduce((a, s) => a + (s.total || 0), 0);
   const caPrev30 = sales30_60.reduce((a, s) => a + (s.total || 0), 0);
-  const ca90    = sales90.reduce((a, s) => a + (s.total || 0), 0);
 
-  const avgDayCA    = sales7.length > 0 ? ca7 / 7 : 0;
-  const prevAvgDay  = caPrev30 > 0 ? caPrev30 / 30 : 0;
   const evolutionMoM = caPrev30 > 0 ? ((ca30 - caPrev30) / caPrev30 * 100) : null;
-  const evolutionWoW = prevAvgDay > 0 ? ((avgDayCA - prevAvgDay) / prevAvgDay * 100) : null;
 
-  // ── COGS et marge (30 jours) ──
+  // ── Fiabilite des couts ──
   const saleIds30 = new Set(sales30.map(s => s.id));
   const items30 = saleItems.filter(si => saleIds30.has(si.saleId));
-  const cogs30 = items30.reduce((a, si) => a + (si.purchasePrice || 0) * (si.quantity || 0), 0);
-  const grossProfit30 = ca30 - cogs30;
-  const marginPct = ca30 > 0 ? (grossProfit30 / ca30 * 100) : 0;
+  
+  let validCogsItems = 0;
+  let totalCogsItems = 0;
+  let cogs30 = 0;
+  items30.forEach(si => {
+    totalCogsItems++;
+    if (si.purchasePrice > 0) {
+      validCogsItems++;
+      cogs30 += (si.purchasePrice * (si.qty || si.quantity || 0));
+    }
+  });
+
+  // Si moins de 80% des ventes ont un prix d'achat, on considere que la marge est incalculable
+  const isDataReliable = (totalCogsItems === 0) || (validCogsItems / totalCogsItems) >= 0.8;
+
+  const grossProfit30 = isDataReliable ? ca30 - cogs30 : null;
+  const marginPct = (isDataReliable && ca30 > 0) ? (grossProfit30 / ca30 * 100) : null;
 
   // ── Valeur du stock ──
-  let totalStockValue = 0, totalStockSaleValue = 0;
+  let totalStockValue = 0;
   products.forEach(p => {
     const qty = stockMap[p.id] || 0;
     totalStockValue += qty * (p.purchasePrice || 0);
-    totalStockSaleValue += qty * (p.salePrice || 0);
   });
-  const potentialProfit = totalStockSaleValue - totalStockValue;
 
-  // ── Rotation du stock (COGS/Valeur stock) ──
-  const stockRotation = totalStockValue > 0 ? (cogs30 * 12 / totalStockValue) : 0; // annualisee
-
-  // ── Duree de couverture globale (jours) ──
-  const avgDailyConsumption = cogs30 / 30; // valeur consommee/j
-  const coverageDays = avgDailyConsumption > 0 ? Math.round(totalStockValue / avgDailyConsumption) : 999;
-
-  // ── Prevision CA a 7 jours ──
-  const forecast7 = Math.round(avgDayCA * 7);
-
-  // ── Niveau de tresorerie conseille ──
-  const recommandedCash = Math.round(ca30 * 0.15); // 15% du CA mensuel
+  // ── Rotation du stock ──
+  const stockRotation = (isDataReliable && totalStockValue > 0) ? (cogs30 * 12 / totalStockValue) : null; 
 
   // ── Ventes par produit ──
-  const salesMap7  = {};
   const salesMap30 = {};
-  const salesMap90 = {};
-
-  sales.forEach(sale => {
-    const saleDate = new Date(sale.createdAt || sale.date || 0).getTime();
-    const items = sale.items || [];
-    items.forEach(item => {
-      const pid = item.productId;
-      if (!pid) return;
-      if (saleDate >= since7)  salesMap7[pid]  = (salesMap7[pid]  || 0) + (item.qty || item.quantity || 0);
-      if (saleDate >= since30) salesMap30[pid] = (salesMap30[pid] || 0) + (item.qty || item.quantity || 0);
-      if (saleDate >= since90) salesMap90[pid] = (salesMap90[pid] || 0) + (item.qty || item.quantity || 0);
-    });
+  const salesMap7 = {};
+  items30.forEach(item => {
+    const pid = item.productId;
+    if (!pid) return;
+    const qty = item.qty || item.quantity || 0;
+    salesMap30[pid] = (salesMap30[pid] || 0) + qty;
+    
+    // sale item date isn't directly available without joining sale, but we can do a quick check via sale
+    const sale = sales30.find(s => s.id === item.saleId);
+    if(sale && new Date(sale.createdAt || sale.date || 0).getTime() >= since7) {
+      salesMap7[pid] = (salesMap7[pid] || 0) + qty;
+    }
   });
 
-  // ── KPIs produits ──
-  let ruptures = [], stockBas = [], dormants = [], topMouvements = [];
-  let alerteRupture7j = []; // produits qui vont rompre dans 7 jours
+  const COUVERTURE_CIBLE = 30; // 30 jours
+  const LEAD_TIME = 3; // 3 jours par defaut
+
+  let healthScore = 100;
+  let doNotRestockIds = new Set();
+  
+  let budgetPrudent = 0;
+  let budgetReco = 0;
+  let budgetMax = 0;
+  
+  let highPriority = [];
+  let mediumPriority = [];
+  let lowPriority = [];
+  let doNotRestock = [];
+  
+  let productStats = [];
+  
+  // Indices Sante
+  let nbRuptures = 0, nbSurstocks = 0, nbDormants = 0, nbPerimes = 0;
 
   products.forEach(p => {
-    const qty     = stockMap[p.id] || 0;
+    const qty = stockMap[p.id] || 0;
     const vente30 = salesMap30[p.id] || 0;
-    const vente7  = salesMap7[p.id]  || 0;
-    const vente90 = salesMap90[p.id] || 0;
-    const vmr30   = vente30 / 30;
-    const vmr7    = vente7  / 7;
-    const jours   = vmr7 > 0 ? Math.floor(qty / vmr7) : 999;
+    const vmr = vente30 / 30; // Vitesse moyenne de rotation (jours)
+    const joursStock = vmr > 0 ? qty / vmr : 999;
+    
+    const profit = (p.salePrice || 0) - (p.purchasePrice || 0);
+    const totalProfit = profit * vente30;
+    
+    productStats.push({ id: p.id, name: p.name, qty, vente30, vmr, joursStock, profit, totalProfit, pp: p.purchasePrice || 0 });
 
-    if (qty === 0 && vente30 > 0) ruptures.push({ ...p, qty, vente30, vmr30, jours: 0 });
-    else if (qty > 0 && qty <= (p.minStock || 5) && vente30 > 0) stockBas.push({ ...p, qty, vente30, vmr30, jours });
-    if (qty > 0 && vente7 > 0 && jours <= 7) alerteRupture7j.push({ ...p, qty, vmr7: vmr7.toFixed(1), jours });
-    if (qty > 0 && vente90 === 0) dormants.push({ ...p, qty, stockValue: qty * (p.purchasePrice || 0) });
-    if (vente30 > 0) topMouvements.push({ ...p, qty, vente30, vmr30, vente7 });
+    // Analyse Sante Stock
+    if (qty === 0 && vente30 > 0) {
+      nbRuptures++;
+      healthScore -= 2;
+    }
+    if (joursStock > 90 && qty > 0 && vente30 > 0) {
+      nbSurstocks++;
+      healthScore -= 0.5;
+    }
+    if (qty > 0 && vente30 === 0) {
+      nbDormants++;
+      healthScore -= 0.5;
+      doNotRestockIds.add(p.id);
+      doNotRestock.push({ name: p.name, reason: 'Produit dormant (0 vente/30j)' });
+    }
+    
+    // Peremptions (approximation simple car on n'a pas forcement iteré les lots, mais on enlevera qq points si le lot est proche)
+  });
+  
+  // Analyse Lots pour peremption
+  lots.forEach(l => {
+    if(l.quantity > 0 && l.expiryDate) {
+      const exp = new Date(l.expiryDate).getTime();
+      if(exp < now + MS_30D) {
+        nbPerimes++;
+        healthScore -= 1;
+        doNotRestockIds.add(l.productId);
+      }
+    }
   });
 
-  ruptures.sort((a, b) => b.vente30 - a.vente30);
-  stockBas.sort((a, b) => a.jours - b.jours);
-  dormants.sort((a, b) => b.stockValue - a.stockValue);
-  topMouvements.sort((a, b) => b.vente30 - a.vente30);
-  alerteRupture7j.sort((a, b) => a.jours - b.jours);
+  healthScore = Math.max(0, healthScore);
 
-  // ── Recommandation commande fournisseur ──
-  const COUVERTURE_CIBLE_JOURS = 30;
-  const produitsACommander = [...ruptures.slice(0, 5), ...stockBas.slice(0, 8)];
+  // Categorisation & Budget
+  productStats.forEach(p => {
+    if (doNotRestockIds.has(p.id)) return;
+    
+    // Besoin = (VMR * Couverture) + (VMR * LeadTime) - Stock Actuel
+    const besoinStrict = Math.max(0, (p.vmr * LEAD_TIME) - p.qty); // Juste pour survivre
+    const besoinOptimal = Math.max(0, (p.vmr * COUVERTURE_CIBLE) - p.qty);
+    const besoinMax = Math.max(0, (p.vmr * (COUVERTURE_CIBLE + 15)) - p.qty); // 45 jours
+    
+    const pp = p.pp || 0;
 
-  let valeurCommandeMin = 0, valeurCommandeMax = 0;
-  let itemsCommande = [];
-
-  produitsACommander.forEach(p => {
-    const vmr = salesMap30[p.id] ? salesMap30[p.id] / 30 : 1;
-    const stockActuel = stockMap[p.id] || 0;
-    const qtyNecessaire = Math.max(0, Math.ceil((vmr * COUVERTURE_CIBLE_JOURS) - stockActuel));
-    const qtyMin = Math.ceil(qtyNecessaire * 0.8);
-    const qtyMax = Math.ceil(qtyNecessaire * 1.2);
-    valeurCommandeMin += qtyMin * (p.purchasePrice || 0);
-    valeurCommandeMax += qtyMax * (p.purchasePrice || 0);
-    if (qtyNecessaire > 0) itemsCommande.push({ name: p.name, qtyMin, qtyMax, vmr: vmr.toFixed(1), stockActuel, jours: stockActuel > 0 ? Math.floor(stockActuel / vmr) : 0 });
+    if (p.qty === 0 && p.vente30 > 0) {
+      highPriority.push({ name: p.name, type: 'Rupture', qty: 0, vmr: p.vmr, reco: Math.ceil(besoinOptimal) });
+      budgetPrudent += Math.ceil(besoinOptimal * 0.5) * pp;
+      budgetReco += Math.ceil(besoinOptimal) * pp;
+      budgetMax += Math.ceil(besoinMax) * pp;
+    } else if (p.qty > 0 && p.joursStock <= LEAD_TIME + 2) {
+      highPriority.push({ name: p.name, type: 'Stock critique', qty: p.qty, vmr: p.vmr, reco: Math.ceil(besoinOptimal) });
+      budgetPrudent += Math.ceil(besoinOptimal * 0.5) * pp;
+      budgetReco += Math.ceil(besoinOptimal) * pp;
+      budgetMax += Math.ceil(besoinMax) * pp;
+    } else if (p.joursStock <= COUVERTURE_CIBLE) {
+      mediumPriority.push({ name: p.name, type: 'Renouvellement normal', qty: p.qty, vmr: p.vmr, reco: Math.ceil(besoinOptimal) });
+      budgetReco += Math.ceil(besoinOptimal) * pp;
+      budgetMax += Math.ceil(besoinMax) * pp;
+    } else if (p.joursStock <= COUVERTURE_CIBLE + 30) {
+      lowPriority.push({ name: p.name, type: 'Stock confortable', qty: p.qty, vmr: p.vmr, reco: 0 });
+      budgetMax += Math.ceil(besoinOptimal) * pp; // Seulement si max
+    }
   });
 
-  const ratioStock = ca30 > 0 ? (totalStockValue / ca30 * 100) : 0;
-  const dormantValue = dormants.reduce((a, p) => a + p.stockValue, 0);
+  // Tris Top 10
+  const topVentes = [...productStats].sort((a,b) => b.vente30 - a.vente30).slice(0, 10);
+  const topRentabilite = [...productStats].sort((a,b) => b.totalProfit - a.totalProfit).slice(0, 10);
+  const trendingUp = [...productStats].map(p => {
+    const v7 = salesMap7[p.id] || 0;
+    const prev7 = (p.vente30 - v7)/3.28; 
+    const trend = prev7 > 0 ? (v7 - prev7)/prev7 : 0;
+    return { ...p, trend, v7 };
+  }).filter(p => p.trend > 0.1).sort((a,b) => b.trend - a.trend).slice(0,10);
+  
+  const trendingDown = [...productStats].map(p => {
+    const v7 = salesMap7[p.id] || 0;
+    const prev7 = (p.vente30 - v7)/3.28; 
+    const trend = prev7 > 0 ? (v7 - prev7)/prev7 : 0;
+    return { ...p, trend, v7 };
+  }).filter(p => p.trend < -0.1).sort((a,b) => a.trend - b.trend).slice(0,10);
+
+  // Alertes
+  const alerts = [];
+  if (nbRuptures > 0) alerts.push({ level: 'critique', text: `${nbRuptures} produits sont actuellement en rupture.` });
+  if (healthScore < 70) alerts.push({ level: 'attention', text: `Santé globale du stock faible (${healthScore}/100).` });
+  if (nbSurstocks > 20) alerts.push({ level: 'attention', text: `${nbSurstocks} produits en surstock (immobilisation inutile).` });
+  if (marginPct && marginPct < 20) alerts.push({ level: 'critique', text: `Marge brute très faible (${marginPct.toFixed(1)}%). Verifiez vos prix.` });
+  if (!isDataReliable) alerts.push({ level: 'info', text: `Marge et Rotation masquées : Prix d'achat manquants.` });
 
   return {
-    // CA
-    caDay, ca7, ca30, caPrev30, ca90, avgDayCA, prevAvgDay,
-    evolutionMoM, evolutionWoW, forecast7,
-    // Marge
-    cogs30, grossProfit30, marginPct,
-    // Stock
-    totalStockValue, totalStockSaleValue, potentialProfit,
-    stockRotation, coverageDays, ratioStock, dormantValue,
-    // Tresorerie
-    recommandedCash,
-    // Produits
-    ruptures, stockBas, dormants, topMouvements, alerteRupture7j,
-    itemsCommande, valeurCommandeMin, valeurCommandeMax,
-    // Meta
-    produits: products.length,
-    nbVentes30: sales30.length,
-    panier30: sales30.length > 0 ? Math.round(ca30 / sales30.length) : 0,
-    dataPoints: { sales30: sales30.length },
+    isDataReliable,
+    ca30, evolutionMoM, marginPct, stockRotation,
+    healthScore, nbRuptures, nbSurstocks, nbDormants,
+    budgetPrudent, budgetReco, budgetMax,
+    highPriority: highPriority.sort((a,b)=>b.vmr - a.vmr).slice(0,10),
+    mediumPriority: mediumPriority.sort((a,b)=>b.vmr - a.vmr).slice(0,10),
+    doNotRestock: doNotRestock.slice(0,10),
+    topVentes, topRentabilite, trendingUp, trendingDown,
+    alerts,
+    nbVentes30: sales30.length
   };
 }
 
-/**
- * Formatte un montant en GNF de façon lisible
- */
 function _fmtGNF(n) {
-  if (n >= 1000000) return (n / 1000000).toFixed(1).replace('.', ',') + ' M GNF';
-  if (n >= 1000) return Math.round(n / 1000) + ' k GNF';
-  return Math.round(n) + ' GNF';
+  if (n == null || isNaN(n)) return "0 GNF";
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " GNF";
 }
 
-// ── Ajout de la conversation dynamique Supply Chain dans Naomie ──
 CONVERSATIONS.push({
   triggers: [
     'commande fournisseur', 'combien commander', 'conseil commande', 'reapprovisionner',
@@ -1511,123 +1561,130 @@ CONVERSATIONS.push({
       const now = new Date();
       const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
 
-      const pct = (v, dec=1) => v != null ? (v > 0 ? '+' : '') + v.toFixed(dec) + '%' : 'N/A';
-      const evMoM = d.evolutionMoM != null
-        ? `<span style="color:${d.evolutionMoM >= 0 ? '#16a34a' : '#dc2626'}">${pct(d.evolutionMoM)}</span> vs mois precedent`
-        : 'Insuffisamment de donnees';
-      const evWoW = d.evolutionWoW != null
-        ? `<span style="color:${d.evolutionWoW >= 0 ? '#16a34a' : '#dc2626'}">${pct(d.evolutionWoW)}</span> vs semaine precedente`
-        : '';
+      // Sante
+      let healthText = "Critique";
+      let healthColor = "#dc2626";
+      if (d.healthScore >= 80) { healthText = "Bon"; healthColor = "#16a34a"; }
+      else if (d.healthScore >= 60) { healthText = "Passable"; healthColor = "#d97706"; }
+      
+      const healthReason = d.healthScore >= 80 ? "Votre stock est globalement équilibré. Une bonne rotation limite l'immobilisation de trésorerie." 
+        : d.healthScore >= 60 ? "Quelques déséquilibres constatés (surstocks ou dormants) nécessitent votre attention." 
+        : "Nombreuses anomalies : risques de ruptures ou fort capital immobilisé.";
 
-      // Evaluation marge
-      const margEval = d.marginPct >= 30
-        ? `<span style="color:#16a34a">✅ Excellente (${d.marginPct.toFixed(1)}%)</span>`
-        : d.marginPct >= 20
-        ? `<span style="color:#d97706">⚠️ Acceptable (${d.marginPct.toFixed(1)}%)</span>`
-        : `<span style="color:#dc2626">🔴 Faible (${d.marginPct.toFixed(1)}%) — Prix d'achat eleves ou remises excessives</span>`;
+      // Synthèse Exécutive
+      const dataRelMsg = d.isDataReliable ? "" : " Les données de coûts d'achat étant incomplètes, les marges ne sont pas affichées.";
+      const recoMsg = d.highPriority.length > 0 ? `Des réapprovisionnements urgents sont recommandés pour ${d.highPriority.length} produits prioritaires.` : "Aucun réapprovisionnement urgent n'est nécessaire à ce jour.";
+      const execSummary = `Au cours des 30 derniers jours, la pharmacie a réalisé un chiffre d'affaires de ${_fmtGNF(d.ca30)} réparti sur ${d.nbVentes30} ventes. ${recoMsg} L'indice de santé du stock est évalué à ${d.healthScore}/100.${dataRelMsg}`;
 
-      // Evaluation rotation
-      const rotEval = d.stockRotation >= 8
-        ? `<span style="color:#16a34a">✅ Excellente rotation (${d.stockRotation.toFixed(1)}x/an)</span>`
-        : d.stockRotation >= 4
-        ? `<span style="color:#d97706">⚠️ Rotation moyenne (${d.stockRotation.toFixed(1)}x/an)</span>`
-        : `<span style="color:#dc2626">🔴 Faible rotation (${d.stockRotation.toFixed(1)}x/an) — Stock trop important</span>`;
+      // Alertes HTML
+      const alertsHtml = d.alerts.map(a => {
+        const bg = a.level === 'critique' ? '#fef2f2' : a.level === 'attention' ? '#fff7ed' : '#f0f9ff';
+        const cl = a.level === 'critique' ? '#dc2626' : a.level === 'attention' ? '#ea580c' : '#0284c7';
+        return `<div style="background:${bg};color:${cl};border-left:3px solid ${cl};padding:6px 10px;margin-bottom:6px;font-size:11px;border-radius:4px">
+          <strong>${a.level.toUpperCase()} :</strong> ${a.text}
+        </div>`;
+      }).join('');
 
-      // Evaluation couverture
-      const covEval = d.coverageDays <= 45
-        ? `<span style="color:#16a34a">✅ Optimal (${d.coverageDays}j de stock)</span>`
-        : d.coverageDays <= 90
-        ? `<span style="color:#d97706">⚠️ Correct (${d.coverageDays}j)</span>`
-        : `<span style="color:#dc2626">🔴 Surstock (${d.coverageDays}j) — Immobilisation de tresorerie</span>`;
+      // Priorites HTML
+      const highHtml = d.highPriority.map(p => `<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #eee">🔴 <strong>${p.name}</strong> - ${p.type} (Recommandé: ${p.reco} u.)</div>`).join('');
+      const medHtml = d.mediumPriority.map(p => `<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #eee">🟠 <strong>${p.name}</strong> - ${p.type} (Recommandé: ${p.reco} u.)</div>`).join('');
+      const doNotHtml = d.doNotRestock.map(p => `<div style="font-size:11px;padding:4px 0;border-bottom:1px solid #eee">⛔ <strong>${p.name}</strong> - ${p.reason}</div>`).join('');
 
-      // Alerte baisse CA
-      const alerteBaisseCA = d.avgDayCA < d.prevAvgDay * 0.8 && d.prevAvgDay > 0
-        ? `<div style="background:#fef2f2;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #dc2626">
-            <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#dc2626;margin-bottom:4px">🚨 ALERTE BAISSE CA INHABITUELLE</div>
-            La moyenne journaliere cette semaine (${_fmtGNF(d.avgDayCA)}/j) est inferieure de <strong>${Math.round((1 - d.avgDayCA/d.prevAvgDay)*100)}%</strong> 
-            a la periode precedente (${_fmtGNF(d.prevAvgDay)}/j). Verifiez : ruptures de stock, absenteisme, concurrence.
-           </div>` : '';
-
-      // Top 5 produits urgents
-      const urgentsHtml = d.itemsCommande.slice(0, 6).map(p =>
-        `<div style="padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px">
-          <strong>${p.name}</strong> — Stock: <strong>${p.stockActuel}</strong> u. (${p.jours}j restants) | Velocite: <strong>${p.vmr}</strong>/j | Commander: <strong>${p.qtyMin}–${p.qtyMax}</strong> u.
-        </div>`
-      ).join('') || '<em>Aucun produit critique.</em>';
-
-      // Alerte rupture 7j
-      const rupture7Html = d.alerteRupture7j.length > 0
-        ? `<div style="background:#fff7ed;border-radius:8px;padding:8px 12px;margin-bottom:10px;border-left:3px solid #ea580c">
-            <div style="font-size:11px;font-weight:700;color:#ea580c;margin-bottom:4px">⏰ RUPTURES IMMINENTES (< 7 jours)</div>
-            ${d.alerteRupture7j.slice(0,4).map(p => `<strong>${p.name}</strong>: ${p.jours}j restants (${p.qty} u., ${p.vmr7}/j)`).join('<br>')}
-           </div>` : '';
+      // Top 10 HTML
+      const topVentesHtml = d.topVentes.slice(0,5).map((p,i) => `<div style="font-size:11px">${i+1}. ${p.name} (${p.vente30} u.)</div>`).join('');
+      const topMargeHtml = d.isDataReliable ? d.topRentabilite.slice(0,5).map((p,i) => `<div style="font-size:11px">${i+1}. ${p.name} (${_fmtGNF(p.totalProfit)})</div>`).join('') : '<div style="font-size:11px;color:#999">Données insuffisantes</div>';
 
       return `
-        <div style="font-weight:800;font-size:14px;margin-bottom:12px;border-bottom:2px solid #e2e8f0;padding-bottom:8px">
-          📊 Analyse Financiere — ${dateStr}
-        </div>
-
-        ${alerteBaisseCA}
-        ${rupture7Html}
-
-        <div style="background:#f0f9ff;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #0284c7">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#0284c7;margin-bottom:6px">📈 PERFORMANCE COMMERCIALE</div>
-          <b>CA aujourd'hui :</b> ${_fmtGNF(d.caDay)}<br>
-          <b>CA 7 derniers jours :</b> ${_fmtGNF(d.ca7)} (moy. ${_fmtGNF(Math.round(d.avgDayCA))}/j) ${evWoW ? '— ' + evWoW : ''}<br>
-          <b>CA 30 derniers jours :</b> ${_fmtGNF(d.ca30)} — ${evMoM}<br>
-          <b>Nb transactions (30j) :</b> ${d.nbVentes30} | Panier moyen : <strong>${_fmtGNF(d.panier30)}</strong><br>
-          <b>Prevision CA 7 prochains jours :</b> <strong style="color:#0284c7">${_fmtGNF(d.forecast7)}</strong>
-          <em style="font-size:10px"> (base sur la velocite des 7 derniers jours)</em>
-        </div>
-
-        <div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #16a34a">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#16a34a;margin-bottom:6px">💹 MARGE ET RENTABILITE</div>
-          <b>CA 30j :</b> ${_fmtGNF(d.ca30)} | COGS : ${_fmtGNF(d.cogs30)}<br>
-          <b>Marge brute :</b> ${_fmtGNF(d.grossProfit30)} — ${margEval}<br>
-          <em style="font-size:10px">Une marge pharmaceutique saine se situe entre 25% et 40%.</em>
-        </div>
-
-        <div style="background:#faf5ff;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #7c3aed">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#7c3aed;margin-bottom:6px">📦 GESTION DU STOCK</div>
-          <b>Valeur stock (achat) :</b> ${_fmtGNF(d.totalStockValue)}<br>
-          <b>Valeur stock (vente) :</b> ${_fmtGNF(d.totalStockSaleValue)} — Profit potentiel : ${_fmtGNF(d.potentialProfit)}<br>
-          <b>Rotation :</b> ${rotEval}<br>
-          <b>Couverture globale :</b> ${covEval}<br>
-          <b>Stock dormant :</b> ${d.dormants.length} produits immobilisent <strong>${_fmtGNF(d.dormantValue)}</strong>
-          <em style="font-size:10px"> (aucune vente depuis 90j)</em>
-        </div>
-
-        <div style="background:#fff7ed;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #ea580c">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#ea580c;margin-bottom:6px">🚨 PRODUITS A COMMANDER (${d.ruptures.length} ruptures, ${d.stockBas.length} stocks bas)</div>
-          ${urgentsHtml}
-        </div>
-
-        <div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;margin-bottom:10px;border-left:3px solid #16a34a">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#16a34a;margin-bottom:4px">💡 RECOMMANDATION COMMANDE</div>
-          Pour <strong>30 jours de couverture</strong> sur vos produits actifs, investissez :
-          <div style="font-size:18px;font-weight:900;text-align:center;margin:8px 0;color:#1a2332">
-            ${_fmtGNF(d.valeurCommandeMin)} — ${_fmtGNF(d.valeurCommandeMax)}
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+          <div style="font-weight:800;font-size:14px;margin-bottom:10px;color:#1e293b;border-bottom:2px solid #e2e8f0;padding-bottom:6px">
+            📊 Rapport Supply Chain & Finances
+            <div style="font-weight:normal;font-size:10px;color:#64748b">${dateStr}</div>
           </div>
-          <em style="font-size:11px">Calculé sur la velocite des 30 derniers jours. Scenario conservateur (×0.8) et optimiste (×1.2).</em>
-        </div>
 
-        <div style="background:#f1f5f9;border-radius:8px;padding:8px 12px;margin-bottom:10px;border-left:3px solid #64748b">
-          <div style="font-size:11px;text-transform:uppercase;font-weight:700;color:#64748b;margin-bottom:4px">🏦 TRESORERIE RECOMMANDEE</div>
-          Conservez au minimum <strong style="color:#0f172a">${_fmtGNF(d.recommandedCash)}</strong> en caisse
-          (15% du CA mensuel) pour couvrir vos charges operationnelles.
-        </div>
+          <!-- Synthèse -->
+          <div style="font-size:11.5px;color:#334155;line-height:1.5;margin-bottom:12px;background:#f8fafc;padding:10px;border-radius:8px">
+            ${execSummary}
+          </div>
 
-        <div style="font-size:11px;color:#94a3b8;margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:6px">
-          ℹ️ Analyse basee sur ${d.dataPoints.sales30} ventes / ${d.produits} produits | Données en temps réel de votre pharmacie
+          <!-- Alertes -->
+          ${alertsHtml ? `<div style="margin-bottom:12px">${alertsHtml}</div>` : ''}
+
+          <!-- Santé du Stock -->
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+            <div style="background:${healthColor};color:#fff;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px">
+              ${Math.round(d.healthScore)}
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:bold;color:#1e293b">Indice de Santé : ${healthText}</div>
+              <div style="font-size:10.5px;color:#64748b">${healthReason}</div>
+            </div>
+          </div>
+
+          <!-- KPIs -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <div style="background:#f0fdf4;padding:8px;border-radius:6px;border:1px solid #bbf7d0">
+              <div style="font-size:10px;color:#166534;font-weight:bold">MARGE BRUTE (30j)</div>
+              <div style="font-size:13px;font-weight:bold;color:#14532d">${d.isDataReliable ? d.marginPct.toFixed(1) + '%' : 'N/A'}</div>
+            </div>
+            <div style="background:#eff6ff;padding:8px;border-radius:6px;border:1px solid #bfdbfe">
+              <div style="font-size:10px;color:#1d4ed8;font-weight:bold">ROTATION STOCK</div>
+              <div style="font-size:13px;font-weight:bold;color:#1e3a8a">${d.isDataReliable ? d.stockRotation.toFixed(1) + 'x/an' : 'N/A'}</div>
+            </div>
+          </div>
+
+          <!-- Budgets Fournisseurs -->
+          <div style="background:#f1f5f9;border-radius:8px;padding:10px;margin-bottom:12px">
+            <div style="font-size:11px;font-weight:bold;color:#475569;margin-bottom:8px;text-transform:uppercase">💰 Recommandation Budgétaire</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+                <span style="color:#64748b">Prudent (Ruptures strictes) :</span>
+                <strong style="color:#0f172a">${_fmtGNF(d.budgetPrudent)}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;background:#e0e7ff;padding:4px 6px;border-radius:4px">
+                <span style="color:#4338ca;font-weight:bold">Recommandé (30 jours) :</span>
+                <strong style="color:#3730a3">${_fmtGNF(d.budgetReco)}</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+                <span style="color:#64748b">Maximal (Stock Optimal) :</span>
+                <strong style="color:#0f172a">${_fmtGNF(d.budgetMax)}</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Priorités -->
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:bold;color:#475569;margin-bottom:4px;text-transform:uppercase">⚠️ Priorité Élevée</div>
+            ${highHtml || '<div style="font-size:11px;color:#999;font-style:italic">Aucun produit</div>'}
+          </div>
+          
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:bold;color:#475569;margin-bottom:4px;text-transform:uppercase">📉 Ne pas réapprovisionner</div>
+            ${doNotHtml || '<div style="font-size:11px;color:#999;font-style:italic">Aucun produit dormant détecté</div>'}
+          </div>
+
+          <!-- Opportunités -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div style="font-size:11px;font-weight:bold;color:#475569;margin-bottom:4px">🔝 Top 5 Ventes</div>
+              ${topVentesHtml}
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:bold;color:#475569;margin-bottom:4px">💎 Top 5 Rentabilité</div>
+              ${topMargeHtml}
+            </div>
+          </div>
+
+          <div style="font-size:9.5px;color:#94a3b8;margin-top:12px;border-top:1px dashed #e2e8f0;padding-top:6px;text-align:center">
+            Les conseils sont générés par intelligence artificielle selon les données disponibles. Vérifiez avant de commander.
+          </div>
         </div>
       `;
     } catch(e) {
-      return 'Je n\'ai pas pu generer l\'analyse financiere. Assurez-vous d\'avoir des ventes et des produits enregistres.';
+      console.error(e);
+      return 'Je n\'ai pas pu générer l\'analyse financière en raison de données insuffisantes ou corrompues.';
     }
   }
 });
-
-// Ajouter le bouton "Conseil Commande" dans les quick options de Naomie
 const _origShowQuickOptions = showQuickOptions;
 function showQuickOptions() {
   const body = document.getElementById('support-chat-body');
