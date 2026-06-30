@@ -684,8 +684,9 @@ async function confirmCaisseClose() {
   const opening = parseFloat(document.getElementById('closure-opening')?.value || 0);
   const note = document.getElementById('closure-note')?.value || '';
   const ok = await UI.confirm(`Confirmer la clôture de caisse du ${today} ?\n\nCette action est irréversible. Aucune vente ne pourra être enregistrée après la clôture.`);
-  if (!ok) return;
+  if (!ok) { window._caisseCloseEnCours = false; return; }
 
+  if (window.UI && UI.showLoader) UI.showLoader('Cloture de caisse en cours...', 10000);
   await DB.dbAdd('cashRegister', {
     type: 'closure',
     date: today,
@@ -702,6 +703,7 @@ async function confirmCaisseClose() {
 
   await DB.writeAudit('CAISSE_CLOSURE', 'cashRegister', null, { date: today, physical, expected: window._expectedCash, closedBy: DB.AppState.currentUser?.name });
   window._caisseCloseEnCours = false;
+  if (window.UI && UI.hideLoader) UI.hideLoader();
   UI.closeModal();
   UI.toast('Caisse cloturee avec succes. Les ventes sont bloquees pour aujourd\'hui.', 'success', 5000);
   Router.navigate('caisse');

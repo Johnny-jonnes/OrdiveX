@@ -1,5 +1,5 @@
 {
-  "version": "9.7.16",
+  "version": "9.7.17",
   "date": "2026-06-30",
-  "changelog": "P1.3 Timeout AbortController 15s sur tous les appels Supabase"
+  "changelog": "P2.3 UI.showLoader robuste fallback 8s"
 }

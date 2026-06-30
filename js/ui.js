@@ -115,9 +115,73 @@ const UI = {
     if (m) m.remove();
   },
 
-  loading(container, message = 'Chargement...') {
+  loading(container, message) {
+    message = message || 'Chargement...';
     if (window._isBackgroundRefresh) return;
-    container.innerHTML = `<div class="loading-state"><div class="spinner"></div><p>${message}</p></div>`;
+    container.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>' + message + '</p></div>';
+  },
+
+  // ── LOADER GLOBAL PLEIN ECRAN ──
+  // Affiche un overlay de chargement sur toute l app.
+  // SECURITE : se ferme automatiquement apres 8s si hideLoader n est pas appele.
+  _loaderTimer: null,
+  _loaderDepth: 0,
+
+  showLoader(message, timeoutMs) {
+    message = message || 'Chargement...';
+    timeoutMs = timeoutMs || 8000;
+    this._loaderDepth++;
+
+    var el = document.getElementById('global-loader-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'global-loader-overlay';
+      el.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:99999',
+        'background:rgba(0,0,0,0.55)', 'backdrop-filter:blur(3px)',
+        'display:flex', 'flex-direction:column',
+        'align-items:center', 'justify-content:center',
+        'gap:16px', 'transition:opacity 0.2s'
+      ].join(';');
+      el.innerHTML =
+        '<div style="width:44px;height:44px;border:4px solid rgba(255,255,255,0.25);border-top-color:#fff;border-radius:50%;animation:spin-global 0.8s linear infinite"></div>' +
+        '<p id="global-loader-msg" style="color:#fff;font-size:15px;font-weight:500;letter-spacing:0.02em;margin:0;text-align:center;max-width:240px"></p>';
+      // Injecter le keyframe une seule fois
+      if (!document.getElementById('global-loader-style')) {
+        var st = document.createElement('style');
+        st.id = 'global-loader-style';
+        st.textContent = '@keyframes spin-global{to{transform:rotate(360deg)}}';
+        document.head.appendChild(st);
+      }
+      document.body.appendChild(el);
+    }
+
+    var msgEl = document.getElementById('global-loader-msg');
+    if (msgEl) msgEl.textContent = message;
+    el.style.display = 'flex';
+
+    // Fallback securite : auto-fermeture apres timeoutMs
+    if (this._loaderTimer) clearTimeout(this._loaderTimer);
+    var self = this;
+    this._loaderTimer = setTimeout(function() {
+      self._loaderDepth = 0;
+      self.hideLoader(true);
+    }, timeoutMs);
+  },
+
+  hideLoader(forced) {
+    if (!forced) {
+      this._loaderDepth = Math.max(0, this._loaderDepth - 1);
+      if (this._loaderDepth > 0) return; // nested calls
+    }
+    if (this._loaderTimer) { clearTimeout(this._loaderTimer); this._loaderTimer = null; }
+    this._loaderDepth = 0;
+    var el = document.getElementById('global-loader-overlay');
+    if (!el) return;
+    el.style.opacity = '0';
+    setTimeout(function() {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, 220);
   },
 
   empty(container, message = 'Aucune donnée', icon = 'package') {

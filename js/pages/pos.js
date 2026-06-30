@@ -2149,7 +2149,8 @@ async function validerVente() {
   }
 
   const btn = document.getElementById('btn-valider');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Traitement…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Traitement...'; }
+  if (window.UI && UI.showLoader) UI.showLoader('Validation de la vente...', 12000);
 
   try {
     // Lazy-load lots pour FEFO (chargés à la demande, pas au démarrage)
@@ -2372,6 +2373,7 @@ async function validerVente() {
     UI.toast('Erreur lors de la validation. Veuillez reessayer.', 'error');
   } finally {
     window._venteEnCours = false;
+    if (window.UI && UI.hideLoader) UI.hideLoader();
     if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle"></i> Valider (F5)'; const g = document.getElementById('pos-grid'); if (g && window.lucide) lucide.createIcons({ node: g }); }
   }
 }
