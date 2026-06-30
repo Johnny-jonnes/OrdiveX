@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.7.13';
+const CACHE_NAME = 'pharma-cache-v9.7.14';
 const ASSETS = [
   './',
   './index.html',
@@ -41,7 +41,11 @@ const ASSETS = [
   './js/pages/shifts.js',
   './js/vendor/lucide.min.js',
   './js/vendor/supabase.min.js',
+  './js/vendor/jspdf.umd.min.js',
+  './js/vendor/jspdf.plugin.autotable.min.js',
+  './js/utils/pdf-export.js',
 ];
+
 
 
 // Install: cache all assets individually to avoid global failure
