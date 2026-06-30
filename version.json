@@ -1,5 +1,5 @@
 {
-  "version": "9.7.18",
+  "version": "9.7.19",
   "date": "2026-06-30",
-  "changelog": "P3.2 Router.onLeave cleanup + P3.3 DocumentFragment pagination 50 lignes"
+  "changelog": "P4.1+P4.2 Rapport de sante automatique (healthReport) + P3.1 cache IDB"
 }

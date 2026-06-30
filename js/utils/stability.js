@@ -463,8 +463,70 @@
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // INIT — Activer toutes les protections
+  // 14. RAPPORT DE SANTE AUTOMATIQUE (P4.1 + P4.2)
+  // Diagnostique toutes les heures l etat critique de l app :
+  //   - Nombre d erreurs JS en session
+  //   - Profondeur de la file OperationQueue
+  //   - Etat reseau (online/offline)
+  //   - Memoire JS si disponible
+  //   - Dernier sync / dernier pull
+  // Accessible manuellement via healthReport() dans la console
   // ═══════════════════════════════════════════════════════════════════
+
+  async function _runHealthReport(silent) {
+    var report = {
+      ts: new Date().toLocaleTimeString('fr-FR'),
+      online: navigator.onLine,
+      errors: _errorCount,
+      lastPull: null,
+      lastSync: null,
+      queueDepth: 0,
+      memMB: null
+    };
+
+    // Dernier pull
+    try {
+      var lp = localStorage.getItem('pharma_last_pull_ts');
+      if (lp) {
+        var age = Math.round((Date.now() - parseInt(lp)) / 60000);
+        report.lastPull = 'il y a ' + age + ' min';
+      }
+    } catch(e) {}
+
+    // File d attente
+    try {
+      if (window.OperationQueue) {
+        report.queueDepth = await window.OperationQueue.countPending();
+      }
+    } catch(e) {}
+
+    // Memoire JS (Chrome uniquement)
+    try {
+      if (performance && performance.memory) {
+        report.memMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
+      }
+    } catch(e) {}
+
+    var status = report.online ? 'EN LIGNE' : 'HORS LIGNE';
+    var qMsg = report.queueDepth > 0 ? (' | Queue: ' + report.queueDepth + ' ops en attente') : '';
+    var errMsg = report.errors > 0 ? (' | Erreurs: ' + report.errors) : '';
+    var memMsg = report.memMB ? (' | Mem: ' + report.memMB + 'MB') : '';
+    var pullMsg = report.lastPull ? (' | Pull: ' + report.lastPull) : '';
+
+    if (!silent || report.queueDepth > 5 || report.errors > 10) {
+      console.log('[Health] ' + report.ts + ' | ' + status + qMsg + errMsg + memMsg + pullMsg);
+    }
+
+    // Alerte si la file est trop longue (donnees bloquees depuis longtemps)
+    if (report.queueDepth > 20 && window.UI && UI.toast) {
+      UI.toast(report.queueDepth + ' operations en attente de sync. Verifiez la connexion.', 'warning', 6000);
+    }
+
+    return report;
+  }
+
+  // Exposer pour debug console
+  window.healthReport = function() { return _runHealthReport(false); };
 
   function _initStability() {
     _wrapRouter();
@@ -489,7 +551,7 @@
       checkForUpdates(true).then(function(remote) {
         if (remote) _showUpdateNotification(remote);
       });
-    }, 15000); // 15s apres le chargement
+    }, 15000);
 
     setInterval(function() {
       checkForUpdates(true).then(function(remote) {
@@ -498,13 +560,16 @@
     }, _versionCheckInterval);
 
     // Watchdog memoire toutes les 30 min
-    setTimeout(_memoryWatchdog, 60000); // 1 min apres le chargement
+    setTimeout(_memoryWatchdog, 60000);
     setInterval(_memoryWatchdog, 30 * 60 * 1000);
+
+    // Rapport de sante automatique toutes les 60 min
+    setTimeout(function() { _runHealthReport(true); }, 60000); // 1ere fois apres 1 min
+    setInterval(function() { _runHealthReport(true); }, 60 * 60 * 1000);
 
     console.log('[Stability] Bouclier de stabilite v9.4.9 active — ' + new Date().toLocaleTimeString('fr-FR'));
   }
 
-  // Demarrer une fois le DOM pret
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() { setTimeout(_initStability, 500); });
   } else {
