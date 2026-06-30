@@ -1394,7 +1394,8 @@ window.exportSuppliersPDF = function() {
     s.address || ''
   ]);
   const headers = ["Fournisseur", "Contact", "Téléphone", "Email", "Adresse"];
-  window.PDFExport.generate("Liste des Fournisseurs", headers, data);
+  const subHeader = [`Total Fournisseurs : ${data.length}`];
+  window.PDFExport.generate("Liste des Fournisseurs", headers, data, { subHeader });
 };
 
 window.exportOrdersPDF = function() {

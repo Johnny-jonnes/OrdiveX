@@ -1113,7 +1113,8 @@ window.exportUsersPDF = function() {
     u.active ? 'Actif' : 'Inactif'
   ]);
   const headers = ["Nom Complet", "Nom d'utilisateur", "Rôle", "Statut"];
-  window.PDFExport.generate("Liste des Utilisateurs", headers, data);
+  const subHeader = [`Total Utilisateurs : ${data.length}`];
+  window.PDFExport.generate("Liste des Utilisateurs", headers, data, { subHeader });
 };
 window.testSmsConnection = testSmsConnection;
 window.handleLogoUpload = handleLogoUpload;

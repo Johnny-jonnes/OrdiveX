@@ -12,6 +12,8 @@ const PDFExport = {
    * @param {Object} options { orientation: 'p'|'l', summaryBlocks: [] }
    */
   async generate(title, headers, data, options = {}) {
+    if (window.UI && window.UI.showLoader) window.UI.showLoader('Génération du PDF en cours...');
+    await new Promise(r => setTimeout(r, 150));
     if (!window.jspdf || !window.jspdf.jsPDF) {
       if (window.UI) UI.toast("L'outil d'export PDF n'a pas pu être chargé", "error");
       return;
@@ -101,10 +103,22 @@ const PDFExport = {
     // ==========================================
     // 3. GÉNÉRATION DU TABLEAU (AutoTable)
     // ==========================================
+    let startYTable = 46;
+    if (options.subHeader && options.subHeader.length > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      options.subHeader.forEach(line => {
+        doc.text(line, 14, startYTable);
+        startYTable += 6;
+      });
+      startYTable += 4;
+    }
+
     doc.autoTable({
       head: [headers],
       body: data,
-      startY: 46,
+      startY: startYTable,
       margin: { top: 46, bottom: 20 },
       styles: {
         fontSize: 8,
@@ -176,6 +190,7 @@ const PDFExport = {
     
     doc.save(filename);
     
+    if (window.UI && window.UI.hideLoader) window.UI.hideLoader();
     if (window.UI) UI.toast("Le PDF a été généré avec succès", "success");
     
     // Log audit
