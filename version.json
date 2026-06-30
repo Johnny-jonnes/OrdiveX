@@ -1,5 +1,5 @@
 {
-  "version": "9.7.12",
+  "version": "9.7.13",
   "date": "2026-06-30",
-  "changelog": "Export PDF sur tous les tableaux, champs Numéro de Lot optionnels"
+  "changelog": "Protection doubles clics et backoff exponentiel"
 }

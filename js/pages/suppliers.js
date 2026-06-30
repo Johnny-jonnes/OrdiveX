@@ -720,9 +720,11 @@ function updateOrderTotal() {
 }
 
 async function submitOrder(status) {
+  if (window._orderEnCours) { UI.toast('Enregistrement en cours...', 'warning', 2000); return; }
+  window._orderEnCours = true;
   const form = document.getElementById('order-form');
   const supplierId = parseInt(document.getElementById('order-supplier')?.value);
-  if (!supplierId) { UI.toast('Sélectionnez un fournisseur', 'error'); return; }
+  if (!supplierId) { window._orderEnCours = false; UI.toast('Selectionnez un fournisseur', 'error'); return; }
 
   const items = [];
   document.querySelectorAll('.rx-item-row[id^="order-item-"]').forEach(row => {
@@ -735,7 +737,7 @@ async function submitOrder(status) {
     }
   });
 
-  if (!items.length) { UI.toast('Ajoutez au moins un article', 'warning'); return; }
+  if (!items.length) { window._orderEnCours = false; UI.toast('Ajoutez au moins un article', 'warning'); return; }
 
   const formData = form ? Object.fromEntries(new FormData(form)) : {};
   const totalAmount = items.reduce((a, i) => a + i.quantity * i.unitPrice, 0);
@@ -752,8 +754,9 @@ async function submitOrder(status) {
   });
 
   await DB.writeAudit('CREATE_ORDER', 'purchaseOrders', orderId, { supplierId, itemCount: items.length, totalAmount });
+  window._orderEnCours = false;
   UI.closeModal();
-  UI.toast(`Commande créée — ${UI.formatCurrency(totalAmount)}`, 'success');
+  UI.toast(`Commande cree — ${UI.formatCurrency(totalAmount)}`, 'success');
   Router.navigate('purchase-orders');
 }
 

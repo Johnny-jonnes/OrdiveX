@@ -2018,7 +2018,10 @@ async function _removeHeldCart(cartId) {
 // VALIDATION VENTE
 // ═══════════════════════════════════════════════════════════════════
 async function validerVente() {
-  if (!posCart.length) { UI.toast('Le panier est vide', 'warning'); return; }
+  // Protection double-clic absolue (avant tout appel async)
+  if (window._venteEnCours) { UI.toast('Traitement en cours, veuillez patienter...', 'warning', 2000); return; }
+  window._venteEnCours = true;
+  if (!posCart.length) { window._venteEnCours = false; UI.toast('Le panier est vide', 'warning'); return; }
 
   // ── Vérification clôture de caisse ──
   const today = new Date().toISOString().split('T')[0];
@@ -2366,8 +2369,9 @@ async function validerVente() {
 
   } catch (err) {
     console.error(err);
-    UI.toast('Erreur : ' + err.message, 'error');
+    UI.toast('Erreur lors de la validation. Veuillez reessayer.', 'error');
   } finally {
+    window._venteEnCours = false;
     if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle"></i> Valider (F5)'; const g = document.getElementById('pos-grid'); if (g && window.lucide) lucide.createIcons({ node: g }); }
   }
 }

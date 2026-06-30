@@ -1267,12 +1267,22 @@ async function syncToSupabase() {
         let retries = 0;
         const maxRetries = 10;
         let lastError = null;
+        // Délais backoff exponentiel : 0, 500ms, 1s, 2s, 5s, 10s...
+        const _backoffDelays = [0, 500, 1000, 2000, 5000, 10000, 15000, 20000, 30000, 60000];
 
         // Découper en lots de 500 pour éviter les timeouts Supabase
         const PUSH_BATCH = 500;
         let allSuccess = true;
 
         while (retries <= maxRetries) {
+          // Backoff : attendre avant de réessayer (sauf premier essai)
+          if (retries > 0) {
+            const delay = _backoffDelays[Math.min(retries, _backoffDelays.length - 1)];
+            await new Promise(r => setTimeout(r, delay));
+            // Vérifier réseau avant chaque retry
+            if (!navigator.onLine) break;
+          }
+
           lastError = null;
           allSuccess = true;
 
@@ -1326,6 +1336,7 @@ async function syncToSupabase() {
             break;
           }
         }
+
 
         if (lastError && navigator.onLine) {
           // Ignorer les erreurs RLS connues (settings upsert en anon mode)

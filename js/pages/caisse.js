@@ -551,8 +551,10 @@ function openAddCashEntry() {
 }
 
 async function submitCashEntry() {
+  if (window._caisseEntryEnCours) { UI.toast('Enregistrement en cours...', 'warning', 2000); return; }
+  window._caisseEntryEnCours = true;
   const form = document.getElementById('cash-entry-form');
-  if (!form?.checkValidity()) { form?.reportValidity(); return; }
+  if (!form?.checkValidity()) { window._caisseEntryEnCours = false; form?.reportValidity(); return; }
   const data = Object.fromEntries(new FormData(form));
   const amount = parseFloat(data.amount);
   const type = data.type === 'in' ? 'manual_in' : 'manual_out';
@@ -586,8 +588,9 @@ async function submitCashEntry() {
     userId: DB.AppState.currentUser?.id,
   });
   await DB.writeAudit('CASH_ENTRY', 'cashRegister', null, data);
+  window._caisseEntryEnCours = false;
   UI.closeModal();
-  UI.toast(`Mouvement de caisse enregistré`, 'success');
+  UI.toast(`Mouvement de caisse enregistre`, 'success');
   Router.navigate('caisse');
 }
 
@@ -666,7 +669,9 @@ function calcClosureEcart() {
 }
 
 async function confirmCaisseClose() {
-  // Restriction : seul le pharmacien ou l'admin peut clôturer
+  if (window._caisseCloseEnCours) { UI.toast('Cloture en cours...', 'warning', 2000); return; }
+  window._caisseCloseEnCours = true;
+  // Restriction : seul le pharmacien ou l'admin peut cloturer
   const role = DB.AppState.currentUser?.role;
   if (!['admin', 'pharmacien'].includes(role)) {
     UI.toast('Seul(e) le/la pharmacien(ne) ou l\'administrateur peut clôturer la caisse.', 'error', 5000);
@@ -696,8 +701,9 @@ async function confirmCaisseClose() {
   });
 
   await DB.writeAudit('CAISSE_CLOSURE', 'cashRegister', null, { date: today, physical, expected: window._expectedCash, closedBy: DB.AppState.currentUser?.name });
+  window._caisseCloseEnCours = false;
   UI.closeModal();
-  UI.toast('Caisse clôturée avec succès. Les ventes sont bloquées pour aujourd\'hui.', 'success', 5000);
+  UI.toast('Caisse cloturee avec succes. Les ventes sont bloquees pour aujourd\'hui.', 'success', 5000);
   Router.navigate('caisse');
 }
 
