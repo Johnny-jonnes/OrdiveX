@@ -1103,8 +1103,7 @@ async function testSmsConnection() {
 
 window.updatePharmacyDisplay = updatePharmacyDisplay;
 window.saveSupabaseConfig = saveSupabaseConfig;
-window.resetSmsConfig = resetSmsConfig;
-
+// window.resetSmsConfig = resetSmsConfig;
 window.exportUsersPDF = function() {
   if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
   const data = (window._usersData || []).map(u => [
