@@ -61,11 +61,11 @@ async function renderProducts(container) {
       <input type="text" id="prod-search" placeholder="Rechercher..." class="filter-input" oninput="filterProducts()">
       <select id="prod-cat" class="filter-select" onchange="filterProducts()">
         <option value="">Toutes catégories</option>
-        ${[...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">${c}</option>`).join('')}
+        ${[...new Set(products.map(p => (p.category || '').trim()).filter(Boolean))].sort().map(c => `<option value="${c}">${c}</option>`).join('')}
       </select>
       <select id="prod-form" class="filter-select" onchange="filterProducts()">
         <option value="">Toutes les formes</option>
-        ${[...new Set(products.map(p => p.form).filter(Boolean))].map(f => `<option value="${f}">${f}</option>`).join('')}
+        ${[...new Set(products.map(p => (p.form || p.forme || '').trim()).filter(Boolean))].sort().map(f => `<option value="${f}">${f}</option>`).join('')}
       </select>
       <select id="prod-sort" class="filter-select" onchange="filterProducts()">
         <option value="">Tri par défaut</option>
@@ -97,7 +97,7 @@ function filterProducts() {
   
   if (search) data = data.filter(p => p.name.toLowerCase().includes(search) || (p.dci || '').toLowerCase().includes(search) || (p.code || '').toLowerCase().includes(search));
   if (cat) data = data.filter(p => p.category === cat);
-  if (form) data = data.filter(p => p.form === form);
+  if (form) data = data.filter(p => (p.form || p.forme || '').trim() === form);
   if (rx !== '') data = data.filter(p => p.requiresPrescription === (rx === '1'));
   
   // Sorting

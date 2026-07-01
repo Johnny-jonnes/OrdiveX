@@ -93,11 +93,11 @@ async function renderStock(container) {
       </select>
       <select id="stock-filter-category" class="filter-select" onchange="filterStock()">
         <option value="">Toutes catégories</option>
-        ${[...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">${c}</option>`).join('')}
+        ${[...new Set(products.map(p => (p.category || '').trim()).filter(Boolean))].sort().map(c => `<option value="${c}">${c}</option>`).join('')}
       </select>
       <select id="stock-filter-form" class="filter-select" onchange="filterStock()">
         <option value="">Toutes les formes</option>
-        ${[...new Set(products.map(p => p.form).filter(Boolean))].map(f => `<option value="${f}">${f}</option>`).join('')}
+        ${[...new Set(products.map(p => (p.form || p.forme || '').trim()).filter(Boolean))].sort().map(f => `<option value="${f}">${f}</option>`).join('')}
       </select>
       <select id="stock-sort" class="filter-select" onchange="filterStock()">
         <option value="">Tri par défaut</option>
@@ -132,7 +132,7 @@ function filterStock() {
   );
 
   if (category) data = data.filter(p => p.category === category);
-  if (form) data = data.filter(p => p.form === form);
+  if (form) data = data.filter(p => (p.form || p.forme || '').trim() === form);
 
   if (status === 'rupture') data = data.filter(p => p.currentStock === 0);
   else if (status === 'low') data = data.filter(p => p.currentStock > 0 && p.currentStock <= p.minStock);
@@ -420,9 +420,15 @@ function renderStockEntry() {
           <label>Fournisseur</label>
           <input type="text" name="supplier" class="form-control" placeholder="Nom du fournisseur">
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label>Prix d'achat unitaire</label>
           <input type="number" name="purchasePrice" class="form-control" placeholder="0 GNF">
+        </div>
+        <div class="form-group">
+          <label>Prix de vente unitaire</label>
+          <input type="number" name="salePrice" class="form-control" placeholder="0 GNF">
         </div>
       </div>
       <div class="form-row">
@@ -473,10 +479,21 @@ async function submitStockEntry() {
         form: '',
         requiresPrescription: false,
         purchasePrice: parseFloat(data.purchasePrice || 0),
-        salePrice: parseFloat(data.purchasePrice || 0) * 1.3,
+        salePrice: parseFloat(data.salePrice || data.purchasePrice || 0) * (data.salePrice ? 1 : 1.3),
         status: 'active'
       });
       if (window.UI) UI.toast("Nouveau produit créé automatiquement", "info");
+    } else {
+      // Update existing product's sale/purchase price if provided
+      if (data.purchasePrice || data.salePrice) {
+        const productsAll = await DB.dbGetAll('products');
+        const existingProd = productsAll.find(p => p.id === productId);
+        if (existingProd) {
+          if (data.purchasePrice) existingProd.purchasePrice = parseFloat(data.purchasePrice);
+          if (data.salePrice) existingProd.salePrice = parseFloat(data.salePrice);
+          await DB.dbPut('products', existingProd);
+        }
+      }
     }
     // Add lot
     await DB.dbAdd('lots', {
@@ -569,6 +586,10 @@ async function submitStockEntry() {
     await DB.writeAudit('STOCK_ENTRY', 'stock', productId, data);
     UI.closeModal();
     UI.toast('Entrée stock enregistrée', 'success');
+
+    if (typeof window._softRefreshStock === 'function') {
+      await window._softRefreshStock();
+    }
 
     // ⚡ Forcer la synchronisation immédiate vers Supabase
     try {

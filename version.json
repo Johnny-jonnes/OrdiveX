@@ -1,5 +1,5 @@
 {
-  "version": "9.7.21",
+  "version": "9.7.22",
   "date": "2026-06-30",
-  "changelog": "Ajout stock prod inexistant, tris catalogues"
+  "changelog": "Fix refresh stock après création, ajout prix vente, fix liste des formes"
 }
