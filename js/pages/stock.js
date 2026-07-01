@@ -100,9 +100,9 @@ async function renderStock(container) {
         ${[...new Set(products.map(p => (p.form || p.forme || '').trim()).filter(Boolean))].sort().map(f => `<option value="${f}">${f}</option>`).join('')}
       </select>
       <select id="stock-sort" class="filter-select" onchange="filterStock()">
-        <option value="">Tri par défaut</option>
-        <option value="alpha">Ordre alphabétique (A-Z)</option>
-        <option value="alpha-desc">Ordre alphabétique (Z-A)</option>
+        <option value="alpha-asc" selected>De A à Z</option>
+        <option value="alpha-desc">De Z à A</option>
+        <option value="">Tri par ordre d'ajout</option>
       </select>
     </div>
 
@@ -121,7 +121,7 @@ function filterStock() {
   const location = document.getElementById('stock-filter-location')?.value || '';
   const category = document.getElementById('stock-filter-category')?.value || '';
   const form = document.getElementById('stock-filter-form')?.value || '';
-  const sort = document.getElementById('stock-sort')?.value || '';
+  const sort = document.getElementById('stock-sort')?.value || 'alpha-asc';
 
   let data = window._stockData || [];
 
@@ -145,7 +145,7 @@ function filterStock() {
   else if (location === 'reserve') data = data.filter(p => p.qtyReserve > 0);
   
   // Sorting
-  if (sort === 'alpha') {
+  if (sort === 'alpha' || sort === 'alpha-asc') {
     data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   } else if (sort === 'alpha-desc') {
     data.sort((a, b) => (b.name || '').localeCompare(a.name || ''));

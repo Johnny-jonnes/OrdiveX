@@ -1,5 +1,5 @@
 {
-  "version": "9.7.22",
+  "version": "9.7.23",
   "date": "2026-06-30",
-  "changelog": "Fix refresh stock après création, ajout prix vente, fix liste des formes"
+  "changelog": "Patch formes existantes et tri alphabétique par défaut"
 }

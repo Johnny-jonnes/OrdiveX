@@ -68,9 +68,9 @@ async function renderProducts(container) {
         ${[...new Set(products.map(p => (p.form || p.forme || '').trim()).filter(Boolean))].sort().map(f => `<option value="${f}">${f}</option>`).join('')}
       </select>
       <select id="prod-sort" class="filter-select" onchange="filterProducts()">
-        <option value="">Tri par défaut</option>
-        <option value="alpha">Ordre alphabétique (A-Z)</option>
-        <option value="alpha-desc">Ordre alphabétique (Z-A)</option>
+        <option value="alpha-asc" selected>De A à Z</option>
+        <option value="alpha-desc">De Z à A</option>
+        <option value="">Tri par ordre d'ajout</option>
       </select>
       <select id="prod-rx" class="filter-select" onchange="filterProducts()">
         <option value="">Rx + OTC</option>
@@ -91,7 +91,7 @@ function filterProducts() {
   const search = document.getElementById('prod-search')?.value.toLowerCase() || '';
   const cat = document.getElementById('prod-cat')?.value || '';
   const form = document.getElementById('prod-form')?.value || '';
-  const sort = document.getElementById('prod-sort')?.value || '';
+  const sort = document.getElementById('prod-sort')?.value || 'alpha-asc';
   const rx = document.getElementById('prod-rx')?.value;
   let data = window._productsData || [];
   
@@ -101,7 +101,7 @@ function filterProducts() {
   if (rx !== '') data = data.filter(p => p.requiresPrescription === (rx === '1'));
   
   // Sorting
-  if (sort === 'alpha') {
+  if (sort === 'alpha' || sort === 'alpha-asc') {
     data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   } else if (sort === 'alpha-desc') {
     data.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
