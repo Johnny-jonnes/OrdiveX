@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Gestion des Stocks
  */
 
@@ -93,7 +93,16 @@ async function renderStock(container) {
       </select>
       <select id="stock-filter-category" class="filter-select" onchange="filterStock()">
         <option value="">Toutes catégories</option>
-        ${[...new Set(products.map(p => p.category))].map(c => `<option value="${c}">${c}</option>`).join('')}
+        ${[...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select id="stock-filter-form" class="filter-select" onchange="filterStock()">
+        <option value="">Toutes les formes</option>
+        ${[...new Set(products.map(p => p.form).filter(Boolean))].map(f => `<option value="${f}">${f}</option>`).join('')}
+      </select>
+      <select id="stock-sort" class="filter-select" onchange="filterStock()">
+        <option value="">Tri par défaut</option>
+        <option value="alpha">Ordre alphabétique (A-Z)</option>
+        <option value="alpha-desc">Ordre alphabétique (Z-A)</option>
       </select>
     </div>
 
@@ -111,6 +120,8 @@ function filterStock() {
   const status = document.getElementById('stock-filter-status')?.value || '';
   const location = document.getElementById('stock-filter-location')?.value || '';
   const category = document.getElementById('stock-filter-category')?.value || '';
+  const form = document.getElementById('stock-filter-form')?.value || '';
+  const sort = document.getElementById('stock-sort')?.value || '';
 
   let data = window._stockData || [];
 
@@ -121,6 +132,7 @@ function filterStock() {
   );
 
   if (category) data = data.filter(p => p.category === category);
+  if (form) data = data.filter(p => p.form === form);
 
   if (status === 'rupture') data = data.filter(p => p.currentStock === 0);
   else if (status === 'low') data = data.filter(p => p.currentStock > 0 && p.currentStock <= p.minStock);
@@ -131,6 +143,13 @@ function filterStock() {
 
   if (location === 'rayon') data = data.filter(p => p.qtyRayon > 0);
   else if (location === 'reserve') data = data.filter(p => p.qtyReserve > 0);
+  
+  // Sorting
+  if (sort === 'alpha') {
+    data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } else if (sort === 'alpha-desc') {
+    data.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+  }
 
   renderStockTable(data);
 }
@@ -438,8 +457,27 @@ async function submitStockEntry() {
   const data = Object.fromEntries(new FormData(form));
 
   try {
-    const productId = parseInt(data.productId);
+    let productId = parseInt(data.productId);
 
+    // Auto-create product if it does not exist
+    if (isNaN(productId)) {
+      const newName = document.getElementById('stock-entry-product-search')?.value.trim();
+      if (!newName) {
+        if (window.UI) UI.toast("Veuillez sélectionner ou saisir le nom du produit", "error");
+        return;
+      }
+      productId = await DB.dbAdd('products', {
+        name: newName,
+        code: 'AUTO-' + Date.now().toString().slice(-5),
+        category: 'Non classé',
+        form: '',
+        requiresPrescription: false,
+        purchasePrice: parseFloat(data.purchasePrice || 0),
+        salePrice: parseFloat(data.purchasePrice || 0) * 1.3,
+        status: 'active'
+      });
+      if (window.UI) UI.toast("Nouveau produit créé automatiquement", "info");
+    }
     // Add lot
     await DB.dbAdd('lots', {
       productId,
@@ -1175,6 +1213,10 @@ window.downloadStockCsvTemplate = function() {
 window.filterStockEntryProducts = function(query) {
   const resultsDiv = document.getElementById('stock-entry-product-results');
   if (!resultsDiv) return;
+  
+  // Update productId to empty if user is typing manually
+  document.getElementById('stock-entry-product-id').value = '';
+  
   if (!query || query.length < 2) {
     resultsDiv.style.display = 'none';
     return;
@@ -1182,28 +1224,39 @@ window.filterStockEntryProducts = function(query) {
   const q = query.toLowerCase();
   const products = window._stockData || [];
   const matches = products.filter(p =>
-    p.name.toLowerCase().includes(q) ||
+    (p.name || '').toLowerCase().includes(q) ||
     (p.code || '').toLowerCase().includes(q) ||
     (p.dci || '').toLowerCase().includes(q)
   ).slice(0, 20);
 
-  if (matches.length === 0) {
-    resultsDiv.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:13px;text-align:center;">Aucun produit trouvé</div>';
-  } else {
-    resultsDiv.innerHTML = matches.map(p => `
+  let html = '';
+  
+  if (matches.length > 0) {
+    html += matches.map(p => `
       <div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center;"
            onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''"
-           onclick="selectStockEntryProduct(${p.id}, '${p.name.replace(/'/g, "\\'")} (${p.code})')">
+           onclick="selectStockEntryProduct(${p.id}, '${(p.name || '').replace(/'/g, "\\'")}')">
         <div><strong>${p.name}</strong> <span class="text-muted">${p.dci || ''}</span></div>
         <code class="code-tag">${p.code}</code>
       </div>
     `).join('');
   }
+  
+  html += `
+    <div style="padding:10px;cursor:pointer;background:rgba(46,134,193,0.1);color:#2E86C1;font-size:13px;text-align:center;border-top:1px solid var(--border);"
+         onclick="selectStockEntryProduct('', '${query.replace(/'/g, "\\'")}')">
+      <i data-lucide="plus-circle" style="width:14px;height:14px;vertical-align:middle;"></i> Ajouter comme nouveau médicament : <strong>${query}</strong>
+      <div style="font-size:11px;opacity:0.8;margin-top:2px;">(Il est conseillé de créer depuis le catalogue)</div>
+    </div>
+  `;
+
+  resultsDiv.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
   resultsDiv.style.display = 'block';
 };
 
 window.selectStockEntryProduct = function(id, label) {
-  document.getElementById('stock-entry-product-id').value = id;
+  document.getElementById('stock-entry-product-id').value = id || '';
   document.getElementById('stock-entry-product-search').value = label;
   document.getElementById('stock-entry-product-results').style.display = 'none';
 };

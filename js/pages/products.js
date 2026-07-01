@@ -61,7 +61,16 @@ async function renderProducts(container) {
       <input type="text" id="prod-search" placeholder="Rechercher..." class="filter-input" oninput="filterProducts()">
       <select id="prod-cat" class="filter-select" onchange="filterProducts()">
         <option value="">Toutes catégories</option>
-        ${[...new Set(products.map(p => p.category))].map(c => `<option value="${c}">${c}</option>`).join('')}
+        ${[...new Set(products.map(p => p.category).filter(Boolean))].map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select id="prod-form" class="filter-select" onchange="filterProducts()">
+        <option value="">Toutes les formes</option>
+        ${[...new Set(products.map(p => p.form).filter(Boolean))].map(f => `<option value="${f}">${f}</option>`).join('')}
+      </select>
+      <select id="prod-sort" class="filter-select" onchange="filterProducts()">
+        <option value="">Tri par défaut</option>
+        <option value="alpha">Ordre alphabétique (A-Z)</option>
+        <option value="alpha-desc">Ordre alphabétique (Z-A)</option>
       </select>
       <select id="prod-rx" class="filter-select" onchange="filterProducts()">
         <option value="">Rx + OTC</option>
@@ -81,11 +90,23 @@ async function renderProducts(container) {
 function filterProducts() {
   const search = document.getElementById('prod-search')?.value.toLowerCase() || '';
   const cat = document.getElementById('prod-cat')?.value || '';
+  const form = document.getElementById('prod-form')?.value || '';
+  const sort = document.getElementById('prod-sort')?.value || '';
   const rx = document.getElementById('prod-rx')?.value;
   let data = window._productsData || [];
+  
   if (search) data = data.filter(p => p.name.toLowerCase().includes(search) || (p.dci || '').toLowerCase().includes(search) || (p.code || '').toLowerCase().includes(search));
   if (cat) data = data.filter(p => p.category === cat);
+  if (form) data = data.filter(p => p.form === form);
   if (rx !== '') data = data.filter(p => p.requiresPrescription === (rx === '1'));
+  
+  // Sorting
+  if (sort === 'alpha') {
+    data.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  } else if (sort === 'alpha-desc') {
+    data.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+  }
+  
   renderProductsTable(data);
 }
 

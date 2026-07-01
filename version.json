@@ -1,5 +1,5 @@
 {
-  "version": "9.7.20",
+  "version": "9.7.21",
   "date": "2026-06-30",
-  "changelog": "Format prix sans slash (PDF), lots optionnels"
+  "changelog": "Ajout stock prod inexistant, tris catalogues"
 }
