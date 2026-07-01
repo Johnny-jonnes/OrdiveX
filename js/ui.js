@@ -4,7 +4,7 @@
 
 const UI = {
   formatCurrency(amount) {
-    return new Intl.NumberFormat('fr-GN', { style: 'currency', currency: 'GNF', minimumFractionDigits: 0 }).format(amount || 0);
+    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'GNF', minimumFractionDigits: 0 }).format(amount || 0).replace(/\//g, ' ').replace(/GNF/g, ' GNF').trim();
   },
 
   formatDate(dateStr) {

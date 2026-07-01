@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OrdiveX — Module Gestion des Factures Professionnelles
  * Factures fournisseurs, traçabilité, liaison stock
  */
@@ -250,11 +250,11 @@ function addInvoiceItem() {
     <div style="display: flex; gap: 8px; width: 100%;">
       <div class="form-group flex-grow" style="margin-bottom:0;">
         <label style="font-size:11px; margin-bottom:2px;">N° de Lot *</label>
-        <input type="text" class="form-control" id="inv-lot-${idx}" placeholder="Ex: L123456" required>
+        <input type="text" class="form-control" id="inv-lot-${idx}" placeholder="Ex: L123456">
       </div>
       <div class="form-group flex-grow" style="margin-bottom:0;">
         <label style="font-size:11px; margin-bottom:2px;">Date d'expiration *</label>
-        <input type="date" class="form-control" id="inv-exp-${idx}" required>
+        <input type="date" class="form-control" id="inv-exp-${idx}">
       </div>
     </div>
   `;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OrdiveX — Gestion des Stocks
  */
 
@@ -389,7 +389,7 @@ function renderStockEntry() {
         </div>
         <div class="form-group">
           <label>Date d'expiration *</label>
-          <input type="date" name="expiryDate" class="form-control" required>
+          <input type="date" name="expiryDate" class="form-control">
         </div>
       </div>
       <div class="form-row">

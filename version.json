@@ -1,5 +1,5 @@
 {
-  "version": "9.7.19",
+  "version": "9.7.20",
   "date": "2026-06-30",
-  "changelog": "P4.1+P4.2 Rapport de sante automatique (healthReport) + P3.1 cache IDB"
+  "changelog": "Format prix sans slash (PDF), lots optionnels"
 }
