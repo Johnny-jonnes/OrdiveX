@@ -280,7 +280,6 @@ async function renderTraceability(container) {
 
   window._traceProductMap = productMap;
   window._traceLots = lots;
-  window._allSoonExpiry = allSoonExpiry;
 
   loadDestructionHistory();
   setTimeout(renderExpiryTable, 50);

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.25",
+  "version": "9.7.26",
   "date": "2026-06-30",
-  "changelog": "Pharmacovigilance : Regroupement des périmés par médicament et calcul des pertes financières"
+  "changelog": "Correction erreur d affichage page Pharmacovigilance (allSoonExpiry)"
 }
