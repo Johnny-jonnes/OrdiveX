@@ -15,27 +15,56 @@ async function renderTraceability(container) {
 
   const productMap = {};
   products.forEach(p => { productMap[p.id] = p; });
-
-  // Lots expiring soon — limiter à 100 pour le rendu initial
   const today = new Date();
-  const allSoonExpiry = lots.filter(l => {
+  const expiryGroups = {};
+  
+  lots.forEach(l => {
+    if (l.status !== 'active') return;
     const d = UI.daysUntilExpiry(l.expiryDate);
-    return l.status === 'active' && d !== null && d <= 90 && d > 0;
-  }).sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+    if (d === null || d > 90) return;
+    
+    const prod = productMap[l.productId];
+    if (!prod) return;
 
-  const expiredLots = lots.filter(l => {
-    const d = UI.daysUntilExpiry(l.expiryDate);
-    return d !== null && d <= 0 && l.status === 'active';
+    const key = l.productId + '_' + l.expiryDate;
+    if (!expiryGroups[key]) {
+      expiryGroups[key] = {
+        id: key,
+        productId: l.productId,
+        expiryDate: l.expiryDate,
+        days: d,
+        totalQuantity: 0,
+        lotIds: [],
+        productName: prod.name || 'Inconnu',
+        category: prod.category || '',
+        purchasePrice: parseFloat(prod.purchasePrice) || 0
+      };
+    }
+    expiryGroups[key].totalQuantity += (l.quantity || 0);
+    expiryGroups[key].lotIds.push(l.id);
   });
 
-  const recalledLots = lots.filter(l => l.status === 'recalled');
+  const allExpiryGroups = Object.values(expiryGroups);
+  
+  let totalLoss = 0;
+  const expiredGroups = [];
+  const soonExpiryGroups = [];
 
-  // Pagination initiale : 100 lots visibles
-  const EXPIRY_PAGE = 100;
-  const soonExpiry = allSoonExpiry.slice(0, EXPIRY_PAGE);
-  const hasMoreExpiry = allSoonExpiry.length > EXPIRY_PAGE;
-  const expiredVisible = expiredLots.slice(0, EXPIRY_PAGE);
-  const combinedExpiry = [...expiredVisible.map(l => ({ ...l, _expired: true })), ...soonExpiry];
+  allExpiryGroups.forEach(g => {
+    g.loss = g.totalQuantity * g.purchasePrice;
+    if (g.days <= 0) {
+      totalLoss += g.loss;
+      expiredGroups.push(g);
+    } else {
+      soonExpiryGroups.push(g);
+    }
+  });
+
+  window._allExpiryGroups = allExpiryGroups;
+  window._expiredGroups = expiredGroups;
+  window._soonExpiryGroups = soonExpiryGroups;
+  
+  const recalledLots = lots.filter(l => l.status === 'recalled');
 
   container.innerHTML = `
     <div class="page-header">
@@ -50,8 +79,9 @@ async function renderTraceability(container) {
     </div>
 
     <div class="stats-bar">
-      <div class="stat-chip stat-red"><span class="stat-val">${expiredLots.length}</span><span class="stat-label">Lots expirés</span></div>
-      <div class="stat-chip stat-orange"><span class="stat-val">${allSoonExpiry.length}</span><span class="stat-label">Exp. &lt;90j</span></div>
+      <div class="stat-chip stat-red"><span class="stat-val">${expiredGroups.length}</span><span class="stat-label">Médicaments expirés</span></div>
+      <div class="stat-chip stat-orange"><span class="stat-val">${soonExpiryGroups.length}</span><span class="stat-label">Exp. &lt;90j</span></div>
+      <div class="stat-chip stat-danger" style="background:#fff1f0;border-color:#ff4d4f;color:#cf1322"><span class="stat-val">${UI.formatCurrency(totalLoss)}</span><span class="stat-label">Pertes Financières</span></div>
       <div class="stat-chip stat-purple"><span class="stat-val">${recalledLots.length}</span><span class="stat-label">Rappels actifs</span></div>
       <div class="stat-chip stat-blue"><span class="stat-val">${lots.filter(l => l.status === 'active').length}</span><span class="stat-label">Lots actifs</span></div>
       <div class="stat-chip stat-purple" style="border-color:#9b59b6"><span class="stat-val">${products.filter(p => p.isControlled).length}</span><span class="stat-label">Stupéfiants</span></div>
@@ -75,39 +105,24 @@ async function renderTraceability(container) {
 
     <!-- Tab: Expirations -->
     <div id="tab-expiry" class="tab-content active">
-      ${expiredLots.length > 0 ? `
+      ${expiredGroups.length > 0 ? `
         <div class="alert-section-banner alert-danger">
-          <i data-lucide="alert-octagon"></i> <strong>${expiredLots.length} lot(s) expiré(s) encore actif(s)</strong> — Action immédiate requise
-          <button class="btn btn-xs btn-danger" onclick="blockExpiredLots()">Bloquer tous</button>
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
+            <span><i data-lucide="alert-octagon"></i> <strong>${expiredGroups.length} médicament(s) expiré(s) encore actif(s)</strong> — Perte totale : ${UI.formatCurrency(totalLoss)}</span>
+            <button class="btn btn-xs btn-danger" onclick="blockExpiredLots()">Détruire & Bloquer tous</button>
+          </div>
         </div>` : ''}
 
-      <h3 class="section-subtitle">Lots expirant dans les 90 jours ${allSoonExpiry.length > EXPIRY_PAGE ? `<span class="text-muted text-sm">(${EXPIRY_PAGE} premiers sur ${allSoonExpiry.length})</span>` : ''}</h3>
-      ${combinedExpiry.length === 0 ? '<div class="empty-state-small"><i data-lucide="check-circle"></i> Aucun lot expirant dans les 90 prochains jours</div>' : `
-        <div class="table-wrapper">
-          <table class="data-table">
-            <thead><tr><th>Produit</th><th>N° Lot</th><th>Stock restant</th><th>Expiration</th><th>Jours restants</th><th>Actions</th></tr></thead>
-            <tbody>
-              ${combinedExpiry.map(lot => {
-    const prod = productMap[lot.productId];
-    const days = UI.daysUntilExpiry(lot.expiryDate);
-    return `<tr class="${days <= 0 ? 'row-danger' : ''}">
-                  <td><strong>${prod?.name || '—'}</strong><br><span class="text-muted text-sm">${prod?.category || ''}</span></td>
-                  <td><code class="code-tag">${lot.lotNumber}</code></td>
-                  <td>${lot.quantity}</td>
-                  <td>${UI.formatDate(lot.expiryDate)}</td>
-                  <td>${UI.expiryBadge(lot.expiryDate)}</td>
-                  <td>
-                    <div class="actions-cell">
-                      <button class="btn btn-xs btn-primary" onclick="traceLot('${lot.lotNumber}')"><i data-lucide="search"></i> Tracer</button>
-                      ${days <= 0 ? `<button class="btn btn-xs btn-danger" onclick="initDestroyLot(${lot.id})"><i data-lucide="trash-2"></i> Détruire</button>` : `<button class="btn btn-xs btn-warning" onclick="promoteLot(${lot.id})"><i data-lucide="megaphone"></i> Promouvoir</button>`}
-                    </div>
-                  </td>
-                </tr>`;
-  }).join('')}
-            </tbody>
-          </table>
-        </div>
-        ${hasMoreExpiry ? `<div style="text-align:center;margin-top:12px;"><button class="btn btn-secondary" onclick="loadMoreExpiryLots()"><i data-lucide="chevrons-down"></i> Afficher ${allSoonExpiry.length - EXPIRY_PAGE} lots supplémentaires</button></div>` : ''}`}
+      <div class="filter-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 class="section-subtitle" style="margin:0">Suivi des Péremptions</h3>
+        <select id="expiry-sort-select" class="form-control" style="width:250px" onchange="renderExpiryTable()">
+          <option value="loss-desc">Trier par Perte financière (Décroissant)</option>
+          <option value="date-asc">Trier par date (Plus proche)</option>
+          <option value="alpha-asc">Trier par Nom (A-Z)</option>
+        </select>
+      </div>
+
+      <div id="expiry-table-container"></div>
     </div>
 
     <!-- Tab: Search -->
@@ -268,6 +283,7 @@ async function renderTraceability(container) {
   window._allSoonExpiry = allSoonExpiry;
 
   loadDestructionHistory();
+  setTimeout(renderExpiryTable, 50);
   if (window.lucide) lucide.createIcons();
 
   // Show controlled substances tab by default if available
@@ -840,18 +856,28 @@ async function confirmDestroyLot(lotId) {
 }
 
 async function blockExpiredLots() {
-  const ok = await UI.confirm('Bloquer tous les lots expirés actifs ?\n\nLes ventes seront automatiquement bloquées.');
+  const expired = window._expiredGroups || [];
+  if (expired.length === 0) return;
+  const totalLoss = expired.reduce((sum, g) => sum + g.loss, 0);
+  
+  const ok = await UI.confirm(`Détruire tous les médicaments expirés ?\n\nCela va détruire définitivement le stock de ${expired.length} produits périmés.\nPerte financière totale enregistrée : ${UI.formatCurrency(totalLoss)}`);
   if (!ok) return;
-  const lots = window._traceLots || [];
+  
   let count = 0;
-  for (const lot of lots) {
-    const d = UI.daysUntilExpiry(lot.expiryDate);
-    if (lot.status === 'active' && d !== null && d <= 0) {
-      await DB.dbPut('lots', { ...lot, status: 'blocked' });
-      count++;
+  for (const g of expired) {
+    for (const lid of g.lotIds) {
+      const lot = await DB.dbGet('lots', lid);
+      if (lot && lot.status === 'active') {
+        await DB.writeAudit('LOT_DESTRUCTION', `Destruction massive périmé: ${g.productName}`, { lotNumber: lot.lotNumber, quantity: lot.quantity });
+        lot.quantity = 0;
+        lot.status = 'destroyed';
+        await DB.dbPut('lots', lot);
+        count++;
+      }
     }
   }
-  UI.toast(`${count} lot(s) expiré(s) bloqué(s)`, 'success');
+  if (window._softRefreshStock) await window._softRefreshStock();
+  UI.toast(`${count} lot(s) détruit(s) avec succès`, 'success');
   Router.navigate('traceability');
 }
 
@@ -1211,6 +1237,77 @@ window.traceLot = traceLot;
 window.showLotRecallForm = showLotRecallForm;
 window.updateRecallInfo = updateRecallInfo;
 window.submitLotRecall = submitLotRecall;
+window.renderExpiryTable = function() {
+  const container = document.getElementById('expiry-table-container');
+  if (!container) return;
+  const sort = document.getElementById('expiry-sort-select')?.value || 'loss-desc';
+  
+  let groups = [...(window._allExpiryGroups || [])];
+  
+  if (sort === 'date-asc') {
+    groups.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+  } else if (sort === 'loss-desc') {
+    groups.sort((a, b) => b.loss - a.loss);
+  } else if (sort === 'alpha-asc') {
+    groups.sort((a, b) => a.productName.localeCompare(b.productName));
+  }
+
+  if (groups.length === 0) {
+    container.innerHTML = '<div class="empty-state-small"><i data-lucide="check-circle"></i> Aucun médicament expirant dans les 90 prochains jours</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead><tr><th>Produit</th><th>Stock restant</th><th>Expiration</th><th>Perte Financière</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${groups.map(g => `
+            <tr class="${g.days <= 0 ? 'row-danger' : ''}">
+              <td><strong>${g.productName}</strong><br><span class="text-muted text-sm">${g.category}</span></td>
+              <td><span style="font-size:1.1em; font-weight:600">${g.totalQuantity}</span></td>
+              <td>${UI.formatDate(g.expiryDate)} <br> ${UI.expiryBadge(g.expiryDate)}</td>
+              <td><strong style="color:var(--danger-color)">${UI.formatCurrency(g.loss)}</strong></td>
+              <td>
+                <div class="actions-cell">
+                  ${g.days <= 0 
+                    ? `<button class="btn btn-xs btn-danger" onclick="initDestroyGroup('${g.id}')"><i data-lucide="trash-2"></i> Détruire (${g.lotIds.length})</button>` 
+                    : `<button class="btn btn-xs btn-warning" onclick="promoteGroup('${g.id}')"><i data-lucide="megaphone"></i> Promouvoir (${g.lotIds.length})</button>`}
+                </div>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+};
+
+window.initDestroyGroup = async function(groupId) {
+  const g = (window._allExpiryGroups || []).find(x => x.id === groupId);
+  if (!g || g.lotIds.length === 0) return;
+  const ok = await UI.confirm(`Confirmer la destruction du stock de ${g.productName} ?\n\nQuantité : ${g.totalQuantity}\nPerte enregistrée : ${UI.formatCurrency(g.loss)}`);
+  if (!ok) return;
+  
+  for (const lid of g.lotIds) {
+    const lot = await DB.dbGet('lots', lid);
+    if(lot) {
+      await DB.writeAudit('LOT_DESTRUCTION', `Destruction périmé: ${g.productName} (Qte: ${lot.quantity})`, { lotNumber: lot.lotNumber, quantity: lot.quantity });
+      lot.quantity = 0;
+      lot.status = 'destroyed';
+      await DB.dbPut('lots', lot);
+    }
+  }
+  if (window._softRefreshStock) await window._softRefreshStock();
+  Router.navigate('traceability');
+  UI.toast('Destruction du groupe enregistrée', 'success');
+};
+
+window.promoteGroup = function(groupId) {
+  UI.toast('Fonctionnalité de promotion groupée à venir.', 'info');
+};
+
 window.showPharmacovigilanceForm = showPharmacovigilanceForm;
 window.previewPVReport = previewPVReport;
 window.submitPVReport = submitPVReport;

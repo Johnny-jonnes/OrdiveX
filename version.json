@@ -1,5 +1,5 @@
 {
-  "version": "9.7.24",
+  "version": "9.7.25",
   "date": "2026-06-30",
-  "changelog": "Tri alphabétique strict garanti pour inventaire, stock et catalogue"
+  "changelog": "Pharmacovigilance : Regroupement des périmés par médicament et calcul des pertes financières"
 }
