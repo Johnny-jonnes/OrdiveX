@@ -1,5 +1,5 @@
 {
-  "version": "9.7.23",
+  "version": "9.7.24",
   "date": "2026-06-30",
-  "changelog": "Patch formes existantes et tri alphabétique par défaut"
+  "changelog": "Tri alphabétique strict garanti pour inventaire, stock et catalogue"
 }

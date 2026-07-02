@@ -642,6 +642,9 @@ async function renderStockInventory() {
     justification: '',
   }));
 
+  // Force default alphabetical sort
+  inventoryItems.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
   window._inventoryItems = inventoryItems;
   window._invPage = 1;
   window._invSearch = '';
