@@ -239,9 +239,13 @@ function addInvoiceItem() {
         <label style="font-size:11px; margin-bottom:2px;">Qté *</label>
         <input type="number" class="form-control" id="inv-qty-${idx}" placeholder="Qté" min="1" value="1" oninput="updateInvoiceTotal()">
       </div>
-      <div class="form-group" style="width:120px; margin-bottom:0;">
-        <label style="font-size:11px; margin-bottom:2px;">Prix d'achat *</label>
-        <input type="number" class="form-control" id="inv-price-${idx}" placeholder="Prix unit." min="0" oninput="updateInvoiceTotal()">
+      <div class="form-group" style="width:90px; margin-bottom:0;">
+        <label style="font-size:11px; margin-bottom:2px;">P. Achat *</label>
+        <input type="number" class="form-control" id="inv-price-${idx}" placeholder="Achat" min="0" oninput="updateInvoiceTotal()">
+      </div>
+      <div class="form-group" style="width:90px; margin-bottom:0;">
+        <label style="font-size:11px; margin-bottom:2px;">P. Vente</label>
+        <input type="number" class="form-control" id="inv-sale-price-${idx}" placeholder="Vente" min="0">
       </div>
       <div style="display: flex; align-items: flex-end; padding-bottom: 4px;">
         <button type="button" class="btn btn-xs btn-danger" onclick="removeInvoiceItem(${idx})"><i data-lucide="trash-2"></i></button>
@@ -284,7 +288,7 @@ function invoiceProductSearch(idx) {
   }
 
   dropdown.innerHTML = matches.map(p => `
-    <div class="order-dd-item" onclick="selectInvoiceProduct(${idx}, ${p.id}, '${(p.name || '').replace(/'/g, "\\'")}', ${p.purchasePrice || 0})">
+    <div class="order-dd-item" onclick="selectInvoiceProduct(${idx}, ${p.id})">
       <strong>${p.name}</strong> <span style="color:var(--text-muted);font-size:11px">(${p.code})</span>
       ${p.purchasePrice ? `<span style="float:right;color:var(--primary);font-weight:700">${UI.formatCurrency(p.purchasePrice)}</span>` : ''}
     </div>
@@ -292,15 +296,35 @@ function invoiceProductSearch(idx) {
   dropdown.style.display = 'block';
 }
 
-function selectInvoiceProduct(idx, productId, productName, purchasePrice) {
+async function selectInvoiceProduct(idx, productId) {
+  const products = window._invoicesProducts || [];
+  const prod = products.find(p => p.id === productId);
+  if (!prod) return;
+
   const input = document.getElementById(`inv-search-${idx}`);
   const hidden = document.getElementById(`inv-prod-${idx}`);
   const dropdown = document.getElementById(`inv-dropdown-${idx}`);
   const priceInput = document.getElementById(`inv-price-${idx}`);
+  const salePriceInput = document.getElementById(`inv-sale-price-${idx}`);
+  const lotInput = document.getElementById(`inv-lot-${idx}`);
+  const expInput = document.getElementById(`inv-exp-${idx}`);
 
-  if (input) input.value = productName;
-  if (hidden) { hidden.value = productId; hidden.dataset.name = productName; }
-  if (priceInput && !priceInput.value) priceInput.value = purchasePrice || '';
+  if (input) input.value = prod.name;
+  if (hidden) { hidden.value = prod.id; hidden.dataset.name = prod.name; }
+  if (priceInput && !priceInput.value) priceInput.value = prod.purchasePrice || '';
+  if (salePriceInput && !salePriceInput.value) salePriceInput.value = prod.salePrice || '';
+  
+  try {
+    const lots = await DB.dbGetAll('lots');
+    const activeLots = lots.filter(l => l.productId === prod.id && l.status === 'active' && l.lotNumber && l.expiryDate);
+    if (activeLots.length > 0) {
+      activeLots.sort((a,b) => new Date(b.receiptDate || 0) - new Date(a.receiptDate || 0));
+      const recentLot = activeLots[0];
+      if (lotInput && !lotInput.value) lotInput.value = recentLot.lotNumber;
+      if (expInput && !expInput.value) expInput.value = recentLot.expiryDate;
+    }
+  } catch(e) {}
+
   if (dropdown) dropdown.style.display = 'none';
   updateInvoiceTotal();
 }
@@ -343,6 +367,7 @@ async function submitInvoice(status) {
     const hidden = document.getElementById(`inv-prod-${idx}`);
     const qty = parseInt(document.getElementById(`inv-qty-${idx}`)?.value || 0);
     const price = parseFloat(document.getElementById(`inv-price-${idx}`)?.value || 0);
+    const salePrice = parseFloat(document.getElementById(`inv-sale-price-${idx}`)?.value || 0);
     const lotNumber = document.getElementById(`inv-lot-${idx}`)?.value?.trim();
     const expiryDate = document.getElementById(`inv-exp-${idx}`)?.value;
 
@@ -356,6 +381,7 @@ async function submitInvoice(status) {
           productName: hidden.dataset?.name || '', 
           quantity: qty, 
           unitPrice: price, 
+          salePrice: salePrice,
           lotNumber, 
           expiryDate,
           total: qty * price
@@ -430,6 +456,26 @@ async function submitInvoice(status) {
             lastUpdated: Date.now()
           });
         }
+        
+        try {
+          const productsAll = await DB.dbGetAll('products');
+          const existingProd = productsAll.find(p => p.id === item.productId);
+          if (existingProd) {
+            let updatedProd = false;
+            if (item.unitPrice && existingProd.purchasePrice !== item.unitPrice) {
+              existingProd.purchasePrice = item.unitPrice;
+              updatedProd = true;
+            }
+            if (item.salePrice && existingProd.salePrice !== item.salePrice) {
+              existingProd.salePrice = item.salePrice;
+              updatedProd = true;
+            }
+            if (updatedProd) {
+              await DB.dbPut('products', existingProd);
+              window._invoicesProducts = null; // force reload next time
+            }
+          }
+        } catch(e) {}
         
         // Create movement
         await DB.dbAdd('movements', {
@@ -516,6 +562,26 @@ async function validateInvoice(invoiceId) {
           lastUpdated: Date.now()
         });
       }
+      
+      try {
+        const productsAll = await DB.dbGetAll('products');
+        const existingProd = productsAll.find(p => p.id === item.productId);
+        if (existingProd) {
+          let updatedProd = false;
+          if (item.unitPrice && existingProd.purchasePrice !== item.unitPrice) {
+            existingProd.purchasePrice = item.unitPrice;
+            updatedProd = true;
+          }
+          if (item.salePrice && existingProd.salePrice !== item.salePrice) {
+            existingProd.salePrice = item.salePrice;
+            updatedProd = true;
+          }
+          if (updatedProd) {
+            await DB.dbPut('products', existingProd);
+            window._invoicesProducts = null;
+          }
+        }
+      } catch(e) {}
       
       await DB.dbAdd('movements', {
         productId: item.productId,

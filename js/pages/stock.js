@@ -1279,10 +1279,38 @@ window.filterStockEntryProducts = function(query) {
   resultsDiv.style.display = 'block';
 };
 
-window.selectStockEntryProduct = function(id, label) {
+window.selectStockEntryProduct = async function(id, label) {
   document.getElementById('stock-entry-product-id').value = id || '';
   document.getElementById('stock-entry-product-search').value = label;
   document.getElementById('stock-entry-product-results').style.display = 'none';
+
+  if (!id) return;
+  const products = window._stockData || [];
+  const prod = products.find(p => p.id == id);
+  if (!prod) return;
+
+  const getF = (name) => document.querySelector(`#stock-entry-form [name="${name}"]`);
+  
+  if (getF('purchasePrice') && !getF('purchasePrice').value) getF('purchasePrice').value = prod.purchasePrice || '';
+  if (getF('salePrice') && !getF('salePrice').value) getF('salePrice').value = prod.salePrice || '';
+  if (getF('supplier') && !getF('supplier').value && prod.supplierId) {
+    try {
+      const sups = await DB.dbGetAll('suppliers');
+      const sup = sups.find(s => s.id === prod.supplierId);
+      if (sup) getF('supplier').value = sup.name;
+    } catch(e) {}
+  }
+
+  try {
+    const lots = await DB.dbGetAll('lots');
+    const activeLots = lots.filter(l => l.productId == id && l.status === 'active' && l.lotNumber && l.expiryDate);
+    if (activeLots.length > 0) {
+      activeLots.sort((a,b) => new Date(b.receiptDate || 0) - new Date(a.receiptDate || 0));
+      const recentLot = activeLots[0];
+      if (getF('lotNumber') && !getF('lotNumber').value) getF('lotNumber').value = recentLot.lotNumber;
+      if (getF('expiryDate') && !getF('expiryDate').value) getF('expiryDate').value = recentLot.expiryDate;
+    }
+  } catch(e) {}
 };
 
 window._softRefreshStock = async function() {

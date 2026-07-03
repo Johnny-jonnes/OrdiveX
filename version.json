@@ -1,5 +1,5 @@
 {
-  "version": "9.7.27",
+  "version": "9.7.28",
   "date": "2026-06-30",
-  "changelog": "Le champ Numéro de Lot est désormais 100% facultatif partout dans l application."
+  "changelog": "Synchronisation Intelligente : Source de vérité unique pour les médicaments implémentée (auto-remplissage et auto-mise à jour)."
 }
