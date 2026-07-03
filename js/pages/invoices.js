@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX — Module Gestion des Factures Professionnelles
  * Factures fournisseurs, traçabilité, liaison stock
  */
@@ -249,7 +249,7 @@ function addInvoiceItem() {
     </div>
     <div style="display: flex; gap: 8px; width: 100%;">
       <div class="form-group flex-grow" style="margin-bottom:0;">
-        <label style="font-size:11px; margin-bottom:2px;">N° de Lot *</label>
+        <label style="font-size:11px; margin-bottom:2px;">N° de Lot <span style="color:var(--text-muted);font-weight:400">(Optionnel)</span></label>
         <input type="text" class="form-control" id="inv-lot-${idx}" placeholder="Ex: L123456">
       </div>
       <div class="form-group flex-grow" style="margin-bottom:0;">
@@ -347,8 +347,8 @@ async function submitInvoice(status) {
     const expiryDate = document.getElementById(`inv-exp-${idx}`)?.value;
 
     if (hidden?.value) {
-      if (status === 'validated' && (!lotNumber || !expiryDate)) {
-        validationError = "Tous les champs (Lot et Expiration) sont requis pour la validation.";
+      if (status === 'validated' && !expiryDate) {
+        validationError = "La date d'expiration est requise pour la validation.";
       }
       if (qty > 0) {
         items.push({ 
@@ -468,9 +468,9 @@ async function validateInvoice(invoiceId) {
   if (!invoice || invoice.status === 'validated') return;
   
   // Ensure all items have lot and expiry
-  const missingData = invoice.items.find(i => !i.lotNumber || !i.expiryDate);
+  const missingData = invoice.items.find(i => !i.expiryDate);
   if (missingData) {
-    UI.toast('Impossible de valider : certains articles n\'ont pas de N° de lot ou de date d\'expiration.', 'error');
+    UI.toast('Impossible de valider : certains articles n\'ont pas de date d\'expiration.', 'error');
     // TODO: Open edit form
     return;
   }
