@@ -281,12 +281,14 @@ window._autoCalcSalePrice = async function(mode) {
   const sellEl = document.getElementById(`sale-price-${mode}`);
   const hintEl = document.getElementById(`sale-price-hint-${mode}`);
   
-  if (!typeEl || !buyEl || !sellEl) return;
+  if (!typeEl || !buyEl || !sellEl || sellEl.dataset.manual === 'true') return;
   
   const buyPrice = parseFloat(buyEl.value) || 0;
   if (buyPrice <= 0) return;
   
   const type = typeEl.value;
+  if (!type) return; // Si aucun type n'est sélectionné, pas de calcul auto
+
   let coeff = type === 'specialty' ? 1.40 : 1.12;
   
   try {
@@ -364,6 +366,7 @@ async function showAddProduct() {
         <div class="form-group">
           <label>Type de produit (Tarification)</label>
           <select name="productType" id="product-type-add" class="form-control" onchange="_autoCalcSalePrice('add')">
+            <option value="">Non spécifié (manuel)</option>
             <option value="specialty">Spécialité (marque) — ×1.40</option>
             <option value="generic">Générique (DCI) — ×1.12</option>
           </select>
@@ -375,8 +378,8 @@ async function showAddProduct() {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Prix de vente (GNF) * <span style="font-size:11px;color:var(--text-muted);font-weight:400" id="sale-price-hint-add">(calculé auto)</span></label>
-          <input type="number" name="salePrice" id="sale-price-add" class="form-control" min="0" required oninput="document.getElementById('sale-price-hint-add').textContent='(modifié manuellement)'">
+          <label>Prix de vente (GNF) * <span style="font-size:11px;color:var(--text-muted);font-weight:400" id="sale-price-hint-add"></span></label>
+          <input type="number" name="salePrice" id="sale-price-add" class="form-control" min="0" required oninput="this.dataset.manual='true'; document.getElementById('sale-price-hint-add').textContent='(modifié manuellement)'">
         </div>
         <div class="form-group">
           <label>Seuil minimum (boîtes/unités brutes)</label>
@@ -563,6 +566,7 @@ async function editProductForm(id) {
         <div class="form-group">
           <label>Type de produit (Tarification)</label>
           <select name="productType" id="product-type-edit" class="form-control" onchange="_autoCalcSalePrice('edit')">
+            <option value="" ${!p.productType ? 'selected' : ''}>Non spécifié (manuel)</option>
             <option value="specialty" ${p.productType === 'specialty' ? 'selected' : ''}>Spécialité (marque) — ×1.40</option>
             <option value="generic" ${p.productType === 'generic' ? 'selected' : ''}>Générique (DCI) — ×1.12</option>
           </select>
@@ -574,8 +578,8 @@ async function editProductForm(id) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Prix de vente (GNF) * <span style="font-size:11px;color:var(--text-muted);font-weight:400" id="sale-price-hint-edit">(calculé auto)</span></label>
-          <input type="number" name="salePrice" id="sale-price-edit" class="form-control" value="${p.salePrice || 0}" min="0" required oninput="document.getElementById('sale-price-hint-edit').textContent='(modifié manuellement)'">
+          <label>Prix de vente (GNF) * <span style="font-size:11px;color:var(--text-muted);font-weight:400" id="sale-price-hint-edit"></span></label>
+          <input type="number" name="salePrice" id="sale-price-edit" class="form-control" value="${p.salePrice || 0}" min="0" required oninput="this.dataset.manual='true'; document.getElementById('sale-price-hint-edit').textContent='(modifié manuellement)'">
         </div>
         <div class="form-group">
           <label>Seuil minimum (boîtes)</label>
