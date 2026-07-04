@@ -323,14 +323,14 @@ window.confirmSettleAllClaims = async function() {
   const ok = await UI.confirm(`Voulez-vous encaisser globalement ${UI.formatCurrency(totalDue)} pour les ${pendingSales.length} factures de l'entreprise ${selectInsurance} ?`);
   if (!ok) return;
 
-  // Créer un overlay loader local pour éviter le bloquage brutal
-  UI.loading(document.body, "Règlement des créances en cours...");
+  // Utiliser le loader global d'OrdiveX au lieu de UI.loading(document.body)
+  UI.showLoader("Règlement des créances en cours...", 30000);
 
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    // Mettre à jour chaque vente et l'ajouter au journal de caisse
-    for (const sale of pendingSales) {
+    // Mettre à jour chaque vente et l'ajouter au journal de caisse en parallèle
+    const promises = pendingSales.map(async (sale) => {
       const debtAmount = sale.assuranceAmount || sale.total;
 
       // 1. Statut payé
@@ -352,7 +352,9 @@ window.confirmSettleAllClaims = async function() {
         timestamp: Date.now(),
         userId: DB.AppState.currentUser?.id,
       });
-    }
+    });
+
+    await Promise.all(promises);
 
     // 3. Trace d'audit globale
     await DB.writeAudit('GLOBAL_DEBT_REFUND', 'claims', null, { 
@@ -379,9 +381,8 @@ window.confirmSettleAllClaims = async function() {
     console.error(err);
     UI.toast('Erreur lors du règlement global : ' + err.message, 'error');
   } finally {
-    // Retirer le loader
-    const loader = document.querySelector('.loading-overlay');
-    if (loader) loader.remove();
+    // Retirer le loader proprement via l'API UI
+    UI.hideLoader();
   }
 };
 

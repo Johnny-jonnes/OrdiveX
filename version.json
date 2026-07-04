@@ -1,5 +1,5 @@
 {
-  "version": "9.7.34",
+  "version": "9.7.35",
   "date": "2026-06-30",
-  "changelog": "Retrait des emojis dans le formulaire de reglement global du module Creances."
+  "changelog": "Optimisation des performances de reglement de creances (Promise.all) et utilisation du loader global non bloquant."
 }
