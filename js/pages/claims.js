@@ -397,62 +397,306 @@ window.exportClaimsPDF = function() {
     return UI.toast("Module PDF non chargé", "error");
   }
 
-  const userMap = {};
-  (window._claimsUsers || []).forEach(u => {
-    userMap[u.id] = u.name || u.username;
-  });
+  // Ouvrir un petit dialogue pour choisir les options
+  UI.modal('<i data-lucide="printer" class="modal-icon-inline"></i> Option d\'impression PDF', `
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <p style="font-size:13px;color:var(--text-muted);margin:0">Choisissez le type de document PDF à générer :</p>
+      
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+          <input type="radio" name="pdf-recap-type" value="recap-only" checked style="width:16px;height:16px">
+          <div>
+            <strong style="font-size:13px;display:block">Récapitulatif uniquement</strong>
+            <span style="font-size:11px;color:var(--text-muted)">Un tableau simple de toutes les factures avec les montants globaux.</span>
+          </div>
+        </label>
+        
+        <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
+          <input type="radio" name="pdf-recap-type" value="recap-detailed" style="width:16px;height:16px">
+          <div>
+            <strong style="font-size:13px;display:block">Récapitulatif + Toutes les factures détaillées</strong>
+            <span style="font-size:11px;color:var(--text-muted)">Le tableau récapitulatif suivi du détail des médicaments vendus pour chaque facture.</span>
+          </div>
+        </label>
+      </div>
 
-  let totalBilled = 0;
-  let totalPaid = 0;
-  let totalDue = 0;
+      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:10px">
+        <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="processClaimsPDFExport()">Générer le PDF</button>
+      </div>
+    </div>
+  `);
+  if (window.lucide) lucide.createIcons();
+};
 
-  const data = window._claimsFilteredData.map(s => {
-    const isPaid = s.status === 'completed' || s.status === 'paid';
-    const remains = isPaid ? 0 : (s.assuranceAmount || s.total);
-    const paid = s.total - remains;
-
-    totalBilled += s.total;
-    totalPaid += paid;
-    totalDue += remains;
-
-    return [
-      '#' + String(s.id).padStart(6, '0'),
-      new Date(s.date).toLocaleDateString('fr-FR'),
-      s.patientName || 'Anonyme',
-      UI.formatCurrency(s.total),
-      UI.formatCurrency(paid),
-      UI.formatCurrency(remains),
-      isPaid ? 'Réglée' : 'En cours',
-      userMap[s.userId] || 'Inconnu'
-    ];
-  });
-
-  const headers = ["N° Facture", "Date", "Patient", "Montant", "Montant Payé", "Reste à payer", "Statut", "Auteur"];
+window.processClaimsPDFExport = async function() {
+  const mode = document.querySelector('input[name="pdf-recap-type"]:checked')?.value || 'recap-only';
+  UI.closeModal();
   
-  const fromDate = document.getElementById('claim-date-from')?.value;
-  const toDate = document.getElementById('claim-date-to')?.value;
+  UI.showLoader("Génération du PDF...", 30000);
   
-  const dateRangeStr = (fromDate && toDate) 
-    ? `Période du ${new Date(fromDate).toLocaleDateString('fr-FR')} au ${new Date(toDate).toLocaleDateString('fr-FR')}`
-    : '';
+  try {
+    const userMap = {};
+    (window._claimsUsers || []).forEach(u => {
+      userMap[u.id] = u.name || u.username;
+    });
 
-  window.PDFExport.generate(
-    `Suivi des Créances — ${window._claimsSelectedName}`,
-    headers,
-    data,
-    {
-      subHeader: [
-        `Entreprise/Assurance : ${window._claimsSelectedName}`,
-        dateRangeStr
-      ],
-      summaryBlocks: [
-        { label: "Nombre total de factures", value: `${data.length}` },
-        { label: "Montant total facturé", value: `${UI.formatCurrency(totalBilled)}` },
-        { label: "Montant total payé", value: `${UI.formatCurrency(totalPaid)}` },
-        { label: "Montant restant dû", value: `${UI.formatCurrency(totalDue)}` }
-      ]
+    let totalBilled = 0;
+    let totalPaid = 0;
+    let totalDue = 0;
+
+    const data = window._claimsFilteredData.map(s => {
+      const isPaid = s.status === 'completed' || s.status === 'paid';
+      const remains = isPaid ? 0 : (s.assuranceAmount || s.total);
+      const paid = s.total - remains;
+
+      totalBilled += s.total;
+      totalPaid += paid;
+      totalDue += remains;
+
+      return [
+        '#' + String(s.id).padStart(6, '0'),
+        new Date(s.date).toLocaleDateString('fr-FR'),
+        s.patientName || 'Anonyme',
+        UI.formatCurrency(s.total),
+        UI.formatCurrency(paid),
+        UI.formatCurrency(remains),
+        isPaid ? 'Réglée' : 'En cours',
+        userMap[s.userId] || 'Inconnu'
+      ];
+    });
+
+    const headers = ["N° Facture", "Date", "Patient", "Montant", "Montant Payé", "Reste à payer", "Statut", "Auteur"];
+    
+    const fromDate = document.getElementById('claim-date-from')?.value;
+    const toDate = document.getElementById('claim-date-to')?.value;
+    const dateRangeStr = (fromDate && toDate) 
+      ? `Période du ${new Date(fromDate).toLocaleDateString('fr-FR')} au ${new Date(toDate).toLocaleDateString('fr-FR')}`
+      : '';
+
+    // Si on veut le récapitulatif uniquement, on utilise le générateur par défaut
+    if (mode === 'recap-only') {
+      await window.PDFExport.generate(
+        `Suivi des Créances — ${window._claimsSelectedName}`,
+        headers,
+        data,
+        {
+          subHeader: [
+            `Entreprise/Assurance : ${window._claimsSelectedName}`,
+            dateRangeStr
+          ],
+          summaryBlocks: [
+            { label: "Nombre total de factures", value: `${data.length}` },
+            { label: "Montant total facturé", value: `${UI.formatCurrency(totalBilled)}` },
+            { label: "Montant total payé", value: `${UI.formatCurrency(totalPaid)}` },
+            { label: "Montant restant dû", value: `${UI.formatCurrency(totalDue)}` }
+          ]
+        }
+      );
+      return;
     }
-  );
+
+    // Sinon, on génère un PDF personnalisé avec le récapitulatif ET le détail de chaque facture
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      UI.toast("L'outil d'export PDF n'a pas pu être chargé", "error");
+      UI.hideLoader();
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('portrait', 'mm', 'a4');
+    
+    // Charger les settings pour l'en-tête
+    const settings = await DB.dbGetAll('settings') || [];
+    const getSetting = (k) => { const s = settings.find(x => x.key === k); return s ? s.value : ''; };
+    const pharmacyName = getSetting('pharmacy_name') || 'OrdiveX Pharmacie';
+    const pharmacyAddress = getSetting('pharmacy_address') || '';
+    const pharmacyPhone = getSetting('pharmacy_phone') || '';
+    const logoDataUrl = getSetting('pharmacy_logo');
+
+    const pageWidth = doc.internal.pageSize.width || doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('fr-FR');
+    const timeStr = today.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const currentUser = AppState?.currentUser?.name || AppState?.currentUser?.username || 'Utilisateur';
+
+    const drawHeader = (doc, title) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(27, 79, 114);
+      
+      let textStartX = 14;
+      let startY = 15;
+      
+      if (logoDataUrl && logoDataUrl.startsWith('data:image')) {
+        try {
+          doc.addImage(logoDataUrl, 'PNG', 14, 10, 16, 16);
+          textStartX = 34;
+        } catch(e) { }
+      }
+      
+      doc.text(pharmacyName, textStartX, startY);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      if (pharmacyAddress) {
+        startY += 4;
+        doc.text(pharmacyAddress, textStartX, startY);
+      }
+      if (pharmacyPhone) {
+        startY += 4;
+        doc.text("Tél : " + pharmacyPhone, textStartX, startY);
+      }
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.line(14, 28, pageWidth - 14, 28);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text(title.toUpperCase(), pageWidth / 2, 34, { align: 'center' });
+      
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Imprimé le : ${dateStr} à ${timeStr}`, pageWidth - 14, 12, { align: 'right' });
+      doc.text(`Par : ${currentUser}`, pageWidth - 14, 16, { align: 'right' });
+    };
+
+    const drawFooter = (doc) => {
+      const str = 'Page ' + doc.internal.getNumberOfPages();
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(str, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      doc.text("Généré par OrdiveX ERP", 14, pageHeight - 10);
+    };
+
+    // 1. Première page: Le Tableau Récapitulatif
+    drawHeader(doc, `Suivi des Créances — ${window._claimsSelectedName}`);
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Entreprise/Assurance : ${window._claimsSelectedName}`, 14, 40);
+    if (dateRangeStr) doc.text(dateRangeStr, 14, 45);
+
+    doc.autoTable({
+      head: [headers],
+      body: data,
+      startY: 48,
+      margin: { top: 40, bottom: 20 },
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: [27, 79, 114], textColor: 255, halign: 'center' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      didDrawPage: function (data) {
+        if (doc.internal.getNumberOfPages() > 1) {
+          drawHeader(doc, `Suivi des Créances — ${window._claimsSelectedName}`);
+        }
+        drawFooter(doc);
+      }
+    });
+
+    // Bloc résumé sur la première page (ou après le tableau)
+    let finalY = doc.lastAutoTable.finalY + 12;
+    if (finalY + 30 > pageHeight - 20) {
+      doc.addPage();
+      finalY = 40;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(27, 79, 114);
+    doc.text("RÉSUMÉ ET STATISTIQUES", 14, finalY);
+    doc.line(14, finalY + 1.5, 60, finalY + 1.5);
+    
+    finalY += 6;
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(50, 50, 50);
+
+    const summaryItems = [
+      { label: "Nombre total de factures", value: `${data.length}` },
+      { label: "Montant total facturé", value: `${UI.formatCurrency(totalBilled)}` },
+      { label: "Montant total payé", value: `${UI.formatCurrency(totalPaid)}` },
+      { label: "Montant restant dû", value: `${UI.formatCurrency(totalDue)}` }
+    ];
+
+    summaryItems.forEach(block => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${block.label} :`, 14, finalY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${block.value}`, 70, finalY);
+      finalY += 4.5;
+    });
+
+    // 2. Pages suivantes: Détail de chaque facture
+    // Récupérer les items de vente correspondants
+    const allSaleItems = await DB.dbGetAll('saleItems');
+    const saleItemsMap = {};
+    allSaleItems.forEach(item => {
+      if (!saleItemsMap[item.saleId]) saleItemsMap[item.saleId] = [];
+      saleItemsMap[item.saleId].push(item);
+    });
+
+    for (const sale of window._claimsFilteredData) {
+      doc.addPage();
+      drawHeader(doc, `Détail Facture #${String(sale.id).padStart(6, '0')}`);
+      drawFooter(doc);
+
+      // Infos de la facture
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(40, 40, 40);
+      doc.text(`Patient : ${sale.patientName || 'Anonyme'}`, 14, 40);
+      doc.text(`Date : ${new Date(sale.date).toLocaleString('fr-FR')}`, 14, 45);
+      
+      const isPaid = sale.status === 'completed' || sale.status === 'paid';
+      const remains = isPaid ? 0 : (sale.assuranceAmount || sale.total);
+      const paid = sale.total - remains;
+
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Montant Total : ${UI.formatCurrency(sale.total)}`, pageWidth - 80, 40);
+      doc.text(`Montant Payé (T.M.) : ${UI.formatCurrency(paid)}`, pageWidth - 80, 45);
+      doc.text(`Reste à payer (Assur.) : ${UI.formatCurrency(remains)}`, pageWidth - 80, 50);
+
+      // Tableau des produits de cette facture
+      const saleItems = saleItemsMap[sale.id] || [];
+      const tableRows = saleItems.map(item => [
+        item.productName,
+        item.lotNumber || '—',
+        item.expiryDate ? new Date(item.expiryDate).toLocaleDateString('fr-FR') : '—',
+        String(item.quantity),
+        UI.formatCurrency(item.unitPrice || 0),
+        UI.formatCurrency(item.total || 0)
+      ]);
+
+      doc.autoTable({
+        head: [["Désignation", "N° Lot", "Expiration", "Quantité", "P. Unit.", "Total GNF"]],
+        body: tableRows,
+        startY: 55,
+        margin: { top: 40, bottom: 20 },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        headStyles: { fillColor: [40, 55, 71], textColor: 255 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        didDrawPage: function (data) {
+          drawFooter(doc);
+        }
+      });
+    }
+
+    const safeTitle = `suivi_creances_detail_${window._claimsSelectedName.toLowerCase().replace(/\s+/g, '_')}`;
+    const filename = `${safeTitle}_${today.toISOString().split('T')[0]}.pdf`;
+    
+    doc.save(filename);
+    UI.hideLoader();
+    UI.toast("Le PDF détaillé a été généré avec succès", "success");
+    DB.writeAudit('EXPORT_PDF', 'claims', null, { title: `Suivi Créances Détaillé - ${window._claimsSelectedName}`, rows: data.length });
+
+  } catch(err) {
+    console.error(err);
+    UI.hideLoader();
+    UI.toast("Erreur lors de la génération du PDF", "error");
+  }
 };
 
 window.exportClaimsCSV = function() {

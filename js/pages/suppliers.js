@@ -343,80 +343,439 @@ async function submitEditSupplier(supId) {
 }
 
 async function viewSupplierDetail(supId) {
-  const [sup, orders] = await Promise.all([
+  const [sup, orders, invoices, users] = await Promise.all([
     DB.dbGet('suppliers', supId),
     DB.dbGetAll('purchaseOrders', 'supplierId', supId),
+    DB.dbGetAll('invoices', 'supplierId', supId),
+    DB.dbGetAll('users'),
   ]);
   if (!sup) return;
+
   const sortedOrders = orders.sort((a, b) => new Date(b.date) - new Date(a.date));
   const complaints = sup.complaints || [];
   const openComplaints = complaints.filter(c => c.status === 'open').length;
 
+  // Stocker dans window pour le filtrage interactif
+  window._historySupplier = sup;
+  window._historyOrders = orders;
+  window._historyInvoices = invoices;
+  window._historyUsers = users;
+
+  // Extraire les options de filtrage de médicaments (tous les produits achetés ou commandés)
+  const uniqueProducts = {};
+  invoices.forEach(inv => {
+    (inv.items || []).forEach(item => {
+      uniqueProducts[item.productId] = item.productName;
+    });
+  });
+  orders.forEach(ord => {
+    (ord.items || []).forEach(item => {
+      uniqueProducts[item.productId] = item.productName;
+    });
+  });
+  const prodOptions = Object.entries(uniqueProducts)
+    .map(([id, name]) => `<option value="${id}">${name}</option>`)
+    .join('');
+
+  // Extraire les options de factures / commandes uniques
+  const uniqueRefs = new Set();
+  invoices.forEach(i => { if (i.invoiceNumber) uniqueRefs.add(i.invoiceNumber); });
+  orders.forEach(o => { if (o.orderNumber) uniqueRefs.add(o.orderNumber); });
+  const invoiceOptions = Array.from(uniqueRefs)
+    .sort()
+    .map(ref => `<option value="${ref}">${ref}</option>`)
+    .join('');
+
+  // Extraire les utilisateurs uniques
+  const uniqueUserIds = new Set();
+  invoices.forEach(i => { if (i.createdBy) uniqueUserIds.add(i.createdBy); });
+  orders.forEach(o => { if (o.createdBy) uniqueUserIds.add(o.createdBy); });
+  const userMap = {};
+  users.forEach(u => { userMap[u.id] = u.name || u.username; });
+  const userOptions = Array.from(uniqueUserIds)
+    .map(uid => `<option value="${uid}">${userMap[uid] || 'Inconnu'}</option>`)
+    .join('');
+
   UI.modal(`<i data-lucide="factory" class="modal-icon-inline"></i> ${sup.name}`, `
     <div class="supplier-detail">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+      <!-- BARRE D'ONGLETS -->
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-sm btn-primary sup-tab-btn active" id="sup-tab-btn-info" onclick="switchSupplierTab(${supId}, 'info')">Fiche Fournisseur</button>
+          <button class="btn btn-sm btn-ghost sup-tab-btn" id="sup-tab-btn-history" onclick="switchSupplierTab(${supId}, 'history')">Historique Commercial</button>
+        </div>
         <button class="btn btn-sm btn-secondary" onclick="UI.closeModal(); showEditSupplier(${supId})"><i data-lucide="pencil"></i> Modifier les informations</button>
       </div>
-      <div class="rx-detail-grid" style="margin-bottom:16px">
-        <div class="rx-detail-card">
-          <h4>Informations</h4>
-          <div class="detail-row"><span>Agrément</span><span><code>${sup.agrément || '—'}</code></span></div>
-          <div class="detail-row"><span>Contact</span><span>${sup.contact || '—'}</span></div>
-          <div class="detail-row"><span>Téléphone</span><span>${sup.phone || '—'}</span></div>
-          <div class="detail-row"><span>Email</span><span>${sup.email || '—'}</span></div>
-          <div class="detail-row"><span>Délai paiement</span><span>${sup.paymentTerms || 30} jours</span></div>
+
+      <!-- ONGLET 1 : FICHE COMMERCIALE -->
+      <div id="sup-tab-content-info" class="sup-tab-content">
+        <div class="rx-detail-grid" style="margin-bottom:16px">
+          <div class="rx-detail-card">
+            <h4>Informations</h4>
+            <div class="detail-row"><span>Agrément</span><span><code>${sup.agrément || '—'}</code></span></div>
+            <div class="detail-row"><span>Contact</span><span>${sup.contact || '—'}</span></div>
+            <div class="detail-row"><span>Téléphone</span><span>${sup.phone || '—'}</span></div>
+            <div class="detail-row"><span>Email</span><span>${sup.email || '—'}</span></div>
+            <div class="detail-row"><span>Délai paiement</span><span>${sup.paymentTerms || 30} jours</span></div>
+          </div>
+          <div class="rx-detail-card">
+            <h4>Statistiques</h4>
+            <div class="detail-row"><span>Total commandes</span><span><strong>${orders.length}</strong></span></div>
+            <div class="detail-row"><span>Total achats</span><span><strong>${UI.formatCurrency(orders.reduce((a, o) => a + (o.totalAmount || 0), 0))}</strong></span></div>
+            <div class="detail-row"><span>Dernière commande</span><span>${orders[0]?.date ? UI.formatDate(orders[0].date) : '—'}</span></div>
+            <div class="detail-row"><span>Statut</span><span><span class="badge badge-${sup.status === 'active' ? 'success' : 'neutral'}">${sup.status}</span></span></div>
+            <div class="detail-row"><span>Réclamations ouvertes</span><span>${openComplaints > 0 ? `<span class="badge badge-danger">${openComplaints}</span>` : '<span class="text-muted">0</span>'}</span></div>
+          </div>
         </div>
-        <div class="rx-detail-card">
-          <h4>Statistiques</h4>
-          <div class="detail-row"><span>Total commandes</span><span><strong>${orders.length}</strong></span></div>
-          <div class="detail-row"><span>Total achats</span><span><strong>${UI.formatCurrency(orders.reduce((a, o) => a + (o.totalAmount || 0), 0))}</strong></span></div>
-          <div class="detail-row"><span>Dernière commande</span><span>${orders[0]?.date ? UI.formatDate(orders[0].date) : '—'}</span></div>
-          <div class="detail-row"><span>Statut</span><span><span class="badge badge-${sup.status === 'active' ? 'success' : 'neutral'}">${sup.status}</span></span></div>
-          <div class="detail-row"><span>Réclamations ouvertes</span><span>${openComplaints > 0 ? `<span class="badge badge-danger">${openComplaints}</span>` : '<span class="text-muted">0</span>'}</span></div>
+        <h4 style="margin-bottom:8px">Historique récent des commandes</h4>
+        ${sortedOrders.length === 0 ? '<p class="text-muted">Aucune commande</p>' : `
+          <table class="data-table"><thead><tr><th>N° BC</th><th>Date</th><th>Montant</th><th>Statut</th></tr></thead>
+          <tbody>${sortedOrders.slice(0, 5).map(o => `
+            <tr>
+              <td><code>${o.orderNumber || o.id}</code></td>
+              <td>${UI.formatDate(o.date)}</td>
+              <td>${UI.formatCurrency(o.totalAmount || 0)}</td>
+              <td><span class="badge badge-${o.status === 'received' ? 'success' : o.status === 'sent' ? 'info' : o.status === 'cancelled' ? 'danger' : 'warning'}">${({pending:'Brouillon',sent:'Envoyée',partial:'Partielle',received:'Reçue',cancelled:'Annulée'})[o.status] || o.status}</span></td>
+            </tr>`).join('')}</tbody>
+          </table>`}
+
+        <!-- RÉCLAMATIONS -->
+        <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:16px">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px">
+            <h4 style="margin:0"><i data-lucide="alert-circle"></i> Réclamations</h4>
+            <button class="btn btn-sm btn-danger" onclick="showAddComplaint(${supId})"><i data-lucide="plus"></i> Nouvelle réclamation</button>
+          </div>
+          <div id="complaints-list-${supId}">
+            ${complaints.length === 0 ? '<p class="text-muted" style="font-size:13px">Aucune réclamation enregistrée pour ce fournisseur.</p>' :
+            complaints.sort((a, b) => new Date(b.date) - new Date(a.date)).map((c, idx) => `
+              <div class="complaint-card">
+                <div class="complaint-header">
+                  <span class="complaint-type ${c.type}">${({quality:'Qualité', delivery:'Livraison', missing:'Manquant', other:'Autre'})[c.type] || c.type}</span>
+                  <span class="complaint-date">${UI.formatDate(c.date)}</span>
+                </div>
+                <div class="complaint-desc">${c.description}</div>
+                ${c.orderRef ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Réf. commande : <code>${c.orderRef}</code></div>` : ''}
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
+                  <span class="complaint-status ${c.status}">
+                    ${c.status === 'open' ? '⏳ Ouverte' : '✅ Résolue'}
+                  </span>
+                  ${c.status === 'open' ? `<button class="btn btn-xs btn-success" onclick="resolveComplaint(${supId}, ${idx})"><i data-lucide="check"></i> Résoudre</button>` : ''}
+                </div>
+                ${c.resolution ? `<div style="margin-top:8px; padding:8px 10px; background:rgba(46,175,125,0.06); border-radius:6px; font-size:12px; color:var(--text-muted)"><strong>Résolution :</strong> ${c.resolution}</div>` : ''}
+              </div>`).join('')}
+          </div>
         </div>
       </div>
-      <h4 style="margin-bottom:8px">Historique des commandes</h4>
-      ${sortedOrders.length === 0 ? '<p class="text-muted">Aucune commande</p>' : `
-        <table class="data-table"><thead><tr><th>N° BC</th><th>Date</th><th>Montant</th><th>Statut</th></tr></thead>
-        <tbody>${sortedOrders.slice(0, 10).map(o => `
-          <tr>
-            <td><code>${o.orderNumber || o.id}</code></td>
-            <td>${UI.formatDate(o.date)}</td>
-            <td>${UI.formatCurrency(o.totalAmount || 0)}</td>
-            <td><span class="badge badge-${o.status === 'received' ? 'success' : o.status === 'sent' ? 'info' : o.status === 'cancelled' ? 'danger' : 'warning'}">${({pending:'Brouillon',sent:'Envoyée',partial:'Partielle',received:'Reçue',cancelled:'Annulée'})[o.status] || o.status}</span></td>
-          </tr>`).join('')}</tbody>
-        </table>`}
 
-      <!-- RÉCLAMATIONS -->
-      <div style="margin-top:24px; border-top:1px solid var(--border); padding-top:16px">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px">
-          <h4 style="margin:0"><i data-lucide="alert-circle"></i> Réclamations</h4>
-          <button class="btn btn-sm btn-danger" onclick="showAddComplaint(${supId})"><i data-lucide="plus"></i> Nouvelle réclamation</button>
+      <!-- ONGLET 2 : HISTORIQUE COMPLET -->
+      <div id="sup-tab-content-history" class="sup-tab-content" style="display:none">
+        <!-- FILTRES -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; background:#F8FAFC; border:1px solid var(--border); padding:12px; border-radius:8px; margin-bottom:16px">
+          <div class="form-group" style="margin-bottom:0">
+            <label style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:2px; display:block">Médicament</label>
+            <select id="hist-filter-product" class="form-control text-xs" style="padding:4px 8px; height:30px" onchange="filterSupplierHistory()">
+              <option value="">Tous</option>
+              ${prodOptions}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:2px; display:block">Facture/Commande</label>
+            <select id="hist-filter-invoice" class="form-control text-xs" style="padding:4px 8px; height:30px" onchange="filterSupplierHistory()">
+              <option value="">Toutes</option>
+              ${invoiceOptions}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:2px; display:block">Utilisateur</label>
+            <select id="hist-filter-user" class="form-control text-xs" style="padding:4px 8px; height:30px" onchange="filterSupplierHistory()">
+              <option value="">Tous</option>
+              ${userOptions}
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:2px; display:block">Date début</label>
+            <input type="date" id="hist-filter-from" class="form-control text-xs" style="padding:4px 8px; height:30px" onchange="filterSupplierHistory()">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:2px; display:block">Date fin</label>
+            <input type="date" id="hist-filter-to" class="form-control text-xs" style="padding:4px 8px; height:30px" onchange="filterSupplierHistory()">
+          </div>
         </div>
-        <div id="complaints-list-${supId}">
-          ${complaints.length === 0 ? '<p class="text-muted" style="font-size:13px">Aucune réclamation enregistrée pour ce fournisseur.</p>' :
-          complaints.sort((a, b) => new Date(b.date) - new Date(a.date)).map((c, idx) => `
-            <div class="complaint-card">
-              <div class="complaint-header">
-                <span class="complaint-type ${c.type}">${({quality:'Qualité', delivery:'Livraison', missing:'Manquant', other:'Autre'})[c.type] || c.type}</span>
-                <span class="complaint-date">${UI.formatDate(c.date)}</span>
-              </div>
-              <div class="complaint-desc">${c.description}</div>
-              ${c.orderRef ? `<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Réf. commande : <code>${c.orderRef}</code></div>` : ''}
-              <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px">
-                <span class="complaint-status ${c.status}">
-                  ${c.status === 'open' ? '⏳ Ouverte' : '✅ Résolue'}
-                </span>
-                ${c.status === 'open' ? `<button class="btn btn-xs btn-success" onclick="resolveComplaint(${supId}, ${idx})"><i data-lucide="check"></i> Résoudre</button>` : ''}
-              </div>
-              ${c.resolution ? `<div style="margin-top:8px; padding:8px 10px; background:rgba(46,175,125,0.06); border-radius:6px; font-size:12px; color:var(--text-muted)"><strong>Résolution :</strong> ${c.resolution}</div>` : ''}
-            </div>`).join('')}
+
+        <!-- EXPORTS DE L'HISTORIQUE -->
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px">
+          <button class="btn btn-xs btn-secondary" onclick="exportSupplierHistoryPDF()"><i data-lucide="printer"></i> PDF</button>
+          <button class="btn btn-xs btn-secondary" onclick="exportSupplierHistoryCSV()"><i data-lucide="download"></i> Exporter CSV</button>
+        </div>
+
+        <!-- STATS DE L'HISTORIQUE -->
+        <div class="supplier-stats-row" style="margin-bottom:16px; background:#F1F5F9; border-radius:8px; padding:10px; display:grid; grid-template-columns:repeat(4, 1fr); text-align:center;">
+          <div class="supplier-stat">
+            <span class="stat-val-sm" id="hist-stat-invoices-count">0</span>
+            <span class="stat-lbl-sm">Factures validées</span>
+          </div>
+          <div class="supplier-stat">
+            <span class="stat-val-sm" id="hist-stat-total-spent">0 GNF</span>
+            <span class="stat-lbl-sm">Total acheté</span>
+          </div>
+          <div class="supplier-stat">
+            <span class="stat-val-sm" id="hist-stat-avg-invoice">0 GNF</span>
+            <span class="stat-lbl-sm">Montant moyen</span>
+          </div>
+          <div class="supplier-stat">
+            <span class="stat-val-sm" id="hist-stat-last-buy">—</span>
+            <span class="stat-lbl-sm">Dernier achat</span>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <!-- LISTE DES OPÉRATIONS -->
+          <div>
+            <h5 style="margin:0 0 8px 0; font-size:12px; text-transform:uppercase; color:var(--text-muted); font-weight:700">Toutes les opérations (Commandes & Factures)</h5>
+            <div id="supplier-history-table-container"></div>
+          </div>
+          
+          <!-- PRODUITS LES PLUS ACHETÉS -->
+          <div>
+            <h5 style="margin:0 0 8px 0; font-size:12px; text-transform:uppercase; color:var(--text-muted); font-weight:700">Produits les plus achetés (Top 5)</h5>
+            <div id="supplier-history-top-products" style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:12px">
+              <p class="text-muted text-xs">Aucun produit</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   `, { size: 'large' });
   if (window.lucide) lucide.createIcons();
 }
+
+window.switchSupplierTab = function(supId, tabName) {
+  document.querySelectorAll('.sup-tab-btn').forEach(btn => {
+    btn.classList.remove('btn-primary', 'active');
+    btn.classList.add('btn-ghost');
+  });
+  
+  const activeBtn = document.getElementById(`sup-tab-btn-${tabName}`);
+  if (activeBtn) {
+    activeBtn.classList.remove('btn-ghost');
+    activeBtn.classList.add('btn-primary', 'active');
+  }
+
+  document.querySelectorAll('.sup-tab-content').forEach(content => {
+    content.style.display = 'none';
+  });
+  
+  const activeContent = document.getElementById(`sup-tab-content-${tabName}`);
+  if (activeContent) activeContent.style.display = 'block';
+
+  if (tabName === 'history') {
+    filterSupplierHistory();
+  }
+};
+
+window.filterSupplierHistory = function() {
+  const prodId = document.getElementById('hist-filter-product')?.value || '';
+  const invoiceNum = document.getElementById('hist-filter-invoice')?.value || '';
+  const userId = document.getElementById('hist-filter-user')?.value || '';
+  const fromDate = document.getElementById('hist-filter-from')?.value || '';
+  const toDate = document.getElementById('hist-filter-to')?.value || '';
+
+  let filteredInvoices = window._historyInvoices || [];
+  let filteredOrders = window._historyOrders || [];
+
+  // Filtrer les factures
+  if (fromDate) filteredInvoices = filteredInvoices.filter(i => i.date >= fromDate);
+  if (toDate) filteredInvoices = filteredInvoices.filter(i => i.date <= toDate);
+  if (invoiceNum) filteredInvoices = filteredInvoices.filter(i => i.invoiceNumber === invoiceNum);
+  if (userId) filteredInvoices = filteredInvoices.filter(i => String(i.createdBy) === userId);
+  if (prodId) {
+    filteredInvoices = filteredInvoices.filter(i => (i.items || []).some(item => String(item.productId) === prodId));
+  }
+
+  // Filtrer les commandes
+  if (fromDate) filteredOrders = filteredOrders.filter(o => o.date >= fromDate);
+  if (toDate) filteredOrders = filteredOrders.filter(o => o.date <= toDate);
+  if (invoiceNum) filteredOrders = filteredOrders.filter(o => o.orderNumber === invoiceNum);
+  if (userId) filteredOrders = filteredOrders.filter(o => String(o.createdBy) === userId);
+  if (prodId) {
+    filteredOrders = filteredOrders.filter(o => (o.items || []).some(item => String(item.productId) === prodId));
+  }
+
+  // Combiner les opérations
+  const operations = [];
+  filteredInvoices.forEach(i => {
+    operations.push({
+      date: i.date,
+      type: 'Facture',
+      ref: i.invoiceNumber || String(i.id),
+      amount: i.totalAmount || 0,
+      status: i.status === 'validated' ? 'Validée' : 'Brouillon',
+      statusClass: i.status === 'validated' ? 'success' : 'neutral',
+      createdBy: i.createdBy,
+      items: i.items || []
+    });
+  });
+
+  filteredOrders.forEach(o => {
+    operations.push({
+      date: o.date,
+      type: 'Commande',
+      ref: o.orderNumber || String(o.id),
+      amount: o.totalAmount || 0,
+      status: ({pending:'Brouillon', sent:'Envoyée', partial:'Partielle', received:'Reçue', cancelled:'Annulée'})[o.status] || o.status,
+      statusClass: o.status === 'received' ? 'success' : o.status === 'sent' ? 'info' : o.status === 'cancelled' ? 'danger' : 'warning',
+      createdBy: o.createdBy,
+      items: o.items || []
+    });
+  });
+
+  // Trier par date décroissante
+  operations.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  window._historyFilteredOps = operations;
+
+  // Calculer les statistiques sur les factures validées
+  const validatedInvoices = filteredInvoices.filter(i => i.status === 'validated');
+  const totalSpent = validatedInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+  const invoicesCount = validatedInvoices.length;
+  const avgInvoice = invoicesCount > 0 ? Math.round(totalSpent / invoicesCount) : 0;
+  const lastBuy = validatedInvoices.length > 0 ? validatedInvoices.sort((a,b) => new Date(b.date) - new Date(a.date))[0].date : null;
+
+  document.getElementById('hist-stat-invoices-count').textContent = invoicesCount;
+  document.getElementById('hist-stat-total-spent').textContent = UI.formatCurrency(totalSpent);
+  document.getElementById('hist-stat-avg-invoice').textContent = UI.formatCurrency(avgInvoice);
+  document.getElementById('hist-stat-last-buy').textContent = lastBuy ? UI.formatDate(lastBuy) : '—';
+
+  // Calculer les produits les plus achetés
+  const prodQty = {};
+  validatedInvoices.forEach(i => {
+    (i.items || []).forEach(item => {
+      if (!prodId || String(item.productId) === prodId) {
+        prodQty[item.productName] = (prodQty[item.productName] || 0) + (item.quantity || 0);
+      }
+    });
+  });
+  const topProds = Object.entries(prodQty).sort((a,b) => b[1] - a[1]).slice(0, 5);
+  const topContainer = document.getElementById('supplier-history-top-products');
+  if (topContainer) {
+    if (topProds.length === 0) {
+      topContainer.innerHTML = '<p class="text-muted text-xs" style="margin:0">Aucun produit</p>';
+    } else {
+      topContainer.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:8px">
+          ${topProds.map(([name, qty], idx) => `
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px">
+              <span style="font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px">${idx+1}. ${name}</span>
+              <span class="badge badge-neutral" style="font-size:10px">${qty} unit.</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+  }
+
+  // Rendu de la table
+  const userMap = {};
+  (window._historyUsers || []).forEach(u => { userMap[u.id] = u.name || u.username; });
+
+  const tableContainer = document.getElementById('supplier-history-table-container');
+  if (tableContainer) {
+    const columns = [
+      { label: 'Date', render: r => UI.formatDate(r.date) },
+      { label: 'Type', render: r => `<span style="font-weight:600; color:${r.type === 'Facture' ? '#2E86C1' : '#27AE60'}">${r.type}</span>` },
+      { label: 'Référence', render: r => `<code>${r.ref}</code>` },
+      { label: 'Montant', render: r => `<strong>${UI.formatCurrency(r.amount)}</strong>` },
+      { label: 'Statut', render: r => `<span class="badge badge-${r.statusClass}">${r.status}</span>` },
+      { label: 'Auteur', render: r => userMap[r.createdBy] || '<span class="text-muted">Inconnu</span>' }
+    ];
+    UI.table(tableContainer, columns, operations, {
+      emptyMessage: 'Aucune opération trouvée avec ces filtres.',
+      emptyIcon: 'history'
+    });
+  }
+};
+
+window.exportSupplierHistoryCSV = function() {
+  const operations = window._historyFilteredOps || [];
+  if (operations.length === 0) return UI.toast("Aucune donnée à exporter", "warning");
+
+  const userMap = {};
+  (window._historyUsers || []).forEach(u => { userMap[u.id] = u.name || u.username; });
+
+  const csvRows = [
+    ["Date", "Type", "Reference", "Montant", "Statut", "Auteur"]
+  ];
+
+  operations.forEach(op => {
+    const author = userMap[op.createdBy] || 'Inconnu';
+    csvRows.push([
+      `"${op.date}"`,
+      `"${op.type}"`,
+      `"${op.ref}"`,
+      op.amount,
+      `"${op.status}"`,
+      `"${author.replace(/"/g, '""')}"`
+    ]);
+  });
+
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + csvRows.map(e => e.join(",")).join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  
+  const supplierName = window._historySupplier?.name || 'fournisseur';
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `historique_${supplierName.toLowerCase().replace(/\s+/g, '_')}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  UI.toast("Historique CSV exporté", "success");
+};
+
+window.exportSupplierHistoryPDF = function() {
+  const operations = window._historyFilteredOps || [];
+  if (operations.length === 0) return UI.toast("Aucune donnée à exporter", "warning");
+
+  if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
+
+  const userMap = {};
+  (window._historyUsers || []).forEach(u => { userMap[u.id] = u.name || u.username; });
+
+  const data = operations.map(op => [
+    new Date(op.date).toLocaleDateString('fr-FR'),
+    op.type,
+    op.ref,
+    UI.formatCurrency(op.amount),
+    op.status,
+    userMap[op.createdBy] || 'Inconnu'
+  ]);
+
+  const headers = ["Date", "Type", "Référence", "Montant", "Statut", "Auteur"];
+  const supplierName = window._historySupplier?.name || 'Fournisseur';
+
+  // Calculer les statistiques actuelles pour le bloc de résumé
+  const validatedInvoices = (window._historyInvoices || []).filter(i => i.status === 'validated');
+  const totalSpent = validatedInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+  const invoicesCount = validatedInvoices.length;
+  const avgInvoice = invoicesCount > 0 ? Math.round(totalSpent / invoicesCount) : 0;
+
+  window.PDFExport.generate(
+    `Historique Commercial — ${supplierName}`,
+    headers,
+    data,
+    {
+      subHeader: [
+        `Fournisseur : ${supplierName}`,
+        `Généré le ${new Date().toLocaleDateString('fr-FR')}`
+      ],
+      summaryBlocks: [
+        { label: "Nombre de factures validées", value: `${invoicesCount}` },
+        { label: "Montant total acheté", value: `${UI.formatCurrency(totalSpent)}` },
+        { label: "Montant moyen par facture", value: `${UI.formatCurrency(avgInvoice)}` }
+      ]
+    }
+  );
+};
 
 // ===== PURCHASE ORDERS =====
 async function renderPurchaseOrders(container) {

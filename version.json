@@ -1,5 +1,5 @@
 {
-  "version": "9.7.35",
+  "version": "9.7.36",
   "date": "2026-06-30",
-  "changelog": "Optimisation des performances de reglement de creances (Promise.all) et utilisation du loader global non bloquant."
+  "changelog": "Ajout de l impression detaillee des factures d assurances et du module d historique complet des fournisseurs avec filtres et exports."
 }
