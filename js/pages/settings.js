@@ -616,10 +616,10 @@ async function renderSettings(container) {
                 ${UI.roleBadge(u.role)}
                 <span class="badge badge-${u.active ? 'success' : 'neutral'}">${u.active ? 'Actif' : 'Inactif'}</span>
               </div>
-              <div class="user-card2-actions" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">
-                <button class="btn btn-sm btn-ghost" onclick="viewEmployee360(${u.id})" title="Profil 360°"><i data-lucide="bar-chart-3"></i></button>
-                <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})" title="Modifier" style="white-space:nowrap;"><i data-lucide="edit-3"></i> Modifier</button>
-                <button class="btn btn-sm btn-ghost" onclick="resetUserPin(${u.id},'${(u.name||'').replace(/'/g,'')}')" title="Réinitialiser PIN"><i data-lucide="key-round"></i></button>
+              <div class="user-card2-actions" style="display:flex; gap:6px; width:100%; justify-content:center;">
+                <button class="btn btn-sm btn-ghost" onclick="viewEmployee360(${u.id})" title="Profil 360°" style="flex:0 0 auto; width:36px; padding:6px 0;"><i data-lucide="bar-chart-3"></i></button>
+                <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})" title="Modifier" style="flex:1; white-space:nowrap;"><i data-lucide="edit-3"></i> Modifier</button>
+                <button class="btn btn-sm btn-ghost" onclick="resetUserPin(${u.id},'${(u.name||'').replace(/'/g,'')}')" title="Réinitialiser PIN" style="flex:0 0 auto; width:36px; padding:6px 0;"><i data-lucide="key-round"></i></button>
               </div>
             </div>`;
           }).join('')}
@@ -951,6 +951,13 @@ async function saveSettings() {
   const form = document.getElementById('settings-form');
   if (!form) return;
   const data = Object.fromEntries(new FormData(form));
+  
+  // Read logo manually as it is outside #settings-form
+  const logoInput = document.getElementById('pharmacy-logo-input');
+  if (logoInput) {
+    data.pharmacy_logo = logoInput.value;
+  }
+
   try {
     for (const [key, value] of Object.entries(data)) {
       const existing = (await DB.dbGetAll('settings')).find(s => s.key === key);

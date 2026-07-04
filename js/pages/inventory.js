@@ -74,6 +74,16 @@ async function renderInventory(container) {
     }
   };
 
+  window.reloadInventoryHistory = async function() {
+    const [invs, stockAll] = await Promise.all([
+      DB.dbGetAll('inventories'),
+      DB.dbGetAll('stock')
+    ]);
+    state.inventories = invs.sort((a, b) => new Date(b.datetime || 0) - new Date(a.datetime || 0));
+    state.stockMap = {};
+    stockAll.forEach(s => { state.stockMap[s.productId] = s.quantity || 0; });
+  };
+
   window._refreshInventoryDOM = render;
   render();
 }
@@ -82,9 +92,6 @@ async function renderInventory(container) {
 // VUE : HISTORIQUE DES INVENTAIRES
 // ═══════════════════════════════════════════════════════════════════
 function renderHistoryView(container) {
-  const state = window._inventoryPageState;
-  const list = state.inventories;
-
   container.innerHTML = `
     <div class="page-header">
       <div>
@@ -115,51 +122,86 @@ function renderHistoryView(container) {
               <th class="ta-r" style="width: 130px;">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            ${list.map(inv => {
-              const dt = new Date(inv.datetime || inv.date);
-              const dateStr = dt.toLocaleDateString('fr-FR');
-              const timeStr = dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-              const valClass = inv.gapsValue === 0 ? 'text-success' : inv.gapsValue > 0 ? 'text-info' : 'text-danger';
-              
-              let statusBadge = '';
-              if (inv.status === 'validated_adjusted') {
-                statusBadge = '<span class="badge badge-success">Ajusté</span>';
-              } else {
-                statusBadge = '<span class="badge badge-neutral">Analyse seule</span>';
-              }
-
-              return `
-                <tr>
-                  <td><strong>${dateStr}</strong> à ${timeStr}</td>
-                  <td>${state.userMap[inv.userId] || 'Inconnu'}</td>
-                  <td><span class="badge badge-info">${formatScopeType(inv.type)}</span></td>
-                  <td><span class="text-muted text-sm">${inv.scope || 'Tous'}</span></td>
-                  <td class="ta-c"><strong>${inv.productsCount}</strong></td>
-                  <td class="ta-c">
-                    <span class="badge ${inv.gapsCount > 0 ? 'badge-warning' : 'badge-success'}">${inv.gapsCount}</span>
-                  </td>
-                  <td class="ta-r ${valClass}"><strong>${UI.formatCurrency(inv.gapsValue)}</strong></td>
-                  <td class="ta-c">${statusBadge}</td>
-                  <td class="ta-r">
-                    <div style="display: flex; gap: 4px; justify-content: flex-end;">
-                      <button class="btn btn-xs btn-secondary" onclick="viewInventoryDetails(${inv.id})" title="Consulter"><i data-lucide="eye"></i></button>
-                      <button class="btn btn-xs btn-secondary" onclick="exportPastInventoryPDF(${inv.id})" title="PDF"><i data-lucide="printer"></i></button>
-                      <button class="btn btn-xs btn-secondary" onclick="exportPastInventoryCSV(${inv.id})" title="CSV"><i data-lucide="download"></i></button>
-                    </div>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-            ${list.length === 0 ? '<tr><td colspan="9" class="ta-c text-muted">Aucun inventaire enregistré dans l\'historique.</td></tr>' : ''}
+          <tbody id="history-inventory-tbody">
+            <!-- Rendu via renderHistoryPage() -->
           </tbody>
         </table>
       </div>
+      <div id="history-pagination" style="margin-top:12px"></div>
     </div>
   `;
 
+  window.renderHistoryPage(1);
   if (window.lucide) lucide.createIcons();
 }
+
+window.renderHistoryPage = function(page = 1) {
+  const state = window._inventoryPageState;
+  state.historyCurrentPage = page;
+  const list = state.inventories || [];
+  const PAGE_SIZE = 15;
+  const totalPages = Math.ceil(list.length / PAGE_SIZE) || 1;
+  const p = Math.max(1, Math.min(page, totalPages));
+  const start = (p - 1) * PAGE_SIZE;
+  const pageItems = list.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById('history-inventory-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = pageItems.map(inv => {
+    const dt = new Date(inv.datetime || inv.date);
+    const dateStr = dt.toLocaleDateString('fr-FR');
+    const timeStr = dt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const valClass = inv.gapsValue === 0 ? 'text-success' : inv.gapsValue > 0 ? 'text-info' : 'text-danger';
+    
+    let statusBadge = '';
+    if (inv.status === 'validated_adjusted') {
+      statusBadge = '<span class="badge badge-success">Ajusté</span>';
+    } else {
+      statusBadge = '<span class="badge badge-neutral">Analyse seule</span>';
+    }
+
+    return `
+      <tr>
+        <td><strong>${dateStr}</strong> à ${timeStr}</td>
+        <td>${state.userMap[inv.userId] || 'Inconnu'}</td>
+        <td><span class="badge badge-info">${formatScopeType(inv.type)}</span></td>
+        <td><span class="text-muted text-sm">${inv.scope || 'Tous'}</span></td>
+        <td class="ta-c"><strong>${inv.productsCount}</strong></td>
+        <td class="ta-c">
+          <span class="badge ${inv.gapsCount > 0 ? 'badge-warning' : 'badge-success'}">${inv.gapsCount}</span>
+        </td>
+        <td class="ta-r ${valClass}"><strong>${UI.formatCurrency(inv.gapsValue)}</strong></td>
+        <td class="ta-c">${statusBadge}</td>
+        <td class="ta-r">
+          <div style="display: flex; gap: 4px; justify-content: flex-end;">
+            <button class="btn btn-xs btn-secondary" onclick="viewInventoryDetails(${inv.id})" title="Consulter"><i data-lucide="eye"></i></button>
+            <button class="btn btn-xs btn-secondary" onclick="exportPastInventoryPDF(${inv.id})" title="PDF"><i data-lucide="printer"></i></button>
+            <button class="btn btn-xs btn-secondary" onclick="exportPastInventoryCSV(${inv.id})" title="CSV"><i data-lucide="download"></i></button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="ta-c text-muted">Aucun inventaire enregistré dans l\'historique.</td></tr>';
+  }
+
+  const pagination = document.getElementById('history-pagination');
+  if (pagination) {
+    pagination.innerHTML = totalPages > 1 ? `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; color:var(--text-muted)">${list.length} inventaires au total</span>
+        <div style="display:flex; gap:8px">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="window.renderHistoryPage(${p - 1})" ${p === 1 ? 'disabled' : ''}>Précédent</button>
+          <span style="font-size:13px; padding:4px 8px">Page ${p} / ${totalPages}</span>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="window.renderHistoryPage(${p + 1})" ${p === totalPages ? 'disabled' : ''}>Suivant</button>
+        </div>
+      </div>
+    ` : '';
+  }
+};
 
 function formatScopeType(type) {
   const dict = {
@@ -180,11 +222,13 @@ function renderCreateView(container) {
   const state = window._inventoryPageState;
 
   // Extraire les options uniques des produits pour les filtres
-  const forms = [...new Set(state.products.filter(p => p.status === 'active' && p.form).map(p => p.form))].sort();
-  const categories = [...new Set(state.products.filter(p => p.status === 'active' && p.category).map(p => p.category))].sort();
+  // Accepter les produits actifs OU ceux sans champ status défini
+  const isActive = p => p.status === 'active' || !p.status;
+  const forms = [...new Set(state.products.filter(p => isActive(p) && p.form).map(p => p.form))].sort();
+  const categories = [...new Set(state.products.filter(p => isActive(p) && p.category).map(p => p.category))].sort();
   
   // Extraire les fournisseurs représentés
-  const supplierIds = [...new Set(state.products.filter(p => p.status === 'active' && p.supplierId).map(p => p.supplierId))];
+  const supplierIds = [...new Set(state.products.filter(p => isActive(p) && p.supplierId).map(p => p.supplierId))];
   const suppliersWithProducts = supplierIds.map(id => ({ id, name: state.supplierMap[id] || `Fournisseur ID ${id}` })).sort((a,b)=>a.name.localeCompare(b.name));
 
   container.innerHTML = `
@@ -194,7 +238,7 @@ function renderCreateView(container) {
         <p class="page-subtitle">Choisissez le périmètre des produits à compter physiquement</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="_inventoryPageState.view = 'history'; _refreshInventoryDOM();">
+        <button class="btn btn-secondary" onclick="window.reloadInventoryHistory().then(() => { _inventoryPageState.view = 'history'; _refreshInventoryDOM(); })">
           <i data-lucide="arrow-left"></i> Retour à l'historique
         </button>
       </div>
@@ -218,31 +262,34 @@ function renderCreateView(container) {
         <!-- Inputs dynamiques selon le périmètre -->
         <div class="form-group" id="group-scope-form" style="display: none;">
           <label>Choisissez la Forme Pharmaceutique</label>
-          <select id="select-scope-form" class="form-control">
-            ${forms.map(f => `<option value="${f}">${f}</option>`).join('')}
-          </select>
+          <input type="text" id="select-scope-form" class="form-control" list="dl-scope-form" placeholder="Tapez pour rechercher une forme...">
+          <datalist id="dl-scope-form">
+            ${forms.map(f => `<option value="${f}">`).join('')}
+          </datalist>
         </div>
 
         <div class="form-group" id="group-scope-category" style="display: none;">
           <label>Choisissez la Catégorie</label>
-          <select id="select-scope-category" class="form-control">
-            ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
-          </select>
+          <input type="text" id="select-scope-category" class="form-control" list="dl-scope-category" placeholder="Tapez pour rechercher une catégorie...">
+          <datalist id="dl-scope-category">
+            ${categories.map(c => `<option value="${c}">`).join('')}
+          </datalist>
         </div>
 
         <div class="form-group" id="group-scope-supplier" style="display: none;">
           <label>Choisissez le Fournisseur</label>
-          <select id="select-scope-supplier" class="form-control">
-            ${suppliersWithProducts.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
-            ${suppliersWithProducts.length === 0 ? '<option value="">Aucun fournisseur lié à des produits</option>' : ''}
-          </select>
+          <input type="text" id="select-scope-supplier" class="form-control" list="dl-scope-supplier" placeholder="Tapez pour rechercher un fournisseur...">
+          <datalist id="dl-scope-supplier">
+            ${suppliersWithProducts.map(s => `<option value="${s.name}" data-id="${s.id}">`).join('')}
+          </datalist>
         </div>
 
         <div class="form-group" id="group-scope-family" style="display: none;">
           <label>Famille Thérapeutique / Classe</label>
-          <select id="select-scope-family" class="form-control">
-            ${categories.map(c => `<option value="${c}">${c}</option>`).join('')}
-          </select>
+          <input type="text" id="select-scope-family" class="form-control" list="dl-scope-family" placeholder="Tapez pour rechercher une famille...">
+          <datalist id="dl-scope-family">
+            ${categories.map(c => `<option value="${c}">`).join('')}
+          </datalist>
         </div>
 
         <!-- Sélection manuelle de produits -->
@@ -284,7 +331,7 @@ window.renderSelectionPage = function(page = 1) {
   const PAGE_SIZE = 50;
   
   const query = (document.getElementById('selection-search')?.value || '').toLowerCase();
-  const allActive = state.products.filter(p => p.status === 'active');
+  const allActive = state.products.filter(p => p.status === 'active' || !p.status);
   const filtered = allActive.filter(p => !query || p.name.toLowerCase().includes(query) || (p.code||'').toLowerCase().includes(query));
   
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
@@ -327,34 +374,44 @@ function startInventorySetup(event) {
 
   let filtered = [];
   let scopeLabel = '';
+  const isActive = p => p.status === 'active' || !p.status;
 
   if (type === 'all') {
-    filtered = state.products.filter(p => p.status === 'active');
+    filtered = state.products.filter(p => isActive(p));
     scopeLabel = 'Pharmacie Complète';
   } else if (type === 'form') {
     const val = document.getElementById('select-scope-form').value;
-    filtered = state.products.filter(p => p.status === 'active' && p.form === val);
+    if (!val) return UI.toast('Veuillez saisir une forme pharmaceutique', 'warning');
+    filtered = state.products.filter(p => isActive(p) && p.form === val);
     scopeLabel = `Forme : ${val}`;
   } else if (type === 'category') {
     const val = document.getElementById('select-scope-category').value;
-    filtered = state.products.filter(p => p.status === 'active' && p.category === val);
+    if (!val) return UI.toast('Veuillez saisir une catégorie', 'warning');
+    filtered = state.products.filter(p => isActive(p) && p.category === val);
     scopeLabel = `Catégorie : ${val}`;
   } else if (type === 'family') {
     const val = document.getElementById('select-scope-family').value;
-    filtered = state.products.filter(p => p.status === 'active' && p.category === val);
+    if (!val) return UI.toast('Veuillez saisir une famille thérapeutique', 'warning');
+    filtered = state.products.filter(p => isActive(p) && p.category === val);
     scopeLabel = `Famille : ${val}`;
   } else if (type === 'supplier') {
-    const val = parseInt(document.getElementById('select-scope-supplier').value);
-    const supName = state.supplierMap[val] || `Fournisseur #${val}`;
-    // Filtrer les produits dont le supplierId correspond
-    filtered = state.products.filter(p => p.status === 'active' && p.supplierId === val);
+    const supName = document.getElementById('select-scope-supplier').value;
+    if (!supName) return UI.toast('Veuillez saisir un fournisseur', 'warning');
+    // Trouver l'ID du fournisseur à partir de son nom
+    const supId = Object.keys(state.supplierMap).find(id => state.supplierMap[id] === supName);
+    if (supId) {
+      filtered = state.products.filter(p => isActive(p) && p.supplierId === parseInt(supId));
+    } else {
+      // Fallback : filtrer par le productSupplierMap
+      filtered = state.products.filter(p => isActive(p) && state.productSupplierMap[p.id] === supName);
+    }
     scopeLabel = `Fournisseur : ${supName}`;
   } else if (type === 'selection') {
     const checkedIds = Object.keys(state.selectedProductsMap).filter(id => state.selectedProductsMap[id]).map(Number);
     if (!checkedIds.length) {
       return UI.toast('Veuillez sélectionner au moins un produit', 'warning');
     }
-    filtered = state.products.filter(p => p.status === 'active' && checkedIds.includes(p.id));
+    filtered = state.products.filter(p => isActive(p) && checkedIds.includes(p.id));
     scopeLabel = `${checkedIds.length} produit(s) sélectionné(s)`;
   }
 
@@ -428,20 +485,20 @@ function renderEntryView(container) {
     </div>
 
     <div class="settings-card2">
-      <div class="table-wrapper" style="border: 1px solid var(--border); border-radius: 8px;">
+      <div class="table-wrapper" style="border: 1px solid var(--border); border-radius: 8px; overflow-x: auto;">
         <table class="data-table" id="entry-inventory-table">
           <thead>
             <tr>
-              <th>Code</th>
-              <th>Médicament</th>
-              <th>Forme</th>
-              <th>Catégorie</th>
-              <th>Dernier Fournisseur</th>
-              <th class="ta-c">Stock Théorique</th>
-              <th class="ta-c" style="width: 110px;">Stock Physique</th>
-              <th class="ta-c">Écart</th>
-              <th class="ta-r">Valeur Écart</th>
-              <th>Observation</th>
+              <th style="min-width:90px;">Code</th>
+              <th style="min-width:200px;">Médicament</th>
+              <th style="min-width:100px;">Forme</th>
+              <th style="min-width:120px;">Catégorie</th>
+              <th style="min-width:150px;">Dernier Fournisseur</th>
+              <th class="ta-c" style="min-width:100px;">Stock Théorique</th>
+              <th class="ta-c" style="min-width:110px; width:110px;">Stock Physique</th>
+              <th class="ta-c" style="min-width:80px;">Écart</th>
+              <th class="ta-r" style="min-width:110px;">Valeur Écart</th>
+              <th style="min-width:150px;">Observation</th>
             </tr>
           </thead>
           <tbody id="entry-inventory-tbody">
@@ -585,6 +642,7 @@ window.cancelInventorySession = async function() {
 
   window._inventoryPageState.currentInventory = null;
   window._inventoryPageState.view = 'history';
+  if (window.reloadInventoryHistory) await window.reloadInventoryHistory();
   _refreshInventoryDOM();
 };
 
@@ -876,7 +934,7 @@ function renderSummaryView(container) {
         <p class="page-subtitle">L'inventaire a été validé et archivé dans votre historique</p>
       </div>
       <div class="header-actions">
-        <button class="btn btn-secondary" onclick="_inventoryPageState.view = 'history'; _refreshInventoryDOM();">
+        <button class="btn btn-secondary" onclick="window.reloadInventoryHistory().then(() => { _inventoryPageState.view = 'history'; _refreshInventoryDOM(); })">
           <i data-lucide="home"></i> Retourner à l'historique
         </button>
       </div>
@@ -912,7 +970,7 @@ function renderSummaryView(container) {
       <div style="display:flex; justify-content:center; gap:12px; border-top: 1px solid var(--border); padding-top:24px;">
         <button class="btn btn-secondary" onclick="exportPastInventoryPDF(${inv.id})"><i data-lucide="printer"></i> Imprimer Rapport PDF</button>
         <button class="btn btn-secondary" onclick="exportPastInventoryCSV(${inv.id})"><i data-lucide="download"></i> Exporter CSV</button>
-        <button class="btn btn-primary" onclick="_inventoryPageState.view = 'history'; _refreshInventoryDOM();"><i data-lucide="arrow-right"></i> Aller à l'historique</button>
+        <button class="btn btn-primary" onclick="window.reloadInventoryHistory().then(() => { _inventoryPageState.view = 'history'; _refreshInventoryDOM(); })"><i data-lucide="arrow-right"></i> Aller à l'historique</button>
       </div>
     </div>
   `;
@@ -1026,10 +1084,11 @@ window.exportPastInventoryPDF = async function(inventoryId) {
   }
 
   const items = inv.items || [];
+  const gapItems = items.filter(it => it.gap !== 0);
   let totalPositive = 0;
   let totalNegative = 0;
 
-  const data = items.map(it => {
+  const data = gapItems.map(it => {
     if (it.gap > 0) totalPositive += it.gapValue;
     else if (it.gap < 0) totalNegative += it.gapValue;
 
@@ -1061,7 +1120,8 @@ window.exportPastInventoryPDF = async function(inventoryId) {
         `Périmètre : ${formatScopeType(inv.type)} (${inv.scope})`,
         `Date : ${dateStr} à ${timeStr}`,
         `Réalisé par : ${users[inv.userId] || 'Inconnu'}`,
-        `Statut Stock : ${inv.status === 'validated_adjusted' ? 'Stock théorique AJUSTÉ' : 'ANALYSE SEULE'}`
+        `Statut Stock : ${inv.status === 'validated_adjusted' ? 'Stock théorique AJUSTÉ' : 'ANALYSE SEULE'}`,
+        `Rapport limité aux Écarts de Stock (${gapItems.length} lignes affichées)`
       ],
       summaryBlocks: [
         { label: "Produits inventoriés", value: `${inv.productsCount}` },
