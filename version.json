@@ -1,5 +1,5 @@
 {
-  "version": "9.7.33",
+  "version": "9.7.34",
   "date": "2026-06-30",
-  "changelog": "Remplacement complet des espaces insecables de devise par des espaces standard (ASCII 32) pour eviter le bug des slashes dans les PDF et l interface."
+  "changelog": "Retrait des emojis dans le formulaire de reglement global du module Creances."
 }

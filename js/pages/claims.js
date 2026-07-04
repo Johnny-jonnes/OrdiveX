@@ -248,7 +248,7 @@ window.settleAllClaims = function() {
       <!-- MONTANT PRINCIPAL -->
       <div style="text-align:center;padding:20px;background:#F8FAFC;border-radius:14px;border:2px solid #E2E8F0">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#64748B;font-weight:700;margin-bottom:6px">
-          🛡️ Montant global à encaisser (${pendingSales.length} factures)
+          Montant global à encaisser (${pendingSales.length} factures)
         </div>
         <div style="font-size:32px;font-weight:900;color:#1E40AF;letter-spacing:-1px">${UI.formatCurrency(totalDue)}</div>
         <div style="font-size:12px;color:#94A3B8;margin-top:6px">
@@ -262,22 +262,18 @@ window.settleAllClaims = function() {
         <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:8px" id="claim-pay-methods">
           <button type="button" class="pay-method-btn active" data-method="cash" onclick="selectClaimPayMethod(this)"
             style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #1E40AF;border-radius:10px;background:#EBF5FB;cursor:pointer;font-family:inherit;text-align:left">
-            <span style="font-size:18px">💵</span>
             <div><div style="font-size:12px;font-weight:700;color:#1E40AF">Espèces</div><div style="font-size:9px;color:#6B7280">Liquide</div></div>
           </button>
           <button type="button" class="pay-method-btn" data-method="orange_money" onclick="selectClaimPayMethod(this)"
             style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #E2E8F0;border-radius:10px;background:#FFFFFF;cursor:pointer;font-family:inherit;text-align:left">
-            <span style="font-size:18px">📱</span>
             <div><div style="font-size:12px;font-weight:700;color:#0F172A">Orange Money</div><div style="font-size:9px;color:#6B7280">Mobile</div></div>
           </button>
           <button type="button" class="pay-method-btn" data-method="mtn_momo" onclick="selectClaimPayMethod(this)"
             style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #E2E8F0;border-radius:10px;background:#FFFFFF;cursor:pointer;font-family:inherit;text-align:left">
-            <span style="font-size:18px">📱</span>
             <div><div style="font-size:12px;font-weight:700;color:#0F172A">MTN MoMo</div><div style="font-size:9px;color:#6B7280">Mobile</div></div>
           </button>
           <button type="button" class="pay-method-btn" data-method="transfer" onclick="selectClaimPayMethod(this)"
             style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #E2E8F0;border-radius:10px;background:#FFFFFF;cursor:pointer;font-family:inherit;text-align:left">
-            <span style="font-size:18px">🏦</span>
             <div><div style="font-size:12px;font-weight:700;color:#0F172A">Virement</div><div style="font-size:9px;color:#6B7280">Bancaire</div></div>
           </button>
         </div>
