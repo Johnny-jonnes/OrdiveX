@@ -5,7 +5,7 @@
 const UI = {
   formatCurrency(amount) {
     const num = Math.round(amount || 0);
-    const formatted = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
+    const formatted = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     return `${formatted} GNF`;
   },
 
