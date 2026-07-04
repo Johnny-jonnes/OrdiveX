@@ -540,6 +540,37 @@ async function renderSettings(container) {
         </form>
       </div>
 
+      <!-- Paramètres de Tarification -->
+      <div class="settings-card">
+        <h3 class="settings-card-title"><i data-lucide="percent"></i> Tarification Automatique</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+          Coefficients utilisés pour calculer automatiquement le prix de vente depuis le prix d'achat lors de la création ou modification d'un médicament.
+        </p>
+        <form id="pricing-form" class="form-grid">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Coefficient — Produits de Spécialité <span style="font-size:11px;color:var(--text-muted)">(marque, innovateur)</span></label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="number" name="pricing_coeff_specialty" id="coeff-specialty" class="form-control" step="0.01" min="1" max="10" value="${gs('pricing_coeff_specialty') || '1.40'}" oninput="document.getElementById('coeff-specialty-display').textContent = 'Achat × ' + parseFloat(this.value||1.4).toFixed(2)">
+                <span id="coeff-specialty-display" style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap">Achat × ${parseFloat(gs('pricing_coeff_specialty') || '1.40').toFixed(2)}</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Coefficient — Génériques / Détail <span style="font-size:11px;color:var(--text-muted)">(DCI, sans marque)</span></label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <input type="number" name="pricing_coeff_generic" id="coeff-generic" class="form-control" step="0.01" min="1" max="10" value="${gs('pricing_coeff_generic') || '1.12'}" oninput="document.getElementById('coeff-generic-display').textContent = 'Achat × ' + parseFloat(this.value||1.12).toFixed(2)">
+                <span id="coeff-generic-display" style="font-size:13px;font-weight:600;color:var(--primary);white-space:nowrap">Achat × ${parseFloat(gs('pricing_coeff_generic') || '1.12').toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:var(--bg-secondary);border-radius:8px;padding:12px;font-size:13px;margin-bottom:12px">
+            <strong>Comment ça marche :</strong><br>
+            Dans le formulaire de création/modification d'un médicament, saisissez le <strong>Prix d'achat</strong>. Le <strong>Prix de vente</strong> est calculé automatiquement selon le type du produit. Vous pouvez toujours l'ajuster manuellement.
+          </div>
+          <button type="button" class="btn btn-primary" onclick="savePricingSettings()"><i data-lucide="save"></i> Sauvegarder les coefficients</button>
+        </form>
+      </div>
+
       <!-- Configuration SMS -->
       <div class="settings-card">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
@@ -711,6 +742,27 @@ async function renderSettings(container) {
 
   // Charger le compteur d'appareils automatiquement
   setTimeout(() => { if (window.loadDeviceCount) loadDeviceCount(); }, 500);
+}
+
+async function savePricingSettings() {
+  const form = document.getElementById('pricing-form');
+  if (!form) return;
+  const data = Object.fromEntries(new FormData(form));
+  try {
+    for (const [key, value] of Object.entries(data)) {
+      const allS = await DB.dbGetAll('settings');
+      const existing = allS.find(s => s.key === key);
+      if (existing) {
+        await DB.dbPut('settings', { ...existing, value: String(value), updatedAt: Date.now() });
+      } else {
+        await DB.dbAdd('settings', { key, value: String(value), updatedAt: Date.now() });
+      }
+    }
+    await DB.writeAudit('SAVE_PRICING_SETTINGS', 'settings', null, data);
+    UI.toast('Coefficients de tarification sauvegardés', 'success');
+  } catch (err) {
+    UI.toast('Erreur : ' + err.message, 'error');
+  }
 }
 
 async function saveSettings() {

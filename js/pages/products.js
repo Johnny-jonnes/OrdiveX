@@ -275,6 +275,33 @@ function _onCategoryChange(formId) {
   if (rxGroup) rxGroup.style.display = isPara ? 'none' : '';
 }
 
+window._autoCalcSalePrice = async function(mode) {
+  const typeEl = document.getElementById(`product-type-${mode}`);
+  const buyEl = document.getElementById(`purchase-price-${mode}`);
+  const sellEl = document.getElementById(`sale-price-${mode}`);
+  const hintEl = document.getElementById(`sale-price-hint-${mode}`);
+  
+  if (!typeEl || !buyEl || !sellEl) return;
+  
+  const buyPrice = parseFloat(buyEl.value) || 0;
+  if (buyPrice <= 0) return;
+  
+  const type = typeEl.value;
+  let coeff = type === 'specialty' ? 1.40 : 1.12;
+  
+  try {
+    const settings = await DB.dbGetAll('settings');
+    const cs = settings.find(s => s.key === 'pricing_coeff_specialty')?.value;
+    const cg = settings.find(s => s.key === 'pricing_coeff_generic')?.value;
+    if (type === 'specialty' && cs) coeff = parseFloat(cs) || 1.40;
+    if (type === 'generic' && cg) coeff = parseFloat(cg) || 1.12;
+  } catch(e) {}
+  
+  const calculated = Math.round(buyPrice * coeff);
+  sellEl.value = calculated;
+  if (hintEl) hintEl.textContent = `(calculé auto : ×${coeff.toFixed(2)})`;
+};
+
 async function showAddProduct() {
   const products = await DB.dbGetAll('products');
   const codeAuto = 'P' + String(products.length + 1).padStart(3, '0');
@@ -335,22 +362,25 @@ async function showAddProduct() {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Prix de vente (GNF) *</label>
-          <input type="number" name="salePrice" class="form-control" min="0" required>
+          <label>Type de produit (Tarification)</label>
+          <select name="productType" id="product-type-add" class="form-control" onchange="_autoCalcSalePrice('add')">
+            <option value="specialty">Spécialité (marque) — ×1.40</option>
+            <option value="generic">Générique (DCI) — ×1.12</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Prix d'achat (GNF)</label>
-          <input type="number" name="purchasePrice" class="form-control" min="0">
+          <input type="number" name="purchasePrice" id="purchase-price-add" class="form-control" min="0" oninput="_autoCalcSalePrice('add')">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Seuil minimum (boîtes/unités brutes)</label>
-          <input type="number" name="minStock" class="form-control" value="10" min="0">
+          <label>Prix de vente (GNF) * <span style="font-size:11px;color:var(--text-muted);font-weight:400" id="sale-price-hint-add">(calculé auto)</span></label>
+          <input type="number" name="salePrice" id="sale-price-add" class="form-control" min="0" required oninput="document.getElementById('sale-price-hint-add').textContent='(modifié manuellement)'">
         </div>
         <div class="form-group">
-          <label>Type de produit</label>
-          <input type="text" name="unit" class="form-control" value="boîte">
+          <label>Seuil minimum (boîtes/unités brutes)</label>
+          <input type="number" name="minStock" class="form-control" value="10" min="0">
         </div>
       </div>
       <div class="med-only-section" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
@@ -531,22 +561,25 @@ async function editProductForm(id) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Prix de vente (GNF) *</label>
-          <input type="number" name="salePrice" class="form-control" value="${p.salePrice || 0}" min="0" required>
+          <label>Type de produit (Tarification)</label>
+          <select name="productType" id="product-type-edit" class="form-control" onchange="_autoCalcSalePrice('edit')">
+            <option value="specialty" ${p.productType === 'specialty' ? 'selected' : ''}>Spécialité (marque) — ×1.40</option>
+            <option value="generic" ${p.productType === 'generic' ? 'selected' : ''}>Générique (DCI) — ×1.12</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Prix d'achat (GNF)</label>
-          <input type="number" name="purchasePrice" class="form-control" value="${p.purchasePrice || 0}" min="0">
+          <input type="number" name="purchasePrice" id="purchase-price-edit" class="form-control" value="${p.purchasePrice || 0}" min="0" oninput="_autoCalcSalePrice('edit')">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Seuil minimum (boîtes)</label>
-          <input type="number" name="minStock" class="form-control" value="${p.minStock || 10}" min="0">
+          <label>Prix de vente (GNF) * <span style="font-size:11px;color:var(--text-muted);font-weight:400" id="sale-price-hint-edit">(calculé auto)</span></label>
+          <input type="number" name="salePrice" id="sale-price-edit" class="form-control" value="${p.salePrice || 0}" min="0" required oninput="document.getElementById('sale-price-hint-edit').textContent='(modifié manuellement)'">
         </div>
         <div class="form-group">
-          <label>Type de produit</label>
-          <input type="text" name="unit" class="form-control" value="${p.unit || 'boîte'}">
+          <label>Seuil minimum (boîtes)</label>
+          <input type="number" name="minStock" class="form-control" value="${p.minStock || 10}" min="0">
         </div>
       </div>
       <div class="med-only-section" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border); display:${isPara ? 'none' : ''}">

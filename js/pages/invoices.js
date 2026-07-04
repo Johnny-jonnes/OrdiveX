@@ -241,11 +241,11 @@ function addInvoiceItem() {
       </div>
       <div class="form-group" style="width:90px; margin-bottom:0;">
         <label style="font-size:11px; margin-bottom:2px;">P. Achat *</label>
-        <input type="number" class="form-control" id="inv-price-${idx}" placeholder="Achat" min="0" oninput="updateInvoiceTotal()">
+        <input type="number" class="form-control" id="inv-price-${idx}" placeholder="Achat" min="0" oninput="updateInvoiceTotal(); autoCalcInvoiceSalePrice(${idx})">
       </div>
       <div class="form-group" style="width:90px; margin-bottom:0;">
         <label style="font-size:11px; margin-bottom:2px;">P. Vente</label>
-        <input type="number" class="form-control" id="inv-sale-price-${idx}" placeholder="Vente" min="0">
+        <input type="number" class="form-control" id="inv-sale-price-${idx}" placeholder="Vente" min="0" oninput="document.getElementById('inv-sale-price-${idx}').dataset.manual = 'true'">
       </div>
       <div style="display: flex; align-items: flex-end; padding-bottom: 4px;">
         <button type="button" class="btn btn-xs btn-danger" onclick="removeInvoiceItem(${idx})"><i data-lucide="trash-2"></i></button>
@@ -327,6 +327,36 @@ async function selectInvoiceProduct(idx, productId) {
 
   if (dropdown) dropdown.style.display = 'none';
   updateInvoiceTotal();
+}
+
+async function autoCalcInvoiceSalePrice(idx) {
+  const buyEl = document.getElementById(`inv-price-${idx}`);
+  const sellEl = document.getElementById(`inv-sale-price-${idx}`);
+  const hiddenProd = document.getElementById(`inv-prod-${idx}`);
+  
+  if (!buyEl || !sellEl || sellEl.dataset.manual === 'true') return;
+  
+  const buyPrice = parseFloat(buyEl.value) || 0;
+  if (buyPrice <= 0) return;
+  
+  // Try to determine product type
+  let type = 'generic'; // default
+  if (hiddenProd && hiddenProd.value) {
+    const products = window._invoicesProducts || [];
+    const prod = products.find(p => p.id == hiddenProd.value);
+    if (prod && prod.productType) type = prod.productType;
+  }
+  
+  let coeff = type === 'specialty' ? 1.40 : 1.12;
+  try {
+    const settings = await DB.dbGetAll('settings');
+    const cs = settings.find(s => s.key === 'pricing_coeff_specialty')?.value;
+    const cg = settings.find(s => s.key === 'pricing_coeff_generic')?.value;
+    if (type === 'specialty' && cs) coeff = parseFloat(cs) || 1.40;
+    if (type === 'generic' && cg) coeff = parseFloat(cg) || 1.12;
+  } catch(e) {}
+  
+  sellEl.value = Math.round(buyPrice * coeff);
 }
 
 function removeInvoiceItem(idx) {

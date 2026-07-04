@@ -1105,3 +1105,4 @@ CREATE POLICY "shifts_full_access" ON public.shifts
 -- Dans la console du navigateur : localStorage.removeItem('pharma_bad_columns');
 -- Puis recharger la page (Ctrl+Shift+R)
 -- ═══════════════════════════════════════════════════════════════════════════════
+ALTER TABLE products ADD COLUMN IF NOT EXISTS "productType" TEXT DEFAULT 'generic';

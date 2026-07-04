@@ -1,5 +1,5 @@
 {
-  "version": "9.7.28",
+  "version": "9.7.29",
   "date": "2026-06-30",
-  "changelog": "Synchronisation Intelligente : Source de vérité unique pour les médicaments implémentée (auto-remplissage et auto-mise à jour)."
+  "changelog": "Calcul automatique du prix de vente selon le type (Spécialité/Générique) et paramétrage des coefficients."
 }
