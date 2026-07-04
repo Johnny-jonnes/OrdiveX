@@ -62,11 +62,21 @@ async function renderSuppliers(container) {
       </div>
     </div>
 
+    <div class="filter-bar" style="margin-bottom:20px; background:var(--surface); padding:16px; border-radius:12px; border:1px solid var(--border); display:flex; gap:12px; align-items:center;">
+      <input type="text" id="supplier-search" placeholder="Rechercher par nom, agrément, téléphone..." class="form-control" style="flex:1" oninput="filterSuppliersList()">
+      <select id="supplier-status-filter" class="form-control" style="width:200px" onchange="filterSuppliersList()">
+        <option value="">Tous les statuts</option>
+        <option value="active">Actif</option>
+        <option value="inactive">Inactif</option>
+      </select>
+    </div>
+
     <div id="suppliers-grid" class="suppliers-grid"></div>
   `;
 
   // Pagination des fournisseurs
   window._suppliersAll = suppliers;
+  window._suppliersFilteredList = null; // Reset au re-rendu complet
   window._supplierStats = supplierStats;
   window._supplierOrders = orders;
   window._suppliersPage = 1;
@@ -74,8 +84,31 @@ async function renderSuppliers(container) {
   if (window.lucide) lucide.createIcons();
 }
 
+window.filterSuppliersList = function() {
+  const query = document.getElementById('supplier-search')?.value.toLowerCase() || '';
+  const status = document.getElementById('supplier-status-filter')?.value || '';
+  
+  let filtered = window._suppliersAll || [];
+  
+  if (query) {
+    filtered = filtered.filter(s => 
+      (s.name || '').toLowerCase().includes(query) ||
+      (s.agrément || '').toLowerCase().includes(query) ||
+      (s.phone || '').toLowerCase().includes(query)
+    );
+  }
+  
+  if (status) {
+    filtered = filtered.filter(s => s.status === status);
+  }
+  
+  window._suppliersFilteredList = filtered;
+  window._suppliersPage = 1;
+  renderSuppliersPage();
+};
+
 function renderSuppliersPage() {
-  const suppliers = window._suppliersAll || [];
+  const suppliers = window._suppliersFilteredList || window._suppliersAll || [];
   const supplierStats = window._supplierStats || {};
   const orders = window._supplierOrders || [];
   const page = window._suppliersPage || 1;
