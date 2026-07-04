@@ -553,45 +553,52 @@ function openAddCashEntry() {
 async function submitCashEntry() {
   if (window._caisseEntryEnCours) { UI.toast('Enregistrement en cours...', 'warning', 2000); return; }
   window._caisseEntryEnCours = true;
-  const form = document.getElementById('cash-entry-form');
-  if (!form?.checkValidity()) { window._caisseEntryEnCours = false; form?.reportValidity(); return; }
-  const data = Object.fromEntries(new FormData(form));
-  const amount = parseFloat(data.amount);
-  const type = data.type === 'in' ? 'manual_in' : 'manual_out';
+  
+  try {
+    const form = document.getElementById('cash-entry-form');
+    if (!form?.checkValidity()) { form?.reportValidity(); return; }
+    const data = Object.fromEntries(new FormData(form));
+    const amount = parseFloat(data.amount);
+    const type = data.type === 'in' ? 'manual_in' : 'manual_out';
 
-  if (type === 'manual_out') {
-    const today = new Date().toISOString().split('T')[0];
-    const [sales, cashRegister] = await Promise.all([
-      DB.dbGetAll('sales'),
-      DB.dbGetAll('cashRegister'),
-    ]);
+    if (type === 'manual_out') {
+      const today = new Date().toISOString().split('T')[0];
+      const [sales, cashRegister] = await Promise.all([
+        DB.dbGetAll('sales'),
+        DB.dbGetAll('cashRegister'),
+      ]);
 
-    const cashSales = sales.filter(s => s.date?.startsWith(today) && (s.paymentMethod || 'cash') === 'cash' && s.status === 'completed').reduce((a, s) => a + s.total, 0);
-    const manualIn = cashRegister.filter(c => c.date === today && c.type === 'manual_in').reduce((a, c) => a + c.amount, 0);
-    const manualOut = cashRegister.filter(c => c.date === today && c.type === 'manual_out').reduce((a, c) => a + c.amount, 0);
-    const currentBalance = cashSales + manualIn - manualOut;
+      const cashSales = sales.filter(s => s.date?.startsWith(today) && (s.paymentMethod || 'cash') === 'cash' && s.status === 'completed').reduce((a, s) => a + s.total, 0);
+      const manualIn = cashRegister.filter(c => c.date === today && c.type === 'manual_in').reduce((a, c) => a + c.amount, 0);
+      const manualOut = cashRegister.filter(c => c.date === today && c.type === 'manual_out').reduce((a, c) => a + c.amount, 0);
+      const currentBalance = cashSales + manualIn - manualOut;
 
-    if (amount > currentBalance) {
-      UI.toast("L'argent n'est pas dans la caisse", 'error', 5000);
-      return;
+      if (amount > currentBalance) {
+        UI.toast("L'argent n'est pas dans la caisse", 'error', 5000);
+        return;
+      }
     }
-  }
 
-  await DB.dbAdd('cashRegister', {
-    type,
-    amount,
-    paymentMethod: data.paymentMethod,
-    reason: data.reason,
-    reference: data.reference || '',
-    date: new Date().toISOString().split('T')[0],
-    timestamp: Date.now(),
-    userId: DB.AppState.currentUser?.id,
-  });
-  await DB.writeAudit('CASH_ENTRY', 'cashRegister', null, data);
-  window._caisseEntryEnCours = false;
-  UI.closeModal();
-  UI.toast(`Mouvement de caisse enregistre`, 'success');
-  Router.navigate('caisse');
+    await DB.dbAdd('cashRegister', {
+      type,
+      amount,
+      paymentMethod: data.paymentMethod,
+      reason: data.reason,
+      reference: data.reference || '',
+      date: new Date().toISOString().split('T')[0],
+      timestamp: Date.now(),
+      userId: DB.AppState.currentUser?.id,
+    });
+    await DB.writeAudit('CASH_ENTRY', 'cashRegister', null, data);
+    UI.closeModal();
+    UI.toast(`Mouvement de caisse enregistré`, 'success');
+    Router.navigate('caisse');
+  } catch (err) {
+    console.error(err);
+    UI.toast('Erreur lors de la validation.', 'error');
+  } finally {
+    window._caisseEntryEnCours = false;
+  }
 }
 
 function openCaisseClose() {

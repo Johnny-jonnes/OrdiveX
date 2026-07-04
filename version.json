@@ -1,5 +1,5 @@
 {
-  "version": "9.7.43",
-  "date": "2026-06-30",
+  "version": "9.7.44",
+  "date": "2026-07-04",
   "changelog": "Refonte complete du module Inventaire : onglet dedie, filtres de perimetre, saisie en direct, validation et ajustements de stock, export PDF/CSV et historique."
 }

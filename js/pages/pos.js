@@ -2023,6 +2023,24 @@ async function validerVente() {
   window._venteEnCours = true;
   if (!posCart.length) { window._venteEnCours = false; UI.toast('Le panier est vide', 'warning'); return; }
 
+  try {
+    await _validerVenteLogic();
+  } catch (err) {
+    console.error(err);
+    UI.toast('Erreur lors de la validation. Veuillez réessayer.', 'error');
+  } finally {
+    window._venteEnCours = false;
+    if (window.UI && UI.hideLoader) UI.hideLoader();
+    const btn = document.getElementById('btn-valider');
+    if (btn) { 
+      btn.disabled = false; 
+      btn.innerHTML = '<i data-lucide="check-circle"></i><span>Valider</span>'; 
+      if (window.lucide) lucide.createIcons({ node: btn }); 
+    }
+  }
+}
+
+async function _validerVenteLogic() {
   // ── Vérification clôture de caisse ──
   const today = new Date().toISOString().split('T')[0];
   const cashRegister = await DB.dbGetAll('cashRegister');
@@ -2363,18 +2381,20 @@ async function validerVente() {
     const rxtog = document.getElementById('rx-toggle');
     if (rxtog) { rxtog.checked = false; onRxToggle(false); }
     resetMobilePayUI();
+    
+    // Reset assurance and switch back to cash
+    const assurFields = document.querySelectorAll('.assur-amount-field');
+    assurFields.forEach(f => f.value = '');
+    const cashBtn = document.querySelector('.pay-btn[data-m="cash"]');
+    if (cashBtn) selectPay(cashBtn);
+    
     refreshCartUI();
     // Mettre à jour uniquement les cartes des produits vendus
     soldPids.forEach(pid => updateCardUI(pid));
     if (typeof updateAlertBadge === 'function') updateAlertBadge();
 
   } catch (err) {
-    console.error(err);
-    UI.toast('Erreur lors de la validation. Veuillez reessayer.', 'error');
-  } finally {
-    window._venteEnCours = false;
-    if (window.UI && UI.hideLoader) UI.hideLoader();
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="check-circle"></i> Valider (F5)'; const g = document.getElementById('pos-grid'); if (g && window.lucide) lucide.createIcons({ node: g }); }
+    throw err; // Relay to wrapper
   }
 }
 

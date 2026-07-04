@@ -616,9 +616,9 @@ async function renderSettings(container) {
                 ${UI.roleBadge(u.role)}
                 <span class="badge badge-${u.active ? 'success' : 'neutral'}">${u.active ? 'Actif' : 'Inactif'}</span>
               </div>
-              <div class="user-card2-actions">
+              <div class="user-card2-actions" style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center;">
                 <button class="btn btn-sm btn-ghost" onclick="viewEmployee360(${u.id})" title="Profil 360°"><i data-lucide="bar-chart-3"></i></button>
-                <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})" title="Modifier"><i data-lucide="edit-3"></i> Modifier</button>
+                <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})" title="Modifier" style="white-space:nowrap;"><i data-lucide="edit-3"></i> Modifier</button>
                 <button class="btn btn-sm btn-ghost" onclick="resetUserPin(${u.id},'${(u.name||'').replace(/'/g,'')}')" title="Réinitialiser PIN"><i data-lucide="key-round"></i></button>
               </div>
             </div>`;
@@ -693,7 +693,7 @@ async function renderSettings(container) {
           <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:var(--bg-secondary);border-radius:12px;border:1px solid var(--border)">
             <div style="position:relative;width:52px;height:28px;flex-shrink:0">
               <input type="checkbox" id="lock-enabled-cb" ${lockEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;position:absolute"
-                onchange="const el=document.getElementById('lock-timeout-group');el.style.opacity=this.checked?'1':'0.4';el.style.pointerEvents=this.checked?'auto':'none';">
+                onchange="window.toggleSecurityLockUI(this)">
               <span onclick="document.getElementById('lock-enabled-cb').click();document.getElementById('lock-enabled-cb').dispatchEvent(new Event('change'))"
                 id="lock-toggle-track"
                 style="position:absolute;inset:0;border-radius:28px;background:${lockEnabled ? 'var(--primary)' : 'var(--border)'};cursor:pointer;transition:background 0.3s;display:flex;align-items:center;padding:3px">
@@ -702,9 +702,9 @@ async function renderSettings(container) {
             </div>
             <div>
               <div style="font-weight:700;font-size:14px">Verrouillage automatique</div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${lockEnabled ? 'La session se verrouille après inactivité' : 'Aucune déconnexion automatique'}</div>
+              <div id="lock-desc-text" style="font-size:12px;color:var(--text-muted);margin-top:2px">${lockEnabled ? 'La session se verrouille après inactivité' : 'Aucune déconnexion automatique'}</div>
             </div>
-            <span class="badge ${lockEnabled ? 'badge-success' : 'badge-neutral'}" style="margin-left:auto">${lockEnabled ? 'Activé' : 'Désactivé'}</span>
+            <span id="lock-status-badge" class="badge ${lockEnabled ? 'badge-success' : 'badge-neutral'}" style="margin-left:auto">${lockEnabled ? 'Activé' : 'Désactivé'}</span>
           </div>
           <div id="lock-timeout-group" style="opacity:${lockEnabled ? '1' : '0.4'};pointer-events:${lockEnabled ? 'auto' : 'none'};transition:opacity 0.3s">
             <label style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:block">Délai d'inactivité</label>
@@ -1338,17 +1338,57 @@ async function testSmsConnection() {
 window.updatePharmacyDisplay = updatePharmacyDisplay;
 window.saveSupabaseConfig = saveSupabaseConfig;
 // window.resetSmsConfig = resetSmsConfig;
-window.exportUsersPDF = function() {
+window.toggleSecurityLockUI = function(cb) {
+  const isChecked = cb.checked;
+  const group = document.getElementById('lock-timeout-group');
+  if (group) {
+    group.style.opacity = isChecked ? '1' : '0.4';
+    group.style.pointerEvents = isChecked ? 'auto' : 'none';
+  }
+  const track = document.getElementById('lock-toggle-track');
+  if (track) {
+    track.style.background = isChecked ? 'var(--primary)' : 'var(--border)';
+    const thumb = track.querySelector('span');
+    if (thumb) thumb.style.transform = `translateX(${isChecked ? '24px' : '0'})`;
+  }
+  const desc = document.getElementById('lock-desc-text');
+  if (desc) desc.textContent = isChecked ? 'La session se verrouille après inactivité' : 'Aucune déconnexion automatique';
+  const badge = document.getElementById('lock-status-badge');
+  if (badge) {
+    badge.className = `badge ${isChecked ? 'badge-success' : 'badge-neutral'}`;
+    badge.textContent = isChecked ? 'Activé' : 'Désactivé';
+  }
+};
+
+window.exportUsersPDF = async function() {
   if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
-  const data = (window._usersData || []).map(u => [
-    u.name,
-    u.username,
-    u.role,
-    u.active ? 'Actif' : 'Inactif'
-  ]);
-  const headers = ["Nom Complet", "Nom d'utilisateur", "Rôle", "Statut"];
-  const subHeader = [`Total Utilisateurs : ${data.length}`];
-  window.PDFExport.generate("Liste des Utilisateurs", headers, data, { subHeader });
+  UI.showLoader('Génération du PDF...', 3000);
+  try {
+    const users = await DB.dbGetAll('users');
+    const settings = await DB.dbGetAll('settings');
+    const gs = k => settings.find(s => s.key === k)?.value;
+    const nomPharma = gs('pharmacy_name') || 'Pharmacie Centrale';
+
+    const data = users.map(u => [
+      u.name || 'N/A',
+      u.username,
+      u.role || 'N/A',
+      u.active ? 'Actif' : 'Inactif',
+      u.createdAt ? new Date(u.createdAt).toLocaleDateString('fr-FR') : '—'
+    ]);
+    const headers = ["Nom Complet", "Nom d'utilisateur", "Rôle", "Statut", "Création"];
+    const subHeader = [
+      nomPharma,
+      `Date d'édition : ${new Date().toLocaleString('fr-FR')}`,
+      `Total Utilisateurs : ${data.length}`
+    ];
+    await window.PDFExport.generate("Liste des Utilisateurs", headers, data, { subHeader, orientation: 'portrait' });
+  } catch (err) {
+    console.error(err);
+    UI.toast("Erreur lors de l'export PDF", "error");
+  } finally {
+    UI.hideLoader();
+  }
 };
 window.testSmsConnection = testSmsConnection;
 window.handleLogoUpload = handleLogoUpload;

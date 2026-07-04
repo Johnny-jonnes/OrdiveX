@@ -50,7 +50,11 @@ async function renderInventory(container) {
     inventories: inventories.sort((a, b) => new Date(b.datetime || 0) - new Date(a.datetime || 0)),
     
     // Config de l'inventaire en cours
-    currentInventory: null
+    currentInventory: null,
+    
+    // Pagination & Selection
+    selectedProductsMap: {},
+    selectCurrentPage: 1
   };
 
   window._inventoryPageState = state;
@@ -244,15 +248,10 @@ function renderCreateView(container) {
         <!-- Sélection manuelle de produits -->
         <div class="form-group" id="group-scope-selection" style="display: none;">
           <label style="margin-bottom:8px; display:block">Sélectionnez les produits concernés</label>
-          <input type="text" id="selection-search" placeholder="Recherche rapide..." class="form-control" style="margin-bottom:10px" oninput="filterSelectionList(this.value)">
-          <div class="table-wrapper" style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 8px;">
+          <input type="text" id="selection-search" placeholder="Recherche rapide..." class="form-control" style="margin-bottom:10px" oninput="window.renderSelectionPage(1)">
+          <div class="table-wrapper" style="border: 1px solid var(--border); border-radius: 8px; padding: 8px;">
             <div id="selection-checkbox-container" style="display:flex; flex-direction:column; gap:8px;">
-              ${state.products.filter(p => p.status === 'active').map(p => `
-                <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer" class="selection-item-label" data-name="${p.name.toLowerCase()}" data-code="${(p.code||'').toLowerCase()}">
-                  <input type="checkbox" name="selected_products" value="${p.id}" class="selected-product-cb">
-                  <span><code>${p.code || 'N/A'}</code> — <strong>${p.name}</strong></span>
-                </label>
-              `).join('')}
+              <!-- Rendu via renderSelectionPage() -->
             </div>
           </div>
         </div>
@@ -265,6 +264,10 @@ function renderCreateView(container) {
   `;
 
   if (window.lucide) lucide.createIcons();
+  
+  // Initialiser la map de sélection et rendre la première page
+  window._inventoryPageState.selectedProductsMap = {};
+  window.renderSelectionPage(1);
 }
 
 window.toggleScopeInputs = function(type) {
@@ -275,13 +278,46 @@ window.toggleScopeInputs = function(type) {
   document.getElementById('group-scope-selection').style.display = type === 'selection' ? 'block' : 'none';
 };
 
-window.filterSelectionList = function(q) {
-  const query = q.toLowerCase();
-  document.querySelectorAll('.selection-item-label').forEach(lbl => {
-    const name = lbl.dataset.name || '';
-    const code = lbl.dataset.code || '';
-    lbl.style.display = (!query || name.includes(query) || code.includes(query)) ? 'flex' : 'none';
-  });
+window.renderSelectionPage = function(page = 1) {
+  const state = window._inventoryPageState;
+  state.selectCurrentPage = page;
+  const PAGE_SIZE = 50;
+  
+  const query = (document.getElementById('selection-search')?.value || '').toLowerCase();
+  const allActive = state.products.filter(p => p.status === 'active');
+  const filtered = allActive.filter(p => !query || p.name.toLowerCase().includes(query) || (p.code||'').toLowerCase().includes(query));
+  
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const p = Math.max(1, Math.min(page, totalPages));
+  const start = (p - 1) * PAGE_SIZE;
+  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+  
+  const container = document.getElementById('selection-checkbox-container');
+  if (!container) return;
+  
+  let html = pageItems.map(prod => `
+    <label style="display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer">
+      <input type="checkbox" value="${prod.id}" class="selected-product-cb" ${state.selectedProductsMap[prod.id] ? 'checked' : ''} onchange="window._inventoryPageState.selectedProductsMap[${prod.id}] = this.checked;">
+      <span><code>${prod.code || 'N/A'}</code> — <strong>${prod.name}</strong></span>
+    </label>
+  `).join('');
+  
+  if (totalPages > 1) {
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid var(--border)">
+        <span style="font-size:12px; color:var(--text-muted)">${filtered.length} produits trouvés</span>
+        <div style="display:flex; gap:8px">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="window.renderSelectionPage(${p - 1})" ${p === 1 ? 'disabled' : ''}>Précédent</button>
+          <span style="font-size:13px; padding:4px 8px">${p} / ${totalPages}</span>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="window.renderSelectionPage(${p + 1})" ${p === totalPages ? 'disabled' : ''}>Suivant</button>
+        </div>
+      </div>
+    `;
+  } else if (filtered.length === 0) {
+    html += `<div class="empty-state" style="padding:20px; font-size:13px">Aucun produit trouvé.</div>`;
+  }
+  
+  container.innerHTML = html;
 };
 
 function startInventorySetup(event) {
@@ -314,12 +350,12 @@ function startInventorySetup(event) {
     filtered = state.products.filter(p => p.status === 'active' && p.supplierId === val);
     scopeLabel = `Fournisseur : ${supName}`;
   } else if (type === 'selection') {
-    const checkedCbs = Array.from(document.querySelectorAll('.selected-product-cb:checked')).map(cb => parseInt(cb.value));
-    if (checkedCbs.length === 0) {
+    const checkedIds = Object.keys(state.selectedProductsMap).filter(id => state.selectedProductsMap[id]).map(Number);
+    if (!checkedIds.length) {
       return UI.toast('Veuillez sélectionner au moins un produit', 'warning');
     }
-    filtered = state.products.filter(p => p.status === 'active' && checkedCbs.includes(p.id));
-    scopeLabel = `${checkedCbs.length} produit(s) sélectionné(s)`;
+    filtered = state.products.filter(p => p.status === 'active' && checkedIds.includes(p.id));
+    scopeLabel = `${checkedIds.length} produit(s) sélectionné(s)`;
   }
 
   if (filtered.length === 0) {
@@ -386,12 +422,13 @@ function renderEntryView(container) {
     </div>
 
     <!-- Barre de recherche rapide de saisie -->
-    <div class="filter-bar" style="margin-bottom:12px">
-      <input type="text" placeholder="Filtrer rapidement par nom ou code..." class="filter-input" oninput="filterEntryTable(this.value)">
+    <div class="filter-bar" style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+      <input type="text" id="entry-search" placeholder="Filtrer rapidement par nom ou code..." class="filter-input" oninput="window.renderEntryPage(1)" style="flex:1; max-width:400px;">
+      <div id="entry-pagination-top" style="font-size:13px; color:var(--text-muted);"></div>
     </div>
 
     <div class="settings-card2">
-      <div class="table-wrapper" style="max-height: 60vh; overflow-y: auto;">
+      <div class="table-wrapper" style="border: 1px solid var(--border); border-radius: 8px;">
         <table class="data-table" id="entry-inventory-table">
           <thead>
             <tr>
@@ -407,51 +444,87 @@ function renderEntryView(container) {
               <th>Observation</th>
             </tr>
           </thead>
-          <tbody>
-            ${items.map(it => {
-              return `
-                <tr class="entry-row" data-name="${it.name.toLowerCase()}" data-code="${it.code.toLowerCase()}">
-                  <td><code class="code-tag">${it.code}</code></td>
-                  <td><strong>${it.name}</strong></td>
-                  <td class="text-sm text-muted">${it.form}</td>
-                  <td><span class="category-tag">${it.category}</span></td>
-                  <td class="text-sm text-muted">${it.supplierName}</td>
-                  <td class="ta-c"><strong>${it.systemQty}</strong></td>
-                  <td class="ta-c">
-                    <input type="number" class="form-control ta-c" id="phys-qty-${it.id}" value="${it.physicalQty}" min="0" style="width: 80px; font-weight: 700;"
-                      oninput="onPhysicalQtyChange(${it.id}, this.value)">
-                  </td>
-                  <td class="ta-c" id="phys-gap-cell-${it.id}"><span class="badge badge-success">0</span></td>
-                  <td class="ta-r" id="phys-val-cell-${it.id}" style="font-weight:600;">0 GNF</td>
-                  <td>
-                    <input type="text" class="form-control" placeholder="Obs..." id="phys-obs-${it.id}" value="${it.observation}" style="width: 140px;"
-                      oninput="onObservationChange(${it.id}, this.value)">
-                  </td>
-                </tr>
-              `;
-            }).join('')}
+          <tbody id="entry-inventory-tbody">
+            <!-- Rendu via renderEntryPage() -->
           </tbody>
         </table>
       </div>
+      <div id="entry-pagination-bottom" style="margin-top:12px"></div>
     </div>
   `;
 
-  // Re-calculer les écarts à l'affichage initial
-  items.forEach(it => {
-    onPhysicalQtyChange(it.id, it.physicalQty, false);
-  });
-  updateEntryGapsKPI();
+  state.entryCurrentPage = 1;
+  window.renderEntryPage(1);
 
   if (window.lucide) lucide.createIcons();
 }
 
-window.filterEntryTable = function(q) {
-  const query = q.toLowerCase();
-  document.querySelectorAll('.entry-row').forEach(row => {
-    const name = row.dataset.name || '';
-    const code = row.dataset.code || '';
-    row.style.display = (!query || name.includes(query) || code.includes(query)) ? '' : 'none';
+window.renderEntryPage = function(page = 1) {
+  const state = window._inventoryPageState;
+  state.entryCurrentPage = page;
+  const items = state.currentInventory.products;
+  const PAGE_SIZE = 50;
+
+  const query = (document.getElementById('entry-search')?.value || '').toLowerCase();
+  const filtered = items.filter(it => !query || it.name.toLowerCase().includes(query) || (it.code||'').toLowerCase().includes(query));
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const p = Math.max(1, Math.min(page, totalPages));
+  const start = (p - 1) * PAGE_SIZE;
+  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+  const tbody = document.getElementById('entry-inventory-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = pageItems.map(it => `
+    <tr class="entry-row">
+      <td><code class="code-tag">${it.code || 'N/A'}</code></td>
+      <td><strong>${it.name}</strong></td>
+      <td class="text-sm text-muted">${it.form || ''}</td>
+      <td><span class="category-tag">${it.category || ''}</span></td>
+      <td class="text-sm text-muted">${it.supplierName || ''}</td>
+      <td class="ta-c"><strong>${it.systemQty}</strong></td>
+      <td class="ta-c">
+        <input type="number" class="form-control ta-c" id="phys-qty-${it.id}" value="${it.physicalQty}" min="0" style="width: 80px; font-weight: 700;"
+          oninput="onPhysicalQtyChange(${it.id}, this.value)">
+      </td>
+      <td class="ta-c" id="phys-gap-cell-${it.id}"><span class="badge badge-success">0</span></td>
+      <td class="ta-r" id="phys-val-cell-${it.id}" style="font-weight:600;">0 GNF</td>
+      <td>
+        <input type="text" class="form-control" placeholder="Obs..." id="phys-obs-${it.id}" value="${it.observation || ''}" style="width: 140px;"
+          oninput="onObservationChange(${it.id}, this.value)">
+      </td>
+    </tr>
+  `).join('');
+
+  // Re-calculer visuellement les écarts pour les lignes rendues
+  pageItems.forEach(it => {
+    onPhysicalQtyChange(it.id, it.physicalQty, false);
   });
+  updateEntryGapsKPI();
+
+  // Mettre à jour la pagination
+  const pagHtml = totalPages > 1 ? `
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:13px; color:var(--text-muted)">${filtered.length} produits trouvés</span>
+      <div style="display:flex; gap:8px">
+        <button type="button" class="btn btn-sm btn-secondary" onclick="window.renderEntryPage(${p - 1})" ${p === 1 ? 'disabled' : ''}>Précédent</button>
+        <span style="font-size:13px; padding:4px 8px">Page ${p} / ${totalPages}</span>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="window.renderEntryPage(${p + 1})" ${p === totalPages ? 'disabled' : ''}>Suivant</button>
+      </div>
+    </div>
+  ` : '';
+  
+  const bottomPag = document.getElementById('entry-pagination-bottom');
+  if (bottomPag) bottomPag.innerHTML = pagHtml;
+  
+  const topPag = document.getElementById('entry-pagination-top');
+  if (topPag) topPag.innerHTML = totalPages > 1 ? `Page ${p}/${totalPages}` : '';
+};
+
+// Obsolete
+window.filterEntryTable = function(q) {
+  window.renderEntryPage(1);
 };
 
 window.onPhysicalQtyChange = function(itemId, val, shouldUpdateKPI = true) {

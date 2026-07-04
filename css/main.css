@@ -942,6 +942,9 @@ canvas {
 
 select.form-control {
   cursor: pointer;
+  height: 40px;
+  max-width: 100%;
+  text-overflow: ellipsis;
 }
 
 textarea.form-control {
