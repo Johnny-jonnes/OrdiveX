@@ -683,6 +683,7 @@ async function confirmCaisseClose() {
   if (!['admin', 'pharmacien'].includes(role)) {
     UI.toast('Seul(e) le/la pharmacien(ne) ou l\'administrateur peut clôturer la caisse.', 'error', 5000);
     UI.closeModal();
+    window._caisseCloseEnCours = false;
     return;
   }
 
@@ -693,27 +694,33 @@ async function confirmCaisseClose() {
   const ok = await UI.confirm(`Confirmer la clôture de caisse du ${today} ?\n\nCette action est irréversible. Aucune vente ne pourra être enregistrée après la clôture.`);
   if (!ok) { window._caisseCloseEnCours = false; return; }
 
-  if (window.UI && UI.showLoader) UI.showLoader('Cloture de caisse en cours...', 10000);
-  await DB.dbAdd('cashRegister', {
-    type: 'closure',
-    date: today,
-    closedAt: Date.now(),
-    closedBy: DB.AppState.currentUser?.name,
-    closedByRole: role,
-    openingFund: opening,
-    expectedCash: window._expectedCash || 0,
-    physicalCash: physical,
-    totalSales: window._todaySalesTotal || 0,
-    transactionCount: window._todaySalesCount || 0,
-    note,
-  });
+  try {
+    if (window.UI && UI.showLoader) UI.showLoader('Cloture de caisse en cours...', 10000);
+    await DB.dbAdd('cashRegister', {
+      type: 'closure',
+      date: today,
+      closedAt: Date.now(),
+      closedBy: DB.AppState.currentUser?.name,
+      closedByRole: role,
+      openingFund: opening,
+      expectedCash: window._expectedCash || 0,
+      physicalCash: physical,
+      totalSales: window._todaySalesTotal || 0,
+      transactionCount: window._todaySalesCount || 0,
+      note,
+    });
 
-  await DB.writeAudit('CAISSE_CLOSURE', 'cashRegister', null, { date: today, physical, expected: window._expectedCash, closedBy: DB.AppState.currentUser?.name });
-  window._caisseCloseEnCours = false;
-  if (window.UI && UI.hideLoader) UI.hideLoader();
-  UI.closeModal();
-  UI.toast('Caisse cloturee avec succes. Les ventes sont bloquees pour aujourd\'hui.', 'success', 5000);
-  Router.navigate('caisse');
+    await DB.writeAudit('CAISSE_CLOSURE', 'cashRegister', null, { date: today, physical, expected: window._expectedCash, closedBy: DB.AppState.currentUser?.name });
+    UI.closeModal();
+    UI.toast('Caisse cloturee avec succes. Les ventes sont bloquees pour aujourd\'hui.', 'success', 5000);
+    Router.navigate('caisse');
+  } catch (err) {
+    console.error('[Caisse Close Error]', err);
+    UI.toast('Erreur lors de la clôture : ' + (err?.message || err), 'error');
+  } finally {
+    window._caisseCloseEnCours = false;
+    if (window.UI && UI.hideLoader) UI.hideLoader();
+  }
 }
 
 async function exportDayTransactions(date) {

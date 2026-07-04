@@ -2207,8 +2207,8 @@ async function _validerVenteLogic() {
           }
         });
       } else {
-        const name = document.getElementById('assur-name')?.value.trim();
-        const ref = document.getElementById('assur-ref')?.value.trim();
+        const name = (document.getElementById('assur-name')?.value || '').trim();
+        const ref = (document.getElementById('assur-ref')?.value || '').trim();
         const amt = parseFloat(document.getElementById('assur-amount')?.value || 0);
         if (amt > 0) {
           insuranceDetails.push({ name, ref, amount: amt });

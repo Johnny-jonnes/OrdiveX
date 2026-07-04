@@ -85,7 +85,7 @@ async function renderSuppliers(container) {
 }
 
 window.filterSuppliersList = function() {
-  const query = document.getElementById('supplier-search')?.value.toLowerCase() || '';
+  const query = (document.getElementById('supplier-search')?.value || '').toLowerCase();
   const status = document.getElementById('supplier-status-filter')?.value || '';
   
   let filtered = window._suppliersAll || [];

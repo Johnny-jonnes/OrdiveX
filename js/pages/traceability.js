@@ -345,7 +345,7 @@ function switchTraceTab(btn, tabId) {
 }
 
 async function doLotTrace() {
-  const query = document.getElementById('trace-input')?.value.trim().toLowerCase();
+  const query = (document.getElementById('trace-input')?.value || '').trim().toLowerCase();
   if (!query) { UI.toast('Entrez un numéro de lot ou nom de produit', 'warning'); return; }
 
   const container = document.getElementById('trace-results');
@@ -503,7 +503,7 @@ function showLotRecallForm() {
 
 // Filtre de recherche pour le select de rappel (remplace le select massif)
 window.filterRecallLots = function() {
-  const query = document.getElementById('recall-lot-search')?.value.trim().toLowerCase();
+  const query = (document.getElementById('recall-lot-search')?.value || '').trim().toLowerCase();
   const container = document.getElementById('recall-lot-results');
   if (!container) return;
 
@@ -1146,7 +1146,7 @@ function loadMoreAudit() {
 window.switchTraceTab = switchTraceTab;
 window.doLotTrace = doLotTrace;
 window.traceInvoice = async function() {
-  const q = document.getElementById('trace-invoice-input')?.value.trim();
+  const q = (document.getElementById('trace-invoice-input')?.value || '').trim();
   const resDiv = document.getElementById('trace-invoice-results');
   if (!q) return;
 

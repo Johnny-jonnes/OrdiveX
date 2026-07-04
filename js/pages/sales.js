@@ -707,7 +707,6 @@ async function confirmSettleDebt(saleId) {
     console.error(err);
     UI.toast('Erreur : ' + err.message, 'error');
   }
-  DB.writeAudit('EXPORT_CSV', 'sales', null, { count: data.length, filename: a.download });
 }
 
 window.exportSalesPDF = function() {

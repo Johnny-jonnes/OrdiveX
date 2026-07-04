@@ -1,5 +1,5 @@
 {
-  "version": "9.7.45",
+  "version": "9.7.46",
   "date": "2026-07-04",
-  "changelog": "Correction du verrouillage de session par inactivité : suppression du minuteur en doublon dans ui.js et intégration du verrouillage dans security-lock.js."
+  "changelog": "Stabilisation globale de l'application : sécurisation de tous les accès DOM .value/.trim()/.toLowerCase() susceptibles de crasher, correction d'un bug de syntaxe/référence dans le règlement de créance, et protection du calcul des seuils d'alerte."
 }

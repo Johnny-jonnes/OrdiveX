@@ -98,7 +98,7 @@ async function renderStockExits(container) {
 }
 
 function filterStockExitsData() {
-  const query = document.getElementById('exit-search-input')?.value.toLowerCase() || '';
+  const query = (document.getElementById('exit-search-input')?.value || '').toLowerCase();
   const methodFilter = document.getElementById('exit-method-select')?.value || '';
   const fromDate = document.getElementById('exit-date-from')?.value;
   const toDate = document.getElementById('exit-date-to')?.value;

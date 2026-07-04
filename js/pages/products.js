@@ -88,7 +88,7 @@ async function renderProducts(container) {
 }
 
 function filterProducts() {
-  const search = document.getElementById('prod-search')?.value.toLowerCase() || '';
+  const search = (document.getElementById('prod-search')?.value || '').toLowerCase();
   const cat = document.getElementById('prod-cat')?.value || '';
   const form = document.getElementById('prod-form')?.value || '';
   const sort = document.getElementById('prod-sort')?.value || 'alpha-asc';

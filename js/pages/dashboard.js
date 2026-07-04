@@ -239,7 +239,8 @@ async function _refreshDashboard(container) {
         lowStockProducts.slice(0, 6).map(p => {
           const stock = stockAll.find(s => s.productId === p.id);
           const qty = stock ? stock.quantity : 0;
-          const pct = Math.min(100, (qty / (p.minStock * 2)) * 100);
+          const denominator = (p.minStock || 1) * 2;
+          const pct = Math.min(100, Math.max(0, (qty / denominator) * 100)) || 0;
           return `
                   <div class="stock-alert-item">
                     <div class="stock-info">

@@ -45,7 +45,7 @@ async function renderPatients(container) {
 }
 
 function filterPatients() {
-  const search = document.getElementById('patient-search')?.value.toLowerCase() || '';
+  const search = (document.getElementById('patient-search')?.value || '').toLowerCase();
   let data = window._patientsData || [];
   if (search) data = data.filter(p =>
     (p.name || '').toLowerCase().includes(search) ||

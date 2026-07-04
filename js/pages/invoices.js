@@ -78,7 +78,7 @@ function loadMoreInvoices() {
 }
 
 function filterInvoices() {
-  const query = document.getElementById('inv-search')?.value.trim().toLowerCase() || '';
+  const query = (document.getElementById('inv-search')?.value || '').trim().toLowerCase();
   const status = document.getElementById('inv-status')?.value || '';
   const supId = document.getElementById('inv-supplier')?.value;
   let data = window._invoicesData || [];

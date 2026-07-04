@@ -111,11 +111,11 @@ async function renderStock(container) {
   window._stockData = stockData;
   renderStockTable(stockData);
 
-  document.getElementById('stock-search').focus();
+  document.getElementById('stock-search')?.focus();
 }
 
 function filterStock() {
-  const search = document.getElementById('stock-search')?.value.toLowerCase() || '';
+  const search = (document.getElementById('stock-search')?.value || '').toLowerCase();
   const status = document.getElementById('stock-filter-status')?.value || '';
   const location = document.getElementById('stock-filter-location')?.value || '';
   const category = document.getElementById('stock-filter-category')?.value || '';
@@ -466,7 +466,7 @@ async function submitStockEntry() {
 
     // Auto-create product if it does not exist
     if (isNaN(productId)) {
-      const newName = document.getElementById('stock-entry-product-search')?.value.trim();
+      const newName = (document.getElementById('stock-entry-product-search')?.value || '').trim();
       if (!newName) {
         if (window.UI) UI.toast("Veuillez sélectionner ou saisir le nom du produit", "error");
         return;

@@ -113,7 +113,7 @@ async function renderPrescriptions(container) {
 }
 
 function filterPrescriptions() {
-  const search = document.getElementById('rx-search')?.value.toLowerCase() || '';
+  const search = (document.getElementById('rx-search')?.value || '').toLowerCase();
   const status = document.getElementById('rx-status')?.value || '';
   const from = document.getElementById('rx-date-from')?.value;
   const to = document.getElementById('rx-date-to')?.value;
