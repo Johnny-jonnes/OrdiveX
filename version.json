@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47",
+  "version": "9.7.47c",
   "date": "2026-07-04",
-  "changelog": "Optimisation de la synchronisation temps réel : suppression des probes réseau redondants, correction de la persistance du cache des colonnes obsolètes, coordination des listeners de reconnexion, suppression des syncs bloquants UI, et correction du PDF d'export d'inventaires pour inclure tous les produits."
+  "changelog": "Optimisation de la synchronisation temps réel : arrêt immédiat du pull incrémental en cas d'interruption ou d'erreur réseau pour éviter de spammer la console, suppression des probes réseau redondants, correction de la persistance du cache des colonnes obsolètes, coordination des listeners de reconnexion, suppression des syncs bloquants UI, et correction du PDF d'export d'inventaires pour inclure tous les produits."
 }

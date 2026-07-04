@@ -1725,6 +1725,9 @@ async function pullFromSupabase(isManual = false) {
             }));
 
             for (const r of results) {
+              if (r.error) {
+                throw r.error;
+              }
               if (r.data && r.data.length > 0) {
                 const count = await writeBatchToIDB(r.sn, r.data);
                 if (count > 0) {
