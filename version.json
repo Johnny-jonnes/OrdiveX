@@ -1,5 +1,5 @@
 {
-  "version": "9.7.42",
+  "version": "9.7.43",
   "date": "2026-06-30",
-  "changelog": "Fix critique : correction de l erreur de syntaxe dans settings.js qui bloquait le chargement de l application."
+  "changelog": "Refonte complete du module Inventaire : onglet dedie, filtres de perimetre, saisie en direct, validation et ajustements de stock, export PDF/CSV et historique."
 }

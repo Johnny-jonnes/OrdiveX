@@ -71,7 +71,7 @@
 })();
 
 const DB_NAME = 'OrdiveXDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 const STORES = {
   products: 'products',
@@ -94,6 +94,8 @@ const STORES = {
   returns: 'returns',
   invoices: 'invoices',
   shifts: 'shifts',
+  inventories: 'inventories',
+  inventoryAdjustments: 'inventoryAdjustments',
 };
 
 let db = null;
@@ -692,6 +694,22 @@ async function initDB() {
         sh.createIndex('date', 'date');
         sh.createIndex('managerId', 'managerId');
         sh.createIndex('type', 'type');
+      }
+
+      // Inventories — Redesign
+      if (!database.objectStoreNames.contains('inventories')) {
+        const invStore = database.createObjectStore('inventories', { keyPath: 'id', autoIncrement: true });
+        invStore.createIndex('date', 'date');
+        invStore.createIndex('userId', 'userId');
+      }
+
+      // Inventory Adjustments — Redesign
+      if (!database.objectStoreNames.contains('inventoryAdjustments')) {
+        const adjStore = database.createObjectStore('inventoryAdjustments', { keyPath: 'id', autoIncrement: true });
+        adjStore.createIndex('date', 'date');
+        adjStore.createIndex('userId', 'userId');
+        adjStore.createIndex('productId', 'productId');
+        adjStore.createIndex('inventoryId', 'inventoryId');
       }
     };
   });
@@ -1836,7 +1854,8 @@ async function autoBackupToStorage() {
     const stores = [
       'products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders',
       'sales', 'saleItems', 'patients', 'prescriptions', 'alerts',
-      'cashRegister', 'auditLog', 'users', 'settings', 'returns'
+      'cashRegister', 'auditLog', 'users', 'settings', 'returns',
+      'inventories', 'inventoryAdjustments'
     ];
 
     const backup = {
@@ -2090,7 +2109,8 @@ async function restoreFromBackup(backupData) {
     const storesToClear = [
       'products', 'lots', 'stock', 'movements', 'suppliers', 'purchaseOrders',
       'sales', 'saleItems', 'patients', 'prescriptions', 'alerts',
-      'cashRegister', 'auditLog', 'settings', 'returns'
+      'cashRegister', 'auditLog', 'settings', 'returns',
+      'inventories', 'inventoryAdjustments'
     ];
 
     const db = await initDB();
