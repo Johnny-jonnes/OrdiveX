@@ -2031,7 +2031,6 @@ function startAutoPull() {
   window.addEventListener('focus', wakeUpCheck);
   window.addEventListener('click', wakeUpCheck, { passive: true, capture: true });
   window.addEventListener('keydown', wakeUpCheck, { passive: true, capture: true });
-  });
 
   // runPull : fonction NON-async — callbacks purs pour briser la trace Chrome
   function runPull() {
