@@ -239,11 +239,11 @@ function addInvoiceItem() {
         <label style="font-size:11px; margin-bottom:2px;">Qté *</label>
         <input type="number" class="form-control" id="inv-qty-${idx}" placeholder="Qté" min="1" value="1" oninput="updateInvoiceTotal()">
       </div>
-      <div class="form-group" style="width:90px; margin-bottom:0;">
+      <div class="form-group" style="width:125px; margin-bottom:0;">
         <label style="font-size:11px; margin-bottom:2px;">P. Achat *</label>
         <input type="number" class="form-control" id="inv-price-${idx}" placeholder="Achat" min="0" oninput="updateInvoiceTotal(); autoCalcInvoiceSalePrice(${idx})">
       </div>
-      <div class="form-group" style="width:90px; margin-bottom:0;">
+      <div class="form-group" style="width:125px; margin-bottom:0;">
         <label style="font-size:11px; margin-bottom:2px;">P. Vente</label>
         <input type="number" class="form-control" id="inv-sale-price-${idx}" placeholder="Vente" min="0" oninput="document.getElementById('inv-sale-price-${idx}').dataset.manual = 'true'">
       </div>

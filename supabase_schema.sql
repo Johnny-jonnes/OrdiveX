@@ -1106,3 +1106,6 @@ CREATE POLICY "shifts_full_access" ON public.shifts
 -- Puis recharger la page (Ctrl+Shift+R)
 -- ═══════════════════════════════════════════════════════════════════════════════
 ALTER TABLE products ADD COLUMN IF NOT EXISTS "productType" TEXT DEFAULT 'generic';
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceName" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceRef" TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS "assuranceAmount" NUMERIC DEFAULT 0;

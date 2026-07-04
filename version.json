@@ -1,5 +1,5 @@
 {
-  "version": "9.7.30",
+  "version": "9.7.31",
   "date": "2026-06-30",
-  "changelog": "Module de suivi et de recouvrement des créances par assurance ou entreprise (Tiers Payant) avec impression PDF et CSV."
+  "changelog": "Agrandissement des champs prix dans les factures et correction du séparateur de devise (suppression de la barre oblique)."
 }
