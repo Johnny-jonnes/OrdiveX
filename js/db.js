@@ -735,6 +735,23 @@ function _scheduleSyncToSupabase() {
   }, 2000); // Réduit de 5s → 2s pour une réactivité cloud optimale
 }
 
+// Flush de secours en arrière-plan (surtout pour mobile lors de la fermeture/veille de l'écran)
+function _flushSyncOnBackground() {
+  if (navigator.onLine && !AppState._confirmedOffline) {
+    if (_syncTimer) {
+      clearTimeout(_syncTimer);
+      _syncTimer = null;
+      syncToSupabase().catch(() => {});
+    }
+  }
+}
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    _flushSyncOnBackground();
+  }
+});
+window.addEventListener('pagehide', _flushSyncOnBackground);
+
 // Internal put that does NOT reset _synced and does NOT trigger sync
 // Used exclusively by syncToSupabase to mark items as synced
 function _dbPutRaw(storeName, data) {
@@ -2063,19 +2080,21 @@ function startAutoPull() {
         setTimeout(function() { syncToSupabase().catch(function(){}); }, 1000);
       }
 
-      // Si on revient d'une vraie coupure, on restaure complètement les WebSockets
-      if (wasOffline) {
-        setTimeout(async function() {
-          try {
-            var sb = await getSupabaseClient();
-            if (sb) {
-              if (sb.auth && sb.auth.startAutoRefresh) sb.auth.startAutoRefresh();
+      // Vérifier et restaurer systématiquement les WebSockets s'ils sont déconnectés ou perdus
+      setTimeout(async function() {
+        try {
+          var sb = await getSupabaseClient();
+          if (sb) {
+            if (sb.auth && sb.auth.startAutoRefresh) sb.auth.startAutoRefresh();
+            if (!_realtimeSubscription) {
               try { _setupRealtime(sb); } catch(e) {}
+            }
+            if (!_broadcastChannel) {
               try { _setupBroadcast(sb); } catch(e) {}
             }
-          } catch(e) {}
-        }, 1500);
-      }
+          }
+        } catch(e) {}
+      }, 1500);
 
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47c",
+  "version": "9.7.47d",
   "date": "2026-07-04",
-  "changelog": "Optimisation de la synchronisation temps réel : arrêt immédiat du pull incrémental en cas d'interruption ou d'erreur réseau pour éviter de spammer la console, suppression des probes réseau redondants, correction de la persistance du cache des colonnes obsolètes, coordination des listeners de reconnexion, suppression des syncs bloquants UI, et correction du PDF d'export d'inventaires pour inclure tous les produits."
+  "changelog": "Optimisation de la synchronisation temps réel : ajout d'un keep-alive sur les canaux de communication temps réel Supabase, déclenchement instantané des envois de données mobiles en arrière-plan (lorsque l'écran s'éteint ou l'app passe en tâche de fond), arrêt immédiat du pull incrémental en cas d'erreur réseau, et correction du PDF d'export d'inventaires pour inclure tous les produits."
 }
