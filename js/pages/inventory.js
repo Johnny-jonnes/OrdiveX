@@ -1084,28 +1084,29 @@ window.exportPastInventoryPDF = async function(inventoryId) {
   }
 
   const items = inv.items || [];
+  // Inclure TOUS les produits inventoriés, pas seulement les écarts
   const gapItems = items.filter(it => it.gap !== 0);
   let totalPositive = 0;
   let totalNegative = 0;
 
-  const data = gapItems.map(it => {
-    if (it.gap > 0) totalPositive += it.gapValue;
-    else if (it.gap < 0) totalNegative += it.gapValue;
+  const data = items.map(it => {
+    if (it.gap > 0) totalPositive += (it.gapValue || 0);
+    else if (it.gap < 0) totalNegative += (it.gapValue || 0);
 
     return [
       it.code || 'N/A',
-      it.name,
+      (it.name || 'Inconnu').substring(0, 35),
       it.form || '—',
-      it.category || '—',
-      String(it.systemQty),
-      String(it.physicalQty),
+      (it.category || '—').substring(0, 15),
+      String(it.systemQty ?? 0),
+      String(it.physicalQty ?? 0),
       it.gap === 0 ? '0' : (it.gap > 0 ? '+' : '') + it.gap,
-      UI.formatCurrency(it.gapValue),
-      it.observation || '—'
+      UI.formatCurrency(it.gapValue || 0),
+      (it.observation || '—').substring(0, 20)
     ];
   });
 
-  const headers = ["Code", "Médicament", "Forme", "Catégorie", "Théorique", "Physique", "Écart", "Valeur Écart", "Observation"];
+  const headers = ["Code", "Médicament", "Forme", "Catégorie", "Théo.", "Phys.", "Écart", "Val. Écart", "Obs."];
   
   const dt = new Date(inv.datetime || inv.date);
   const dateStr = dt.toLocaleDateString('fr-FR');
@@ -1116,17 +1117,20 @@ window.exportPastInventoryPDF = async function(inventoryId) {
     headers,
     data,
     {
+      orientation: items.length > 0 ? 'landscape' : 'portrait',
       subHeader: [
         `Périmètre : ${formatScopeType(inv.type)} (${inv.scope})`,
         `Date : ${dateStr} à ${timeStr}`,
         `Réalisé par : ${users[inv.userId] || 'Inconnu'}`,
         `Statut Stock : ${inv.status === 'validated_adjusted' ? 'Stock théorique AJUSTÉ' : 'ANALYSE SEULE'}`,
-        `Rapport limité aux Écarts de Stock (${gapItems.length} lignes affichées)`
+        `Total produits : ${items.length} — Produits en écart : ${gapItems.length}`
       ],
       summaryBlocks: [
-        { label: "Produits inventoriés", value: `${inv.productsCount}` },
-        { label: "Produits en écart", value: `${inv.gapsCount}` },
-        { label: "Impact financier net", value: `${UI.formatCurrency(inv.gapsValue)}` }
+        { label: "Produits inventoriés", value: `${inv.productsCount || items.length}` },
+        { label: "Produits en écart", value: `${inv.gapsCount || gapItems.length}` },
+        { label: "Excédents (surplus)", value: `${UI.formatCurrency(totalPositive)}` },
+        { label: "Manquants (déficits)", value: `${UI.formatCurrency(totalNegative)}` },
+        { label: "Impact financier net", value: `${UI.formatCurrency(inv.gapsValue || (totalPositive + totalNegative))}` }
       ]
     }
   );
