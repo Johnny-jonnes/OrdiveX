@@ -1,5 +1,5 @@
 {
-  "version": "9.7.31",
+  "version": "9.7.32",
   "date": "2026-06-30",
-  "changelog": "Agrandissement des champs prix dans les factures et correction du séparateur de devise (suppression de la barre oblique)."
+  "changelog": "Ajout du bouton Règlement Global de toutes les créances en attente pour une entreprise/assurance."
 }

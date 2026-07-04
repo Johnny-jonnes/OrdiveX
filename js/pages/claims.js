@@ -34,6 +34,7 @@ async function renderClaims(container) {
         <p class="page-subtitle">Suivi du tiers payant, recouvrements et encours entreprises</p>
       </div>
       <div class="header-actions">
+        <button class="btn btn-success" id="btn-claim-settle-all" style="display:none" onclick="settleAllClaims()"><i data-lucide="check-circle"></i> Tout Solder</button>
         <button class="btn btn-secondary" onclick="exportClaimsPDF()"><i data-lucide="printer"></i> PDF</button>
         <button class="btn btn-secondary" onclick="exportClaimsCSV()"><i data-lucide="download"></i> Exporter CSV</button>
       </div>
@@ -128,6 +129,9 @@ function filterClaimsData() {
     // Garder une trace globale des données filtrées vides pour les exports
     window._claimsFilteredData = [];
     window._claimsSelectedName = '';
+
+    const settleAllBtn = document.getElementById('btn-claim-settle-all');
+    if (settleAllBtn) settleAllBtn.style.display = 'none';
     
     if (window.lucide) lucide.createIcons();
     return;
@@ -166,6 +170,13 @@ function filterClaimsData() {
   document.getElementById('kpi-claim-total').textContent = UI.formatCurrency(totalBilled);
   document.getElementById('kpi-claim-paid').textContent = UI.formatCurrency(totalPaid);
   document.getElementById('kpi-claim-due').textContent = UI.formatCurrency(totalDue);
+
+  // Mettre à jour la visibilité du bouton "Tout solder"
+  const settleAllBtn = document.getElementById('btn-claim-settle-all');
+  if (settleAllBtn) {
+    settleAllBtn.style.display = totalDue > 0 ? 'inline-flex' : 'none';
+    settleAllBtn.innerHTML = `<i data-lucide="check-circle"></i> Tout Solder (${UI.formatCurrency(totalDue)})`;
+  }
 
   // Conserver les données filtrées actives pour les exports PDF/CSV
   window._claimsFilteredData = filtered;
@@ -221,6 +232,162 @@ function filterClaimsData() {
   
   if (window.lucide) lucide.createIcons();
 }
+
+window.settleAllClaims = function() {
+  const selectInsurance = window._claimsSelectedName;
+  const pendingSales = (window._claimsFilteredData || []).filter(s => s.status === 'pending');
+  if (pendingSales.length === 0) {
+    return UI.toast("Aucune créance en cours à solder pour cette entreprise", "warning");
+  }
+
+  const totalDue = pendingSales.reduce((sum, s) => sum + (s.assuranceAmount || s.total), 0);
+
+  UI.modal('<i data-lucide="check-circle" class="modal-icon-inline"></i> Règlement Global — ' + selectInsurance, `
+    <div style="display:flex;flex-direction:column;gap:16px">
+
+      <!-- MONTANT PRINCIPAL -->
+      <div style="text-align:center;padding:20px;background:#F8FAFC;border-radius:14px;border:2px solid #E2E8F0">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#64748B;font-weight:700;margin-bottom:6px">
+          🛡️ Montant global à encaisser (${pendingSales.length} factures)
+        </div>
+        <div style="font-size:32px;font-weight:900;color:#1E40AF;letter-spacing:-1px">${UI.formatCurrency(totalDue)}</div>
+        <div style="font-size:12px;color:#94A3B8;margin-top:6px">
+          Tiers payant entreprise : <strong style="color:#475569">${selectInsurance}</strong>
+        </div>
+      </div>
+
+      <!-- MODE DE PAIEMENT -->
+      <div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#64748B;margin-bottom:8px">Mode de règlement global</div>
+        <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:8px" id="claim-pay-methods">
+          <button type="button" class="pay-method-btn active" data-method="cash" onclick="selectClaimPayMethod(this)"
+            style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #1E40AF;border-radius:10px;background:#EBF5FB;cursor:pointer;font-family:inherit;text-align:left">
+            <span style="font-size:18px">💵</span>
+            <div><div style="font-size:12px;font-weight:700;color:#1E40AF">Espèces</div><div style="font-size:9px;color:#6B7280">Liquide</div></div>
+          </button>
+          <button type="button" class="pay-method-btn" data-method="orange_money" onclick="selectClaimPayMethod(this)"
+            style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #E2E8F0;border-radius:10px;background:#FFFFFF;cursor:pointer;font-family:inherit;text-align:left">
+            <span style="font-size:18px">📱</span>
+            <div><div style="font-size:12px;font-weight:700;color:#0F172A">Orange Money</div><div style="font-size:9px;color:#6B7280">Mobile</div></div>
+          </button>
+          <button type="button" class="pay-method-btn" data-method="mtn_momo" onclick="selectClaimPayMethod(this)"
+            style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #E2E8F0;border-radius:10px;background:#FFFFFF;cursor:pointer;font-family:inherit;text-align:left">
+            <span style="font-size:18px">📱</span>
+            <div><div style="font-size:12px;font-weight:700;color:#0F172A">MTN MoMo</div><div style="font-size:9px;color:#6B7280">Mobile</div></div>
+          </button>
+          <button type="button" class="pay-method-btn" data-method="transfer" onclick="selectClaimPayMethod(this)"
+            style="display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #E2E8F0;border-radius:10px;background:#FFFFFF;cursor:pointer;font-family:inherit;text-align:left">
+            <span style="font-size:18px">🏦</span>
+            <div><div style="font-size:12px;font-weight:700;color:#0F172A">Virement</div><div style="font-size:9px;color:#6B7280">Bancaire</div></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- RÉFÉRENCE DE PAIEMENT -->
+      <div>
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#64748B;display:block;margin-bottom:6px">Référence / Chèque / Bordereau</label>
+        <input type="text" id="claim-pay-ref" class="form-control" placeholder="Ex: Chèque n°12345, Bordereau de virement..." style="width:100%">
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:10px">
+        <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+        <button class="btn btn-success" style="padding:10px 20px;font-size:13px;font-weight:700" onclick="confirmSettleAllClaims()">
+          <i data-lucide="check-circle"></i> Confirmer l'encaissement
+        </button>
+      </div>
+    </div>
+  `);
+  if (window.lucide) lucide.createIcons();
+};
+
+window.selectClaimPayMethod = function(btn) {
+  document.querySelectorAll('#claim-pay-methods .pay-method-btn').forEach(b => {
+    b.classList.remove('active');
+    b.style.borderColor = '#E2E8F0';
+    b.style.background = '#FFFFFF';
+    b.querySelector('div div').style.color = '#0F172A';
+  });
+  btn.classList.add('active');
+  btn.style.borderColor = '#1E40AF';
+  btn.style.background = '#EBF5FB';
+  btn.querySelector('div div').style.color = '#1E40AF';
+};
+
+window.confirmSettleAllClaims = async function() {
+  const selectInsurance = window._claimsSelectedName;
+  const pendingSales = (window._claimsFilteredData || []).filter(s => s.status === 'pending');
+  if (pendingSales.length === 0) return;
+
+  const methodBtn = document.querySelector('#claim-pay-methods .pay-method-btn.active');
+  const paymentMethod = methodBtn ? methodBtn.dataset.method : 'cash';
+  const reference = document.getElementById('claim-pay-ref')?.value || '';
+
+  const totalDue = pendingSales.reduce((sum, s) => sum + (s.assuranceAmount || s.total), 0);
+
+  const ok = await UI.confirm(`Voulez-vous encaisser globalement ${UI.formatCurrency(totalDue)} pour les ${pendingSales.length} factures de l'entreprise ${selectInsurance} ?`);
+  if (!ok) return;
+
+  // Créer un overlay loader local pour éviter le bloquage brutal
+  UI.loading(document.body, "Règlement des créances en cours...");
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Mettre à jour chaque vente et l'ajouter au journal de caisse
+    for (const sale of pendingSales) {
+      const debtAmount = sale.assuranceAmount || sale.total;
+
+      // 1. Statut payé
+      sale.status = 'paid';
+      sale.paidAt = Date.now();
+      sale.paidDate = today;
+      sale.paidMethod = paymentMethod;
+      await DB.dbPut('sales', sale);
+
+      // 2. Enregistrer le règlement individuel en caisse pour que l'historique soit propre
+      await DB.dbAdd('cashRegister', {
+        type: 'debt_in',
+        amount: debtAmount,
+        paymentMethod: paymentMethod,
+        reason: `Règlement global créance ${selectInsurance} — Vente #${String(sale.id).padStart(6, '0')}${sale.patientName ? ' · ' + sale.patientName : ''}`,
+        reference: reference,
+        saleId: sale.id,
+        date: today,
+        timestamp: Date.now(),
+        userId: DB.AppState.currentUser?.id,
+      });
+    }
+
+    // 3. Trace d'audit globale
+    await DB.writeAudit('GLOBAL_DEBT_REFUND', 'claims', null, { 
+      company: selectInsurance, 
+      amount: totalDue, 
+      count: pendingSales.length, 
+      paymentMethod 
+    });
+
+    UI.toast(`Règlement global effectué avec succès ! (${pendingSales.length} factures)`, 'success');
+    UI.closeModal();
+
+    // Re-charger les ventes fraîches de la DB locale
+    const freshSales = await DB.dbGetAll('sales');
+    window._claimsSales = freshSales;
+    filterClaimsData();
+
+    // Déclencher la synchronisation Supabase en tâche de fond
+    if (typeof DB.syncToSupabase === 'function') {
+      DB.syncToSupabase().catch(console.error);
+    }
+
+  } catch (err) {
+    console.error(err);
+    UI.toast('Erreur lors du règlement global : ' + err.message, 'error');
+  } finally {
+    // Retirer le loader
+    const loader = document.querySelector('.loading-overlay');
+    if (loader) loader.remove();
+  }
+};
 
 window.exportClaimsPDF = function() {
   if (!window._claimsSelectedName) {
