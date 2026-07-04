@@ -1,5 +1,5 @@
 {
-  "version": "9.7.41",
+  "version": "9.7.42",
   "date": "2026-06-30",
-  "changelog": "Refonte totale de la page Parametres : onglets, grille utilisateurs, zone dangereuse Supabase, suppression audit, simulation de tarif."
+  "changelog": "Fix critique : correction de l erreur de syntaxe dans settings.js qui bloquait le chargement de l application."
 }
