@@ -1,5 +1,5 @@
 {
-  "version": "9.7.36",
+  "version": "9.7.37",
   "date": "2026-06-30",
-  "changelog": "Ajout de l impression detaillee des factures d assurances et du module d historique complet des fournisseurs avec filtres et exports."
+  "changelog": "Restauration de l impression PDF directe sans modal de choix, integrant par defaut le recapitulatif et toutes les factures detaillees."
 }

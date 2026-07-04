@@ -386,52 +386,13 @@ window.confirmSettleAllClaims = async function() {
   }
 };
 
-window.exportClaimsPDF = function() {
+window.exportClaimsPDF = async function() {
   if (!window._claimsSelectedName) {
     return UI.toast("Veuillez sélectionner une entreprise avant d'exporter", "warning");
   }
   if (!window._claimsFilteredData || window._claimsFilteredData.length === 0) {
     return UI.toast("Aucune donnée à exporter pour la période sélectionnée", "warning");
   }
-  if (!window.PDFExport) {
-    return UI.toast("Module PDF non chargé", "error");
-  }
-
-  // Ouvrir un petit dialogue pour choisir les options
-  UI.modal('<i data-lucide="printer" class="modal-icon-inline"></i> Option d\'impression PDF', `
-    <div style="display:flex;flex-direction:column;gap:16px">
-      <p style="font-size:13px;color:var(--text-muted);margin:0">Choisissez le type de document PDF à générer :</p>
-      
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
-          <input type="radio" name="pdf-recap-type" value="recap-only" checked style="width:16px;height:16px">
-          <div>
-            <strong style="font-size:13px;display:block">Récapitulatif uniquement</strong>
-            <span style="font-size:11px;color:var(--text-muted)">Un tableau simple de toutes les factures avec les montants globaux.</span>
-          </div>
-        </label>
-        
-        <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)">
-          <input type="radio" name="pdf-recap-type" value="recap-detailed" style="width:16px;height:16px">
-          <div>
-            <strong style="font-size:13px;display:block">Récapitulatif + Toutes les factures détaillées</strong>
-            <span style="font-size:11px;color:var(--text-muted)">Le tableau récapitulatif suivi du détail des médicaments vendus pour chaque facture.</span>
-          </div>
-        </label>
-      </div>
-
-      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:10px">
-        <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="processClaimsPDFExport()">Générer le PDF</button>
-      </div>
-    </div>
-  `);
-  if (window.lucide) lucide.createIcons();
-};
-
-window.processClaimsPDFExport = async function() {
-  const mode = document.querySelector('input[name="pdf-recap-type"]:checked')?.value || 'recap-only';
-  UI.closeModal();
   
   UI.showLoader("Génération du PDF...", 30000);
   
@@ -474,29 +435,7 @@ window.processClaimsPDFExport = async function() {
       ? `Période du ${new Date(fromDate).toLocaleDateString('fr-FR')} au ${new Date(toDate).toLocaleDateString('fr-FR')}`
       : '';
 
-    // Si on veut le récapitulatif uniquement, on utilise le générateur par défaut
-    if (mode === 'recap-only') {
-      await window.PDFExport.generate(
-        `Suivi des Créances — ${window._claimsSelectedName}`,
-        headers,
-        data,
-        {
-          subHeader: [
-            `Entreprise/Assurance : ${window._claimsSelectedName}`,
-            dateRangeStr
-          ],
-          summaryBlocks: [
-            { label: "Nombre total de factures", value: `${data.length}` },
-            { label: "Montant total facturé", value: `${UI.formatCurrency(totalBilled)}` },
-            { label: "Montant total payé", value: `${UI.formatCurrency(totalPaid)}` },
-            { label: "Montant restant dû", value: `${UI.formatCurrency(totalDue)}` }
-          ]
-        }
-      );
-      return;
-    }
-
-    // Sinon, on génère un PDF personnalisé avec le récapitulatif ET le détail de chaque facture
+    // On génère un PDF personnalisé avec le récapitulatif ET le détail de chaque facture
     if (!window.jspdf || !window.jspdf.jsPDF) {
       UI.toast("L'outil d'export PDF n'a pas pu être chargé", "error");
       UI.hideLoader();
