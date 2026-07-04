@@ -499,6 +499,7 @@ function initSupportWidget() {
  document.body.insertAdjacentHTML('beforeend', html);
  _widgetInitialized = true;
  showQuickOptions();
+ makeWidgetDraggable();
 
  // Bouton Retour Android (popstate)
  window.addEventListener('popstate', function(e) {
@@ -507,6 +508,131 @@ function initSupportWidget() {
  toggleSupportWindow();
  }
  });
+}
+
+function makeWidgetDraggable() {
+  const container = document.getElementById('support-widget-container');
+  const fab = container ? container.querySelector('.support-fab') : null;
+  if (!container || !fab) return;
+
+  let isDragging = false;
+  let startX = 0, startY = 0;
+  let initLeft = 0, initTop = 0;
+  const dragThreshold = 6;
+  let hasMoved = false;
+
+  // Mémoriser/Restaurer la position mémorisée
+  const savedX = localStorage.getItem('naomi_pos_x');
+  const savedY = localStorage.getItem('naomi_pos_y');
+  if (savedX !== null && savedY !== null) {
+    container.style.bottom = 'auto';
+    container.style.right = 'auto';
+    container.style.left = savedX;
+    container.style.top = savedY;
+    
+    // Ajuster l'alignement de la fenêtre selon la position restaurée
+    const rect = container.getBoundingClientRect();
+    const sw = document.getElementById('support-window');
+    if (sw) {
+      if (rect.left < window.innerWidth / 2) {
+        sw.style.right = 'auto';
+        sw.style.left = '70px';
+        sw.style.transformOrigin = 'bottom left';
+      } else {
+        sw.style.left = 'auto';
+        sw.style.right = '0';
+        sw.style.transformOrigin = 'bottom right';
+      }
+    }
+  }
+
+  // Événements Souris
+  fab.addEventListener('mousedown', onDragStart);
+  window.addEventListener('mousemove', onDragMove);
+  window.addEventListener('mouseup', onDragEnd);
+
+  // Événements Tactiles
+  fab.addEventListener('touchstart', onDragStart, { passive: false });
+  window.addEventListener('touchmove', onDragMove, { passive: false });
+  window.addEventListener('touchend', onDragEnd);
+
+  function onDragStart(e) {
+    isDragging = true;
+    hasMoved = false;
+    
+    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+    
+    startX = clientX;
+    startY = clientY;
+    
+    const rect = container.getBoundingClientRect();
+    initLeft = rect.left;
+    initTop = rect.top;
+    
+    if (e.type !== 'touchstart') {
+      e.preventDefault();
+    }
+  }
+
+  function onDragMove(e) {
+    if (!isDragging) return;
+    
+    const clientX = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+    
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    
+    if (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold) {
+      hasMoved = true;
+    }
+    
+    if (hasMoved) {
+      let newLeft = initLeft + dx;
+      let newTop = initTop + dy;
+      
+      const pad = 12;
+      const maxLeft = window.innerWidth - container.offsetWidth - pad;
+      const maxTop = window.innerHeight - container.offsetHeight - pad;
+      
+      newLeft = Math.max(pad, Math.min(newLeft, maxLeft));
+      newTop = Math.max(pad, Math.min(newTop, maxTop));
+      
+      container.style.bottom = 'auto';
+      container.style.right = 'auto';
+      container.style.left = newLeft + 'px';
+      container.style.top = newTop + 'px';
+      
+      // Ajuster le positionnement de la boîte de chat Naomi en fonction de la position du FAB
+      const sw = document.getElementById('support-window');
+      if (sw) {
+        if (newLeft < window.innerWidth / 2) {
+          sw.style.right = 'auto';
+          sw.style.left = '70px';
+          sw.style.transformOrigin = 'bottom left';
+        } else {
+          sw.style.left = 'auto';
+          sw.style.right = '0';
+          sw.style.transformOrigin = 'bottom right';
+        }
+      }
+    }
+  }
+
+  function onDragEnd() {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    if (hasMoved) {
+      localStorage.setItem('naomi_pos_x', container.style.left);
+      localStorage.setItem('naomi_pos_y', container.style.top);
+      
+      // Bloquer le clic d'ouverture instantané après un glissement
+      fab.style.pointerEvents = 'none';
+      setTimeout(() => { fab.style.pointerEvents = 'auto'; }, 80);
+    }
+  }
 }
 
 function hideSupportWidget() {

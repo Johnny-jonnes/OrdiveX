@@ -39,6 +39,7 @@ const Auth = {
       if (typeof updateTopbar === 'function') updateTopbar();
       if (typeof AlertsEngine !== 'undefined') AlertsEngine.start();
       if (typeof updateAlertBadge !== 'undefined') updateAlertBadge();
+      if (window.SecurityLock) window.SecurityLock.reloadConfig();
     }, 500);
     return DB.AppState.currentUser;
   },
@@ -47,6 +48,7 @@ const Auth = {
     if (DB.AppState.currentUser) {
       await DB.writeAudit('LOGOUT', 'session', null, {}, DB.AppState.currentUser.id);
     }
+    if (window.SecurityLock) window.SecurityLock.stop();
     DB.AppState.currentUser = null;
     Router.navigate('login');
   },

@@ -467,6 +467,12 @@ async function renderSettings(container) {
 
   const recentAudit = auditLog.sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
 
+  // Paramètres de sécurité (par utilisateur courant)
+  const curUserId = DB.AppState.currentUser?.id;
+  const lockEnabledVal = settingsData.find(s => s.key === `security_lock_enabled_${curUserId}`)?.value;
+  const lockEnabled = lockEnabledVal !== undefined ? lockEnabledVal === 'true' : true; // Activé par défaut
+  const lockTimeout = settingsData.find(s => s.key === `security_lock_timeout_${curUserId}`)?.value || '15';
+
   container.innerHTML = `
     <div class="page-header">
       <div>
@@ -715,7 +721,59 @@ async function renderSettings(container) {
         </div>
       </div>
 
+      <!-- Sécurité — Verrouillage Automatique -->
+      <div class="settings-card">
+        <h3 class="settings-card-title"><i data-lucide="shield-check"></i> Sécurité — Verrouillage Automatique</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+          Lorsqu'activé, la session se verrouille automatiquement après une période d'inactivité (aucun clic, aucune saisie, aucun mouvement de souris).
+          <br><strong>Ces préférences sont enregistrées pour votre compte uniquement.</strong>
+        </p>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--bg-secondary);border-radius:12px;border:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1">
+            <div style="position:relative;width:52px;height:28px;flex-shrink:0">
+              <input type="checkbox" id="lock-enabled-cb" ${lockEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;position:absolute"
+                onchange="
+                  const el = document.getElementById('lock-timeout-group');
+                  el.style.opacity = this.checked ? '1' : '0.4';
+                  el.style.pointerEvents = this.checked ? 'auto' : 'none';
+                ">
+              <span onclick="document.getElementById('lock-enabled-cb').click(); document.getElementById('lock-enabled-cb').dispatchEvent(new Event('change'))"
+                style="position:absolute;inset:0;border-radius:28px;background:${lockEnabled ? 'var(--primary)' : 'var(--border)'};cursor:pointer;transition:background 0.3s;display:flex;align-items:center;padding:3px" id="lock-toggle-track">
+                <span style="width:22px;height:22px;background:#fff;border-radius:50%;transition:transform 0.3s;box-shadow:0 2px 6px rgba(0,0,0,0.2);transform:translateX(${lockEnabled ? '24px' : '0'})"></span>
+              </span>
+            </div>
+            <span style="font-weight:600;font-size:14px">Verrouillage automatique <span class="badge ${lockEnabled ? 'badge-success' : 'badge-neutral'}" style="margin-left:4px">${lockEnabled ? 'Activé' : 'Désactivé'}</span></span>
+          </label>
+        </div>
+        <div id="lock-timeout-group" style="opacity:${lockEnabled ? '1' : '0.4'};pointer-events:${lockEnabled ? 'auto' : 'none'};transition:opacity 0.3s">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;display:block">
+            Délai d'inactivité avant verrouillage
+          </label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${[
+              { val: '5', label: '5 min' },
+              { val: '10', label: '10 min' },
+              { val: '15', label: '15 min' },
+              { val: '30', label: '30 min' },
+              { val: '60', label: '1 heure' },
+            ].map(opt => `
+              <label style="cursor:pointer">
+                <input type="radio" name="lock_timeout" value="${opt.val}" ${lockTimeout === opt.val ? 'checked' : ''} style="display:none" class="lock-radio">
+                <span class="lock-time-btn ${lockTimeout === opt.val ? 'active' : ''}" onclick="document.querySelectorAll('.lock-time-btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');"
+                  style="display:inline-block;padding:8px 18px;border-radius:20px;border:2px solid ${lockTimeout === opt.val ? 'var(--primary)' : 'var(--border)'};font-weight:600;font-size:13px;background:${lockTimeout === opt.val ? 'var(--primary-alpha,rgba(46,134,193,0.12))' : 'var(--surface)'};color:${lockTimeout === opt.val ? 'var(--primary)' : 'var(--text-muted)'};transition:all 0.2s">
+                  ${opt.label}
+                </span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        <div style="margin-top:20px">
+          <button class="btn btn-primary" onclick="saveSecurityLockSettings()"><i data-lucide="shield-check"></i> Enregistrer les préférences de sécurité</button>
+        </div>
+      </div>
+
       <!-- Audit Log -->
+
       <div class="settings-card settings-card-wide">
         <h3 class="settings-card-title"><i data-lucide="clipboard-list"></i> Journal d'Audit (20 dernières actions)</h3>
         <div class="table-wrapper">
@@ -743,6 +801,61 @@ async function renderSettings(container) {
   // Charger le compteur d'appareils automatiquement
   setTimeout(() => { if (window.loadDeviceCount) loadDeviceCount(); }, 500);
 }
+
+window.saveSecurityLockSettings = async function() {
+  const user = DB.AppState.currentUser;
+  if (!user) return UI.toast('Utilisateur non connecté', 'error');
+
+  const enabledCb = document.getElementById('lock-enabled-cb');
+  const selectedRadio = document.querySelector('input.lock-radio:checked') ||
+                        document.querySelector('input[name="lock_timeout"]:checked');
+
+  const enabled = enabledCb ? enabledCb.checked : true;
+  const timeout = selectedRadio ? selectedRadio.value : '15';
+
+  const enabledKey = `security_lock_enabled_${user.id}`;
+  const timeoutKey = `security_lock_timeout_${user.id}`;
+
+  try {
+    const allS = await DB.dbGetAll('settings');
+
+    const upsert = async (key, value) => {
+      const existing = allS.find(s => s.key === key);
+      if (existing) {
+        await DB.dbPut('settings', { ...existing, value: String(value), updatedAt: Date.now() });
+      } else {
+        await DB.dbAdd('settings', { key, value: String(value), updatedAt: Date.now() });
+      }
+    };
+
+    await upsert(enabledKey, enabled);
+    await upsert(timeoutKey, timeout);
+
+    // Mettre à jour le toggle visuellement
+    const track = document.getElementById('lock-toggle-track');
+    if (track) {
+      track.style.background = enabled ? 'var(--primary)' : 'var(--border)';
+      const thumb = track.querySelector('span');
+      if (thumb) thumb.style.transform = `translateX(${enabled ? '24px' : '0'})`;
+    }
+
+    // Reconfigurer SecurityLock sans délai
+    if (window.SecurityLock) {
+      window.SecurityLock._enabled = enabled;
+      window.SecurityLock._timeoutMs = parseInt(timeout) * 60 * 1000;
+      if (enabled) {
+        window.SecurityLock.start();
+      } else {
+        window.SecurityLock.stop();
+      }
+    }
+
+    await DB.writeAudit('SAVE_SECURITY_LOCK', 'settings', null, { enabled, timeout });
+    UI.toast(`Verrouillage automatique ${enabled ? 'activé après ' + (timeout === '60' ? '1 heure' : timeout + ' min') : 'désactivé'}`, 'success');
+  } catch (err) {
+    UI.toast('Erreur : ' + err.message, 'error');
+  }
+};
 
 async function savePricingSettings() {
   const form = document.getElementById('pricing-form');

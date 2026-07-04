@@ -1,5 +1,5 @@
 {
-  "version": "9.7.39",
+  "version": "9.7.40",
   "date": "2026-06-30",
-  "changelog": "Mise a jour du module des Sorties de Caisse (frais generaux, dejeuner, dechets, ampoules, etc.) en ciblant les debits manuels."
+  "changelog": "Verrouillage automatique configurable par utilisateur + bouton Naomie deplable par glisser-deposer."
 }
