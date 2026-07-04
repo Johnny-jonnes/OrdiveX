@@ -1,5 +1,5 @@
 {
-  "version": "9.7.38",
+  "version": "9.7.39",
   "date": "2026-06-30",
-  "changelog": "Ajout de la recherche/filtrage des fournisseurs et creation du module de rapport des sorties de stock."
+  "changelog": "Mise a jour du module des Sorties de Caisse (frais generaux, dejeuner, dechets, ampoules, etc.) en ciblant les debits manuels."
 }

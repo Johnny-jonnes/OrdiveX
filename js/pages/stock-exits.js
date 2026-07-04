@@ -1,14 +1,13 @@
 /**
- * OrdiveX — Rapport des sorties manuelles de stock
+ * OrdiveX — Rapport des sorties de caisse (Dépenses et frais généraux)
  */
 
 async function renderStockExits(container) {
-  UI.loading(container, 'Chargement des sorties de stock...');
+  UI.loading(container, 'Chargement des sorties de caisse...');
 
-  // Récupérer les données
-  const [movements, products, users] = await Promise.all([
-    DB.dbGetAll('movements'),
-    DB.dbGetAll('products'),
+  // Récupérer les données de la caisse et des utilisateurs
+  const [cashRegister, users] = await Promise.all([
+    DB.dbGetAll('cashRegister'),
     DB.dbGetAll('users')
   ]);
 
@@ -21,8 +20,8 @@ async function renderStockExits(container) {
   container.innerHTML = `
     <div class="page-header">
       <div>
-        <h1 class="page-title">Rapport des Sorties de Stock</h1>
-        <p class="page-subtitle">Suivi détaillé des ajustements négatifs et pertes de stock</p>
+        <h1 class="page-title">Rapport des Sorties de Caisse (Dépenses)</h1>
+        <p class="page-subtitle">Suivi détaillé des frais généraux, déjeuners, achats divers et frais de fonctionnement</p>
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" onclick="exportStockExitsPDF()"><i data-lucide="printer"></i> PDF</button>
@@ -34,16 +33,16 @@ async function renderStockExits(container) {
     <div class="filter-bar" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:var(--surface); padding:16px; border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">
       <div class="form-group" style="margin-bottom:0; flex:2; min-width:200px;">
         <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px; display:block;">Recherche</label>
-        <input type="text" id="exit-search-input" class="form-control" placeholder="Rechercher par médicament, motif, référence..." oninput="filterStockExitsData()">
+        <input type="text" id="exit-search-input" class="form-control" placeholder="Rechercher par libellé, référence, motif..." oninput="filterStockExitsData()">
       </div>
       <div class="form-group" style="margin-bottom:0; flex:1; min-width:150px;">
-        <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px; display:block;">Motif / Sous-type</label>
-        <select id="exit-subtype-select" class="form-control" onchange="filterStockExitsData()">
-          <option value="">Tous les motifs</option>
-          <option value="ADMIN_ADJUSTMENT">Ajustement Administrateur</option>
-          <option value="INVENTORY_ADJUSTMENT">Ajustement d'Inventaire</option>
-          <option value="LOSS">Pertes / Casses</option>
-          <option value="EXPIRED">Périmés</option>
+        <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:4px; display:block;">Mode de règlement</label>
+        <select id="exit-method-select" class="form-control" onchange="filterStockExitsData()">
+          <option value="">Tous les modes</option>
+          <option value="cash">Espèces (Caisse)</option>
+          <option value="orange_money">Orange Money</option>
+          <option value="mtn_momo">MTN MoMo</option>
+          <option value="transfer">Virement Bancaire</option>
         </select>
       </div>
       <div class="form-group" style="margin-bottom:0; width:150px;">
@@ -62,21 +61,21 @@ async function renderStockExits(container) {
         <div class="kpi-icon"><i data-lucide="package-minus"></i></div>
         <div class="kpi-content">
           <div class="kpi-value" id="kpi-exit-count">0</div>
-          <div class="kpi-label">Nombre de Sorties</div>
-        </div>
-      </div>
-      <div class="kpi-card kpi-orange">
-        <div class="kpi-icon"><i data-lucide="hash"></i></div>
-        <div class="kpi-content">
-          <div class="kpi-value" id="kpi-exit-qty">0</div>
-          <div class="kpi-label">Quantité Totale Sortie</div>
+          <div class="kpi-label">Nombre total de Sorties</div>
         </div>
       </div>
       <div class="kpi-card kpi-red">
         <div class="kpi-icon"><i data-lucide="banknote"></i></div>
         <div class="kpi-content">
           <div class="kpi-value" id="kpi-exit-value">0 GNF</div>
-          <div class="kpi-label">Valeur Totale (P. Achat)</div>
+          <div class="kpi-label">Montant total sorti</div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-orange">
+        <div class="kpi-icon"><i data-lucide="calculator"></i></div>
+        <div class="kpi-content">
+          <div class="kpi-value" id="kpi-exit-avg">0 GNF</div>
+          <div class="kpi-label">Moyenne par sortie</div>
         </div>
       </div>
     </div>
@@ -84,16 +83,12 @@ async function renderStockExits(container) {
     <div id="exits-table-container"></div>
   `;
 
-  // Préparer les dictionnaires pour le rendu
-  const productMap = {};
-  products.forEach(p => { productMap[p.id] = p; });
-
+  // Préparer le dictionnaire des utilisateurs
   const userMap = {};
   users.forEach(u => { userMap[u.id] = u.name || u.username; });
 
   // Mettre les données brutes dans le scope global pour le filtrage
-  window._exitMovements = movements;
-  window._exitProductMap = productMap;
+  window._exitCashRegister = cashRegister;
   window._exitUserMap = userMap;
 
   // Filtrer au chargement
@@ -104,106 +99,88 @@ async function renderStockExits(container) {
 
 function filterStockExitsData() {
   const query = document.getElementById('exit-search-input')?.value.toLowerCase() || '';
-  const subTypeFilter = document.getElementById('exit-subtype-select')?.value || '';
+  const methodFilter = document.getElementById('exit-method-select')?.value || '';
   const fromDate = document.getElementById('exit-date-from')?.value;
   const toDate = document.getElementById('exit-date-to')?.value;
 
   const container = document.getElementById('exits-table-container');
   if (!container) return;
 
-  // 1. Filtrer les mouvements : TYPE === 'EXIT' et SUBTYPE !== 'SALE' (et on ignore les retours d'écriture s'il y a lieu)
-  let filtered = (window._exitMovements || []).filter(m => m.type === 'EXIT' && m.subType !== 'SALE');
+  // Filtrer les entrées de caisse de type 'manual_out' (sorties manuelles / dépenses)
+  let filtered = (window._exitCashRegister || []).filter(c => c.type === 'manual_out');
 
-  // Filtrer par période
+  // Filtrer par période (on compare les dates au format YYYY-MM-DD)
   if (fromDate) {
-    filtered = filtered.filter(m => m.date && m.date.split('T')[0] >= fromDate);
+    filtered = filtered.filter(c => c.date && c.date >= fromDate);
   }
   if (toDate) {
-    filtered = filtered.filter(m => m.date && m.date.split('T')[0] <= toDate);
+    filtered = filtered.filter(c => c.date && c.date <= toDate);
   }
 
-  // Filtrer par sous-type
-  if (subTypeFilter) {
-    filtered = filtered.filter(m => m.subType === subTypeFilter);
+  // Filtrer par mode de règlement
+  if (methodFilter) {
+    filtered = filtered.filter(c => c.paymentMethod === methodFilter);
   }
 
-  // Filtrer par recherche textuelle (médicament, note, référence)
+  // Filtrer par recherche textuelle (libellé/reason ou référence)
   if (query) {
-    filtered = filtered.filter(m => {
-      const prod = window._exitProductMap[m.productId];
-      const prodName = prod ? prod.name.toLowerCase() : '';
-      const note = (m.note || '').toLowerCase();
-      const ref = (m.reference || '').toLowerCase();
-      return prodName.includes(query) || note.includes(query) || ref.includes(query);
+    filtered = filtered.filter(c => {
+      const reason = (c.reason || '').toLowerCase();
+      const ref = (c.reference || '').toLowerCase();
+      return reason.includes(query) || ref.includes(query);
     });
   }
 
-  // Trier par date décroissante
-  filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+  // Trier par date/timestamp décroissant
+  filtered.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-  // Conserver pour les exports PDF/CSV
+  // Conserver les données filtrées
   window._exitsFilteredData = filtered;
 
   // Calculer les statistiques cumulées
-  let totalExitsCount = filtered.length;
-  let totalQty = 0;
-  let totalValue = 0;
-
-  filtered.forEach(m => {
-    // Quantité stockée négative, on l'affiche positivement
-    const qty = Math.abs(m.quantity || 0);
-    const prod = window._exitProductMap[m.productId];
-    const buyPrice = prod ? (parseFloat(prod.purchasePrice) || 0) : 0;
-
-    totalQty += qty;
-    totalValue += qty * buyPrice;
-  });
+  const count = filtered.length;
+  const totalAmount = filtered.reduce((sum, c) => sum + (c.amount || 0), 0);
+  const avgAmount = count > 0 ? Math.round(totalAmount / count) : 0;
 
   // Mettre à jour les KPIs
-  document.getElementById('kpi-exit-count').textContent = totalExitsCount;
-  document.getElementById('kpi-exit-qty').textContent = totalQty;
-  document.getElementById('kpi-exit-value').textContent = UI.formatCurrency(totalValue);
+  document.getElementById('kpi-exit-count').textContent = count;
+  document.getElementById('kpi-exit-value').textContent = UI.formatCurrency(totalAmount);
+  document.getElementById('kpi-exit-avg').textContent = UI.formatCurrency(avgAmount);
 
   // Rendu du tableau
   const columns = [
     { 
-      label: 'Date & Heure', 
+      label: 'Date', 
       render: r => {
-        if (!r.date) return '—';
-        const d = new Date(r.date);
-        return `${d.toLocaleDateString('fr-FR')} à ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+        if (!r.timestamp) return r.date ? new Date(r.date).toLocaleDateString('fr-FR') : '—';
+        return new Date(r.timestamp).toLocaleDateString('fr-FR');
       } 
     },
     { 
-      label: 'Médicament', 
+      label: 'Heure', 
       render: r => {
-        const prod = window._exitProductMap[r.productId];
-        return prod ? `<strong>${prod.name}</strong>` : `<span class="text-muted">Inconnu (ID: ${r.productId})</span>`;
+        if (!r.timestamp) return '—';
+        return new Date(r.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       } 
     },
     { 
-      label: 'Quantité', 
-      render: r => `<strong class="text-danger">${Math.abs(r.quantity)}</strong>` 
-    },
-    {
-      label: 'Valeur (P.A.)',
-      render: r => {
-        const prod = window._exitProductMap[r.productId];
-        const buyPrice = prod ? (parseFloat(prod.purchasePrice) || 0) : 0;
-        return UI.formatCurrency(Math.abs(r.quantity) * buyPrice);
-      }
+      label: 'Libellé / Objet', 
+      render: r => `<strong>${r.reason || '—'}</strong>` 
     },
     { 
-      label: 'Motif', 
+      label: 'Montant', 
+      render: r => `<strong class="text-danger">${UI.formatCurrency(r.amount || 0)}</strong>` 
+    },
+    { 
+      label: 'Mode de règlement', 
       render: r => {
-        // Traduire ou formater le motif
-        const sub = r.subType || '';
-        let motifLabel = sub;
-        if (sub === 'ADMIN_ADJUSTMENT') motifLabel = 'Ajustement Admin';
-        if (sub === 'INVENTORY_ADJUSTMENT') motifLabel = 'Ajustement Inventaire';
-        if (sub === 'LOSS') motifLabel = 'Perte / Casse';
-        if (sub === 'EXPIRED') motifLabel = 'Périmé';
-        return `<span class="badge badge-warning">${motifLabel}</span>`;
+        const m = r.paymentMethod || 'cash';
+        let label = m;
+        if (m === 'cash') label = 'Espèces';
+        if (m === 'orange_money') label = 'Orange Money';
+        if (m === 'mtn_momo') label = 'MTN MoMo';
+        if (m === 'transfer') label = 'Virement';
+        return `<span class="badge badge-neutral">${label}</span>`;
       } 
     },
     { 
@@ -211,21 +188,14 @@ function filterStockExitsData() {
       render: r => window._exitUserMap[r.userId] || `<span class="text-muted">Inconnu</span>` 
     },
     { 
-      label: 'Observation', 
-      render: r => {
-        const note = r.note || '';
-        // Si la note contient " — ", on affiche ce qui est après
-        if (note.includes(' — ')) {
-          return note.split(' — ')[1];
-        }
-        return note || '—';
-      } 
+      label: 'Observation / Réf', 
+      render: r => r.reference || '<span class="text-muted">—</span>' 
     }
   ];
 
   UI.table(container, columns, filtered, {
-    emptyMessage: "Aucune sortie manuelle de stock trouvée pour cette sélection.",
-    emptyIcon: 'package-x'
+    emptyMessage: "Aucune dépense / sortie de caisse enregistrée sur cette période.",
+    emptyIcon: 'banknote'
   });
 
   if (window.lucide) lucide.createIcons();
@@ -240,45 +210,33 @@ window.exportStockExitsPDF = function() {
     return UI.toast("Module PDF non chargé", "error");
   }
 
-  let totalQty = 0;
-  let totalValue = 0;
+  let totalAmount = 0;
 
-  const data = dataList.map(m => {
-    const qty = Math.abs(m.quantity || 0);
-    const prod = window._exitProductMap[m.productId];
-    const buyPrice = prod ? (parseFloat(prod.purchasePrice) || 0) : 0;
-    const value = qty * buyPrice;
+  const data = dataList.map(c => {
+    totalAmount += (c.amount || 0);
 
-    totalQty += qty;
-    totalValue += value;
-
-    const d = new Date(m.date);
+    const d = c.timestamp ? new Date(c.timestamp) : (c.date ? new Date(c.date) : new Date());
     const dateStr = d.toLocaleDateString('fr-FR');
-    const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = c.timestamp ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
 
-    let motifLabel = m.subType || '';
-    if (m.subType === 'ADMIN_ADJUSTMENT') motifLabel = 'Ajustement Admin';
-    if (m.subType === 'INVENTORY_ADJUSTMENT') motifLabel = 'Ajustement Inventaire';
-    if (m.subType === 'LOSS') motifLabel = 'Perte / Casse';
-    if (m.subType === 'EXPIRED') motifLabel = 'Périmé';
-
-    let observation = m.note || '';
-    if (observation.includes(' — ')) {
-      observation = observation.split(' — ')[1];
-    }
+    let methodLabel = c.paymentMethod || 'cash';
+    if (methodLabel === 'cash') methodLabel = 'Espèces';
+    if (methodLabel === 'orange_money') methodLabel = 'Orange Money';
+    if (methodLabel === 'mtn_momo') methodLabel = 'MTN MoMo';
+    if (methodLabel === 'transfer') methodLabel = 'Virement';
 
     return [
       dateStr,
       timeStr,
-      prod ? prod.name : `Produit ID: ${m.productId}`,
-      String(qty),
-      motifLabel,
-      window._exitUserMap[m.userId] || 'Inconnu',
-      observation || '—'
+      c.reason || '—',
+      UI.formatCurrency(c.amount || 0),
+      methodLabel,
+      window._exitUserMap[c.userId] || 'Inconnu',
+      c.reference || '—'
     ];
   });
 
-  const headers = ["Date", "Heure", "Médicament", "Quantité", "Motif", "Utilisateur", "Observation"];
+  const headers = ["Date", "Heure", "Libellé / Objet", "Montant", "Mode", "Utilisateur", "Réf / Observation"];
   
   const fromDate = document.getElementById('exit-date-from')?.value;
   const toDate = document.getElementById('exit-date-to')?.value;
@@ -287,7 +245,7 @@ window.exportStockExitsPDF = function() {
     : '';
 
   window.PDFExport.generate(
-    `Rapport des Sorties de Stock`,
+    `Rapport des Sorties de Caisse (Dépenses)`,
     headers,
     data,
     {
@@ -297,8 +255,8 @@ window.exportStockExitsPDF = function() {
       ],
       summaryBlocks: [
         { label: "Nombre total de sorties", value: `${dataList.length}` },
-        { label: "Quantité totale sortie", value: `${totalQty}` },
-        { label: "Valeur totale (Prix Achat)", value: `${UI.formatCurrency(totalValue)}` }
+        { label: "Montant total des sorties", value: `${UI.formatCurrency(totalAmount)}` },
+        { label: "Moyenne par sortie", value: `${UI.formatCurrency(dataList.length > 0 ? Math.round(totalAmount / dataList.length) : 0)}` }
       ]
     }
   );
@@ -311,42 +269,30 @@ window.exportStockExitsCSV = function() {
   }
 
   const csvRows = [
-    ["Date", "Heure", "Medicament", "Quantite", "Valeur (P.A.)", "Motif", "Utilisateur", "Observation"]
+    ["Date", "Heure", "Libelle / Objet", "Montant", "Mode de Reglement", "Utilisateur", "Observation / Reference"]
   ];
 
-  dataList.forEach(m => {
-    const qty = Math.abs(m.quantity || 0);
-    const prod = window._exitProductMap[m.productId];
-    const buyPrice = prod ? (parseFloat(prod.purchasePrice) || 0) : 0;
-    const value = qty * buyPrice;
-
-    const d = new Date(m.date);
+  dataList.forEach(c => {
+    const d = c.timestamp ? new Date(c.timestamp) : (c.date ? new Date(c.date) : new Date());
     const dateStr = d.toLocaleDateString('fr-FR');
-    const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = c.timestamp ? d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—';
 
-    let motifLabel = m.subType || '';
-    if (m.subType === 'ADMIN_ADJUSTMENT') motifLabel = 'Ajustement Admin';
-    if (m.subType === 'INVENTORY_ADJUSTMENT') motifLabel = 'Ajustement Inventaire';
-    if (m.subType === 'LOSS') motifLabel = 'Perte / Casse';
-    if (m.subType === 'EXPIRED') motifLabel = 'Périmé';
+    let methodLabel = c.paymentMethod || 'cash';
+    if (methodLabel === 'cash') methodLabel = 'Especes';
+    if (methodLabel === 'orange_money') methodLabel = 'Orange Money';
+    if (methodLabel === 'mtn_momo') methodLabel = 'MTN MoMo';
+    if (methodLabel === 'transfer') methodLabel = 'Virement';
 
-    let observation = m.note || '';
-    if (observation.includes(' — ')) {
-      observation = observation.split(' — ')[1];
-    }
-
-    const userName = window._exitUserMap[m.userId] || 'Inconnu';
-    const prodName = prod ? prod.name : `Produit ID: ${m.productId}`;
+    const userName = window._exitUserMap[c.userId] || 'Inconnu';
 
     csvRows.push([
       `"${dateStr}"`,
       `"${timeStr}"`,
-      `"${prodName.replace(/"/g, '""')}"`,
-      qty,
-      value,
-      `"${motifLabel}"`,
+      `"${(c.reason || '—').replace(/"/g, '""')}"`,
+      c.amount || 0,
+      `"${methodLabel}"`,
       `"${userName.replace(/"/g, '""')}"`,
-      `"${observation.replace(/"/g, '""')}"`
+      `"${(c.reference || '—').replace(/"/g, '""')}"`
     ]);
   });
 
@@ -359,13 +305,13 @@ window.exportStockExitsCSV = function() {
   const dateSuffix = fromDate ? `_${fromDate}_to_${toDate}` : '';
 
   link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `sorties_stock${dateSuffix}.csv`);
+  link.setAttribute("download", `sorties_caisse_${dateSuffix}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 
   UI.toast("Le fichier CSV a été exporté avec succès", "success");
-  DB.writeAudit('EXPORT_CSV', 'stock-exits', null, { count: dataList.length });
+  DB.writeAudit('EXPORT_CSV', 'cash-exits', null, { count: dataList.length });
 };
 
 // Enregistrer la route
