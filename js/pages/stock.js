@@ -590,13 +590,11 @@ async function submitStockEntry() {
       await window._softRefreshStock();
     }
 
-    // ⚡ Forcer la synchronisation immédiate vers Supabase
-    try {
-      if (navigator.onLine && typeof DB.syncToSupabase === 'function') {
-        await DB.syncToSupabase();
-      }
-    } catch (syncErr) {
-      console.warn('[StockEntry] Sync différée :', syncErr.message || syncErr);
+    // ⚡ Forcer la synchronisation immédiate vers Supabase (arrière-plan)
+    if (navigator.onLine && typeof DB.syncToSupabase === 'function') {
+      DB.syncToSupabase().catch(syncErr => {
+        console.warn('[StockEntry] Sync différée :', syncErr.message || syncErr);
+      });
     }
 
     Router.navigate('stock');
@@ -725,14 +723,11 @@ async function submitAdjustStock(productId, oldQty) {
     UI.closeModal();
     UI.toast('Stock ajust\u00e9 : ' + oldQty + ' \u2192 ' + newQty + ' (' + (diff > 0 ? '+' : '') + diff + ')', 'success');
 
-    // ⚡ Forcer la synchronisation imm\u00e9diate vers Supabase
-    try {
-      if (navigator.onLine && typeof DB.syncToSupabase === 'function') {
-        await DB.syncToSupabase();
-      }
-    } catch (syncErr) {
-      console.warn('[AdjustStock] Sync diff\u00e9r\u00e9e :', syncErr.message || syncErr);
-      UI.toast('Ajustement sauv\u00e9 localement. Synchronisation en attente...', 'info');
+    // ⚡ Forcer la synchronisation immédiate vers Supabase (arrière-plan)
+    if (navigator.onLine && typeof DB.syncToSupabase === 'function') {
+      DB.syncToSupabase().catch(syncErr => {
+        console.warn('[AdjustStock] Sync différée :', syncErr.message || syncErr);
+      });
     }
 
     Router.navigate('stock');

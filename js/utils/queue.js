@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX - OperationQueue v1.0
  * File d attente persistante (IndexedDB) pour les operations offline
  *
@@ -191,10 +191,10 @@ const OperationQueue = (function () {
   // DEMARRAGE AUTO — Lier au retour reseau
   // ─────────────────────────────────────────────────
   function start() {
-    // Traiter au retour en ligne
-    window.addEventListener('online', function () {
-      setTimeout(process, 2000); // 2s de grace pour que la connexion soit stable
-    });
+    // P3 — L'événement online est géré par _handleConnectivityChange
+    window._triggerQueueProcess = function() {
+      setTimeout(process, 2000); // 2s de grâce pour que la connexion soit stable
+    };
 
     // Traiter au demarrage si on est deja en ligne (ops de la session precedente)
     setTimeout(function () {

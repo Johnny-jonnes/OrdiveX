@@ -718,6 +718,7 @@ async function initDB() {
 // Sync debounce & guard
 let _syncTimer = null;
 let _syncInProgress = false;
+let _syncNeededAfter = false;
 let _restoreInProgress = false;
 
 function _scheduleSyncToSupabase() {
@@ -726,6 +727,10 @@ function _scheduleSyncToSupabase() {
   _syncTimer = setTimeout(() => {
     _syncTimer = null;
     if (!navigator.onLine) return; // Double vérification
+    if (_syncInProgress) {
+      _syncNeededAfter = true;
+      return;
+    }
     syncToSupabase().catch(() => { });
   }, 2000); // Réduit de 5s → 2s pour une réactivité cloud optimale
 }
@@ -1182,7 +1187,6 @@ async function syncToSupabase() {
     };
     var _colCache = {};
     try { 
-      localStorage.removeItem('pharma_bad_columns'); // Reset for sync overhaul
       _colCache = JSON.parse(localStorage.getItem('pharma_bad_columns') || '{}'); 
     } catch (e) { }
     // Fusionner le hardcodé avec le cache dynamique
@@ -1195,25 +1199,30 @@ async function syncToSupabase() {
 
     // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
     if (!navigator.onLine) { AppState.isOnline = false; return; }
-    try {
-      var _probeCtrl = new AbortController();
-      var _probeTimeout = setTimeout(function() { _probeCtrl.abort(); }, 8000);
-      const probeReq = await sb.from('settings').select('key').limit(1).abortSignal(_probeCtrl.signal);
-      clearTimeout(_probeTimeout);
-      if (probeReq.error) {
-        // Si 401 → re-auth et retry
-        if (probeReq.error.message?.includes('401') || probeReq.error.code === 'PGRST301') {
-          try { await sb.auth.signInAnonymously(); } catch (e) { }
-          const retry = await sb.from('settings').select('key').limit(1);
-          if (retry.error) throw retry.error;
-        } else {
-          throw probeReq.error;
+    // Si le dernier pull a réussi il y a < 30s, on sait qu'on est en ligne
+    var _lastPullOk = parseInt(localStorage.getItem('pharma_last_pull_ts') || '0');
+    var _pullRecent = (Date.now() - _lastPullOk) < 30000;
+    if (!_pullRecent) {
+      try {
+        var _probeCtrl = new AbortController();
+        var _probeTimeout = setTimeout(function() { _probeCtrl.abort(); }, 8000);
+        const probeReq = await sb.from('settings').select('key').limit(1).abortSignal(_probeCtrl.signal);
+        clearTimeout(_probeTimeout);
+        if (probeReq.error) {
+          // Si 401 → re-auth et retry
+          if (probeReq.error.message?.includes('401') || probeReq.error.code === 'PGRST301') {
+            try { await sb.auth.signInAnonymously(); } catch (e) { }
+            const retry = await sb.from('settings').select('key').limit(1);
+            if (retry.error) throw retry.error;
+          } else {
+            throw probeReq.error;
+          }
         }
+        AppState.isOnline = true;
+      } catch (err) {
+        AppState.isOnline = false;
+        return;
       }
-      AppState.isOnline = true;
-    } catch (err) {
-      AppState.isOnline = false;
-      return;
     }
 
     // ⚡ FLASH SEND — Envoi séquentiel pour ne pas étouffer le réseau (surtout avec 30k produits)
@@ -1468,6 +1477,13 @@ async function syncToSupabase() {
   } finally {
     _syncInProgress = false;
     _showSyncIndicator(false);
+    // P5 — Si des items n'ont pas pu être envoyés (chunking 500), relancer un cycle dans 5s
+    if (_hasMorePending && navigator.onLine) {
+      setTimeout(function() { syncToSupabase().catch(function(){}); }, 5000);
+    } else if (_syncNeededAfter && navigator.onLine) {
+      _syncNeededAfter = false;
+      _scheduleSyncToSupabase();
+    }
   }
 }
 
@@ -1809,6 +1825,7 @@ async function pullFromSupabase(isManual = false) {
     }
     throw e; // IMPORTANT: Re-throw l'erreur pour que runPull.catch() la capte
   } finally {
+    clearTimeout(_pullLockTimeout);
     _isPulling = false;
   }
 }
@@ -1990,14 +2007,14 @@ let _pullFailCount = 0;
 function startAutoPull() {
   if (_autoPullTimer) clearTimeout(_autoPullTimer);
 
-  // Écouter les changements réseau pour réagir instantanément
-  window.addEventListener('online', function() {
+  // P3 — Les événements online/offline sont gérés par _handleConnectivityChange (point unique)
+  // On expose _triggerAutoPull pour que _handleConnectivityChange puisse déclencher un pull
+  window._triggerAutoPull = function() {
     _pullFailCount = 0;
-    // Ne pas set AppState.isOnline = true ici, on laisse _handleConnectivityChange le faire
     AppState._confirmedOffline = false;
     if (_autoPullTimer) clearTimeout(_autoPullTimer);
     _autoPullTimer = window.setTimeout(runPull, 3000);
-  });
+  };
   
   // Réveil sur interaction utilisateur (throttle 2 min pour zéro spam d'erreur HEAD)
   var _lastWakeUp = 0;
@@ -2014,11 +2031,6 @@ function startAutoPull() {
   window.addEventListener('focus', wakeUpCheck);
   window.addEventListener('click', wakeUpCheck, { passive: true, capture: true });
   window.addEventListener('keydown', wakeUpCheck, { passive: true, capture: true });
-  window.addEventListener('offline', function() {
-    AppState.isOnline = false;
-    AppState._confirmedOffline = true;
-    if (_autoPullTimer) clearTimeout(_autoPullTimer);
-    _autoPullTimer = window.setTimeout(runPull, 120000);
   });
 
   // runPull : fonction NON-async — callbacks purs pour briser la trace Chrome
@@ -2259,6 +2271,17 @@ function _handleConnectivityChange(isOnline) {
         // Relancer le realtime + broadcast (avec cooldown intégré)
         try { _setupRealtime(sb); } catch (e) { /* optionnel */ }
         try { _setupBroadcast(sb); } catch (e) { /* optionnel */ }
+        
+        // Déclencher le auto-pull réseau coordonné
+        if (typeof window._triggerAutoPull === 'function') {
+          window._triggerAutoPull();
+        }
+
+        // Déclencher le traitement de la file d'attente
+        if (typeof window._triggerQueueProcess === 'function') {
+          window._triggerQueueProcess();
+        }
+
         // Tenter un sync
         syncToSupabase().then(() => {
           _reconnectAttempts = 0; // Reset sur succès
@@ -2301,5 +2324,3 @@ window.addEventListener('offline', () => _handleConnectivityChange(false));
 const _DBExports = { initDB, dbAdd, dbPut, dbBulkPut, dbGet, dbGetAll, dbGetRecent, dbSearchProducts, dbCountProducts, dbDelete, dbCount, dbStockValue, writeAudit, seedDemoData, syncToSupabase, pullFromSupabase, resetSupabaseClient, forceSyncAll, trackInstallation, getSupabaseClient, STORES, AppState, doBackup, startAutoBackup, startAutoPull, autoBackupToStorage, restoreFromBackup };
 Object.defineProperty(_DBExports, '_isPulling', { get: () => _isPulling });
 window.DB = _DBExports;
-
-2
