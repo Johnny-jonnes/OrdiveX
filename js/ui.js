@@ -947,16 +947,10 @@ window.Charts = Charts;
 // L'utilisateur doit saisir son mot de passe pour déverrouiller
 // ═══════════════════════════════════════════════════════════════════
 (function() {
-  const LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-  let _lockTimer = null;
   let _isLocked = false;
 
   function _resetLockTimer() {
-    if (_isLocked) return;
-    if (_lockTimer) clearTimeout(_lockTimer);
-    // Only lock if user is logged in
-    if (!window.DB?.AppState?.currentUser) return;
-    _lockTimer = setTimeout(_showLockScreen, LOCK_TIMEOUT);
+    // Désactivé : géré de manière configurable par SecurityLock dans security-lock.js
   }
 
   function _showLockScreen() {
@@ -1005,7 +999,7 @@ window.Charts = Charts;
           _isLocked = false;
           overlay.classList.remove('visible');
           setTimeout(() => overlay.remove(), 300);
-          _resetLockTimer();
+          if (window.SecurityLock) window.SecurityLock.resetTimer();
           UI.toast('🔓 Session déverrouillée', 'success');
         } else {
           err.textContent = 'Mot de passe incorrect';

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.44",
+  "version": "9.7.45",
   "date": "2026-07-04",
-  "changelog": "Refonte complete du module Inventaire : onglet dedie, filtres de perimetre, saisie en direct, validation et ajustements de stock, export PDF/CSV et historique."
+  "changelog": "Correction du verrouillage de session par inactivité : suppression du minuteur en doublon dans ui.js et intégration du verrouillage dans security-lock.js."
 }

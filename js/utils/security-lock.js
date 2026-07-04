@@ -75,8 +75,11 @@ const SecurityLock = {
     this.stop();
     if (DB.AppState.currentUser) {
       console.log('[SecurityLock] Inactivité détectée. Verrouillage automatique...');
-      UI.toast('Session verrouillée pour cause d\'inactivité', 'warning', 8000);
-      Auth.logout();
+      if (typeof window._showLockScreen === 'function') {
+        window._showLockScreen();
+      } else {
+        Auth.logout();
+      }
     }
   }
 };
