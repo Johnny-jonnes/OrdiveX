@@ -474,17 +474,405 @@ async function renderSettings(container) {
   const lockTimeout = settingsData.find(s => s.key === `security_lock_timeout_${curUserId}`)?.value || '15';
 
   container.innerHTML = `
+    <style>
+      .settings-tabs { display:flex; gap:4px; background:var(--surface); padding:6px; border-radius:14px; border:1px solid var(--border); margin-bottom:28px; flex-wrap:wrap; }
+      .settings-tab-btn { flex:1; min-width:120px; padding:10px 16px; border:none; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:var(--text-muted); transition:all 0.25s; display:flex; align-items:center; justify-content:center; gap:8px; }
+      .settings-tab-btn.active { background:var(--primary); color:#fff; box-shadow:0 4px 14px rgba(46,134,193,0.3); }
+      .settings-tab-btn:hover:not(.active) { background:var(--bg-secondary); color:var(--text); }
+      .settings-tab-pane { display:none; animation: fadeInTab 0.25s ease; }
+      .settings-tab-pane.active { display:block; }
+      @keyframes fadeInTab { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+      .settings-2col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+      @media(max-width:900px){ .settings-2col{grid-template-columns:1fr;} }
+      .settings-card2 { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; }
+      .settings-card2-title { font-size:15px; font-weight:700; color:var(--text); margin:0 0 18px 0; display:flex; align-items:center; gap:10px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+      .settings-card2-title i { width:18px; height:18px; color:var(--primary); }
+      /* Users grid */
+      .users-grid2 { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:16px; }
+      .user-card2 { background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:18px 16px; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; transition:box-shadow 0.2s; }
+      .user-card2:hover { box-shadow:0 4px 20px rgba(0,0,0,0.08); }
+      .user-card2-avatar { width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg,var(--primary),#1a56db); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:22px; flex-shrink:0; box-shadow:0 4px 12px rgba(46,134,193,0.25); }
+      .user-card2-name { font-weight:700; font-size:14px; color:var(--text); }
+      .user-card2-username { font-size:12px; color:var(--text-muted); margin-top:-6px; }
+      .user-card2-badges { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+      .user-card2-actions { display:flex; gap:6px; width:100%; }
+      .user-card2-actions .btn { flex:1; font-size:12px; padding:6px; }
+      /* Danger zone */
+      .danger-zone { background:rgba(239,68,68,0.06); border:2px solid rgba(239,68,68,0.25); border-radius:16px; padding:20px; }
+      .danger-zone-title { color:#dc2626; font-weight:800; font-size:15px; display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+      .danger-zone p { font-size:13px; color:#ef4444; margin-bottom:16px; line-height:1.5; }
+      .danger-zone .form-control { border-color:rgba(239,68,68,0.4) !important; background:rgba(239,68,68,0.04) !important; }
+      .danger-zone .form-control:focus { border-color:#dc2626 !important; box-shadow:0 0 0 3px rgba(239,68,68,0.15) !important; }
+      .danger-zone label { color:#b91c1c !important; font-weight:600; }
+    </style>
+
     <div class="page-header">
       <div>
         <h1 class="page-title">Paramètres & Administration</h1>
-        <p class="page-subtitle">Gestion des utilisateurs, sécurité et configuration</p>
+        <p class="page-subtitle">Configuration de la pharmacie, utilisateurs et sécurité</p>
       </div>
     </div>
 
-    <div class="settings-grid">
-      <!-- Pharmacy Info -->
-      <div class="settings-card">
-        <h3 class="settings-card-title"><i data-lucide="hospital"></i> Informations Pharmacie</h3>
+    <!-- ONGLETS -->
+    <div class="settings-tabs">
+      <button class="settings-tab-btn active" onclick="switchSettingsTab('pharmacie',this)"><i data-lucide="hospital"></i> Pharmacie</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('utilisateurs',this)"><i data-lucide="users"></i> Utilisateurs</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('tarification',this)"><i data-lucide="percent"></i> Tarification</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('securite',this)"><i data-lucide="shield-check"></i> Sécurité</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('cloud',this)"><i data-lucide="cloud"></i> Cloud & Sync</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('sms',this)"><i data-lucide="message-square"></i> SMS</button>
+    </div>
+
+    <!-- ══════════════ ONGLET : PHARMACIE ══════════════ -->
+    <div class="settings-tab-pane active" id="tab-pharmacie">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="building-2"></i> Identité de la Pharmacie</h3>
+          <form id="settings-form" class="form-grid">
+            <div class="form-group">
+              <label>Nom de la pharmacie</label>
+              <input type="text" name="pharmacy_name" class="form-control" value="${gs('pharmacy_name') || 'Pharmacie Centrale de Conakry'}">
+            </div>
+            <div class="form-group">
+              <label>Adresse</label>
+              <input type="text" name="pharmacy_address" class="form-control" value="${gs('pharmacy_address') || 'Avenue de la République, Conakry'}">
+            </div>
+            <div class="form-group">
+              <label>Slogan / Phrase d'accroche</label>
+              <input type="text" name="pharmacy_slogan" class="form-control" value="${gs('pharmacy_slogan') || 'Santé & Technologie'}" placeholder="Ex: Votre santé, notre priorité">
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Téléphone</label>
+                <input type="text" name="pharmacy_phone" class="form-control" value="${gs('pharmacy_phone') || '+224 620 000 000'}">
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="pharmacy_email" class="form-control" value="${gs('pharmacy_email') || ''}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>N° Licence DNPM</label>
+                <input type="text" name="pharmacy_dnpm" class="form-control" value="${gs('pharmacy_dnpm') || 'LIC-DNPM-2024-001'}">
+              </div>
+              <div class="form-group">
+                <label>Pharmacien responsable</label>
+                <input type="text" name="pharmacy_resp" class="form-control" value="${gs('pharmacy_resp') || 'Pharmacien Responsable'}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Seuil alerte stock</label>
+                <input type="number" name="min_stock_alert" class="form-control" value="${gs('min_stock_alert') || '10'}">
+              </div>
+              <div class="form-group">
+                <label>Alerte expiration (jours)</label>
+                <input type="number" name="expiry_alert_days" class="form-control" value="${gs('expiry_alert_days') || '90'}">
+              </div>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="saveSettings()"><i data-lucide="save"></i> Sauvegarder</button>
+          </form>
+        </div>
+
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="image"></i> Logo de la Pharmacie</h3>
+          <div id="logo-preview-container" class="settings-logo-container" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px;background:var(--bg-secondary);border-radius:12px;border:2px dashed var(--border);">
+            ${gs('pharmacy_logo') ? `
+              <img src="${gs('pharmacy_logo')}" id="settings-logo-img" style="max-height:120px;max-width:100%;object-fit:contain;border-radius:8px;">
+              <button type="button" class="btn btn-sm btn-danger" onclick="removeLogo()"><i data-lucide="trash-2"></i> Supprimer</button>
+            ` : `
+              <div style="width:80px;height:80px;border-radius:16px;background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--text-muted)"><i data-lucide="image"></i></div>
+              <p style="color:var(--text-muted);font-size:13px;text-align:center;margin:0">Aucun logo configuré.<br>Formats acceptés : PNG, JPG, SVG</p>
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('logo-upload').click()"><i data-lucide="upload"></i> Choisir un logo</button>
+            `}
+            <input type="file" id="logo-upload" accept="image/*" style="display:none;" onchange="handleLogoUpload(event)">
+            <input type="hidden" name="pharmacy_logo" id="pharmacy-logo-input" value="${gs('pharmacy_logo') || ''}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : UTILISATEURS ══════════════ -->
+    <div class="settings-tab-pane" id="tab-utilisateurs">
+      ${DB.AppState.currentUser?.role === 'admin' ? `
+      <div class="settings-card2">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+          <h3 class="settings-card2-title" style="margin:0;border:none;padding:0"><i data-lucide="users"></i> ${users.length} Utilisateur${users.length > 1 ? 's' : ''} enregistré${users.length > 1 ? 's' : ''}</h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-sm btn-secondary" onclick="exportUsersPDF()"><i data-lucide="printer"></i> PDF</button>
+            <button class="btn btn-sm btn-primary" onclick="showAddUser()"><i data-lucide="user-plus"></i> Ajouter</button>
+          </div>
+        </div>
+        <div class="users-grid2">
+          ${users.map(u => {
+            const colors = { admin: 'linear-gradient(135deg,#7c3aed,#4f46e5)', pharmacien: 'linear-gradient(135deg,#0ea5e9,#2563eb)', caissier: 'linear-gradient(135deg,#10b981,#059669)' };
+            return `
+            <div class="user-card2">
+              <div class="user-card2-avatar" style="background:${colors[u.role] || colors.caissier}">${(u.name||'?').charAt(0).toUpperCase()}</div>
+              <div class="user-card2-name">${u.name}</div>
+              <div class="user-card2-username">@${u.username}</div>
+              <div class="user-card2-badges">
+                ${UI.roleBadge(u.role)}
+                <span class="badge badge-${u.active ? 'success' : 'neutral'}">${u.active ? 'Actif' : 'Inactif'}</span>
+              </div>
+              <div class="user-card2-actions">
+                <button class="btn btn-sm btn-ghost" onclick="viewEmployee360(${u.id})" title="Profil 360°"><i data-lucide="bar-chart-3"></i></button>
+                <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})" title="Modifier"><i data-lucide="edit-3"></i> Modifier</button>
+                <button class="btn btn-sm btn-ghost" onclick="resetUserPin(${u.id},'${(u.name||'').replace(/'/g,'')}')" title="Réinitialiser PIN"><i data-lucide="key-round"></i></button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      ` : '<div class="empty-state"><p>Accès réservé à l\'administrateur.</p></div>'}
+    </div>
+
+    <!-- ══════════════ ONGLET : TARIFICATION ══════════════ -->
+    <div class="settings-tab-pane" id="tab-tarification">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="percent"></i> Coefficients de Tarification</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
+            Ces coefficients définissent le prix de vente calculé automatiquement à partir du prix d'achat lors de la création ou modification d'un médicament.
+          </p>
+          <form id="pricing-form" class="form-grid">
+            <div class="form-group">
+              <label>Coefficient — Produits de Spécialité <span style="font-size:11px;color:var(--text-muted)">(marque, innovateur)</span></label>
+              <div style="display:flex;align-items:center;gap:10px">
+                <input type="number" name="pricing_coeff_specialty" id="coeff-specialty" class="form-control" step="0.01" min="1" max="10" value="${gs('pricing_coeff_specialty') || '1.40'}" oninput="document.getElementById('coeff-specialty-display').textContent='× '+parseFloat(this.value||1.4).toFixed(2)">
+                <span id="coeff-specialty-display" style="font-size:16px;font-weight:800;color:var(--primary);white-space:nowrap;min-width:60px">× ${parseFloat(gs('pricing_coeff_specialty') || '1.40').toFixed(2)}</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Coefficient — Génériques / Détail <span style="font-size:11px;color:var(--text-muted)">(DCI, sans marque)</span></label>
+              <div style="display:flex;align-items:center;gap:10px">
+                <input type="number" name="pricing_coeff_generic" id="coeff-generic" class="form-control" step="0.01" min="1" max="10" value="${gs('pricing_coeff_generic') || '1.12'}" oninput="document.getElementById('coeff-generic-display').textContent='× '+parseFloat(this.value||1.12).toFixed(2)">
+                <span id="coeff-generic-display" style="font-size:16px;font-weight:800;color:var(--primary);white-space:nowrap;min-width:60px">× ${parseFloat(gs('pricing_coeff_generic') || '1.12').toFixed(2)}</span>
+              </div>
+            </div>
+            <div style="background:var(--bg-secondary);border-radius:10px;padding:14px;font-size:13px;border-left:4px solid var(--primary)">
+              <strong>Comment ça marche :</strong><br>
+              Saisissez le <strong>Prix d'achat</strong> lors de la création d'un produit. Le <strong>Prix de vente</strong> est calculé automatiquement selon le type. Vous pouvez toujours l'ajuster manuellement.
+            </div>
+            <button type="button" class="btn btn-primary" onclick="savePricingSettings()"><i data-lucide="save"></i> Sauvegarder les coefficients</button>
+          </form>
+        </div>
+        <div class="settings-card2" style="background:linear-gradient(135deg,var(--surface),var(--bg-secondary))">
+          <h3 class="settings-card2-title"><i data-lucide="info"></i> Simulation de Tarif</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Entrez un prix d'achat pour prévisualiser les prix de vente calculés selon vos coefficients.</p>
+          <div class="form-group">
+            <label>Prix d'achat (GNF)</label>
+            <input type="number" id="sim-price" class="form-control" placeholder="Ex: 10000" oninput="simulatePrice(this.value)">
+          </div>
+          <div id="sim-result" style="margin-top:16px;display:none">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="padding:14px 16px;background:var(--surface);border-radius:12px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:13px;color:var(--text-muted)">Spécialité (× <span id="sim-coeff-s"></span>)</span>
+                <strong id="sim-price-s" style="font-size:16px;color:var(--primary)"></strong>
+              </div>
+              <div style="padding:14px 16px;background:var(--surface);border-radius:12px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:13px;color:var(--text-muted)">Générique (× <span id="sim-coeff-g"></span>)</span>
+                <strong id="sim-price-g" style="font-size:16px;color:var(--primary)"></strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : SÉCURITÉ ══════════════ -->
+    <div class="settings-tab-pane" id="tab-securite">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="shield-check"></i> Verrouillage Automatique</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
+            Lorsqu'activé, la session se verrouille automatiquement après une période d'inactivité (aucun clic, aucune saisie, aucun mouvement de souris).
+            <br><strong style="color:var(--text)">Ces préférences sont enregistrées pour votre compte uniquement.</strong>
+          </p>
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding:16px;background:var(--bg-secondary);border-radius:12px;border:1px solid var(--border)">
+            <div style="position:relative;width:52px;height:28px;flex-shrink:0">
+              <input type="checkbox" id="lock-enabled-cb" ${lockEnabled ? 'checked' : ''} style="opacity:0;width:0;height:0;position:absolute"
+                onchange="const el=document.getElementById('lock-timeout-group');el.style.opacity=this.checked?'1':'0.4';el.style.pointerEvents=this.checked?'auto':'none';">
+              <span onclick="document.getElementById('lock-enabled-cb').click();document.getElementById('lock-enabled-cb').dispatchEvent(new Event('change'))"
+                id="lock-toggle-track"
+                style="position:absolute;inset:0;border-radius:28px;background:${lockEnabled ? 'var(--primary)' : 'var(--border)'};cursor:pointer;transition:background 0.3s;display:flex;align-items:center;padding:3px">
+                <span style="width:22px;height:22px;background:#fff;border-radius:50%;transition:transform 0.3s;box-shadow:0 2px 6px rgba(0,0,0,0.2);transform:translateX(${lockEnabled ? '24px' : '0'})"></span>
+              </span>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:14px">Verrouillage automatique</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${lockEnabled ? 'La session se verrouille après inactivité' : 'Aucune déconnexion automatique'}</div>
+            </div>
+            <span class="badge ${lockEnabled ? 'badge-success' : 'badge-neutral'}" style="margin-left:auto">${lockEnabled ? 'Activé' : 'Désactivé'}</span>
+          </div>
+          <div id="lock-timeout-group" style="opacity:${lockEnabled ? '1' : '0.4'};pointer-events:${lockEnabled ? 'auto' : 'none'};transition:opacity 0.3s">
+            <label style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;display:block">Délai d'inactivité</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${[{val:'5',label:'5 min'},{val:'10',label:'10 min'},{val:'15',label:'15 min'},{val:'30',label:'30 min'},{val:'60',label:'1 heure'}].map(opt=>`
+                <label style="cursor:pointer">
+                  <input type="radio" name="lock_timeout" value="${opt.val}" ${lockTimeout===opt.val?'checked':''} style="display:none" class="lock-radio">
+                  <span class="lock-time-btn ${lockTimeout===opt.val?'active':''}" onclick="document.querySelectorAll('.lock-time-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');"
+                    style="display:inline-block;padding:10px 20px;border-radius:24px;border:2px solid ${lockTimeout===opt.val?'var(--primary)':'var(--border)'};font-weight:700;font-size:13px;background:${lockTimeout===opt.val?'var(--primary)':'var(--surface)'};color:${lockTimeout===opt.val?'#fff':'var(--text-muted)'};transition:all 0.2s">
+                    ${opt.label}
+                  </span>
+                </label>`).join('')}
+            </div>
+          </div>
+          <div style="margin-top:24px">
+            <button class="btn btn-primary" onclick="saveSecurityLockSettings()"><i data-lucide="shield-check"></i> Enregistrer les préférences</button>
+          </div>
+        </div>
+
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="monitor"></i> Identité de cet Appareil</h3>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Nom de cet appareil affiché dans le Moniteur de Réseau multi-poste.</p>
+          <div class="form-group">
+            <label>Nom de l'appareil</label>
+            <input type="text" id="device-name-input" class="form-control" value="${localStorage.getItem('pharma_device_name') || 'Caisse 1'}" placeholder="Ex: PC Bureau, Mobile Vente...">
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">ID : <code>${localStorage.getItem('pharma_device_id') || 'N/A'}</code></div>
+          <button type="button" class="btn btn-secondary" onclick="saveDeviceName()"><i data-lucide="save"></i> Enregistrer le nom</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : CLOUD & SYNC ══════════════ -->
+    <div class="settings-tab-pane" id="tab-cloud">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="rotate-cw"></i> Synchronisation & Sauvegarde</h3>
+          <div class="sync-panel">
+            <div class="sync-status-row">
+              <span>Statut réseau</span>
+              <span class="${navigator.onLine ? 'text-success' : 'text-danger'}">${navigator.onLine ? '<i data-lucide="wifi"></i> En ligne' : '<i data-lucide="wifi-off"></i> Hors ligne'}</span>
+            </div>
+            <div class="sync-status-row">
+              <span>Mode opération</span>
+              <span class="badge badge-success">Offline-First <i data-lucide="check"></i></span>
+            </div>
+            <div class="sync-status-row">
+              <span><i data-lucide="monitor" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i> Appareils connectés</span>
+              <span id="settings-device-count" class="badge badge-info" style="cursor:pointer" onclick="if(window.UI&&UI.openSyncMonitor)UI.openSyncMonitor();loadDeviceCount()">Chargement...</span>
+            </div>
+            <div class="sync-actions" style="margin-top:16px">
+              <button class="btn btn-secondary" onclick="doBackup()"><i data-lucide="save"></i> Sauvegarder maintenant</button>
+              <button class="btn btn-ghost" onclick="restoreBackup()"><i data-lucide="folder-open"></i> Restaurer</button>
+            </div>
+            <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-sm btn-primary" onclick="triggerPull()"><i data-lucide="cloud-download"></i> Récupérer depuis le Cloud (PULL)</button>
+              <button class="btn btn-sm btn-secondary" onclick="DB.syncToSupabase()"><i data-lucide="cloud-lightning"></i> Envoyer vers le Cloud (PUSH)</button>
+              <button class="btn btn-xs btn-outline-danger" onclick="repairSync()"><i data-lucide="wrench"></i> Réparer l'envoi Cloud</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ZONE DANGEREUSE — Clés Supabase -->
+        <div class="danger-zone">
+          <div class="danger-zone-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            Zone Sensible — Configuration Supabase
+          </div>
+          <p>
+            Ces clés donnent un accès complet à votre base de données cloud. Ne les partagez jamais avec des personnes non autorisées. Toute modification ici affecte immédiatement toutes les connexions.
+          </p>
+          <form id="supabase-config-form" class="form-grid">
+            <div class="form-group">
+              <label>URL du Projet Supabase</label>
+              <input type="password" name="supabase_url" class="form-control" value="${gs('supabase_url') || ''}" placeholder="https://xyz.supabase.co">
+            </div>
+            <div class="form-group">
+              <label>Clé Anon Public (API Key)</label>
+              <input type="password" name="supabase_key" class="form-control" value="${gs('supabase_key') || ''}" placeholder="eyJhbGciOiJI...">
+            </div>
+            <button type="button" class="btn btn-sm" style="background:#dc2626;color:#fff;border:none" onclick="saveSupabaseConfig()">
+              <i data-lucide="save"></i> Enregistrer la configuration Cloud
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : SMS ══════════════ -->
+    <div class="settings-tab-pane" id="tab-sms">
+      <div class="settings-card2" style="max-width:600px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <h3 class="settings-card2-title" style="margin:0;border:none;padding:0"><i data-lucide="message-square"></i> Configuration SMS</h3>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="sms-enabled-cb" ${smsConfig.enabled ? 'checked' : ''} onchange="document.getElementById('sms-settings-box').style.opacity=this.checked?'1':'0.5';document.getElementById('sms-settings-box').style.pointerEvents=this.checked?'auto':'none';">
+            <span style="font-weight:600;font-size:13px">Activer les SMS</span>
+          </label>
+        </div>
+        <div id="sms-settings-box" style="opacity:${smsConfig.enabled ? '1' : '0.5'};pointer-events:${smsConfig.enabled ? 'auto' : 'none'};transition:all 0.3s">
+          <form id="sms-config-form" class="form-grid">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fournisseur API</label>
+                <select name="provider" class="form-control" onchange="document.getElementById('sms-username-group').style.display=this.value==='africastalking'?'block':'none'">
+                  <option value="africastalking" ${smsConfig.provider === 'africastalking' ? 'selected' : ''}>AfricasTalking (Recommandé)</option>
+                  <option value="twilio" ${smsConfig.provider === 'twilio' ? 'selected' : ''}>Twilio</option>
+                  <option value="orange" ${smsConfig.provider === 'orange' ? 'selected' : ''}>Orange SMS API</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Sender ID (Expéditeur)</label>
+                <input type="text" name="senderId" class="form-control" value="${smsConfig.senderId || 'OrdiveX'}" placeholder="Max 11 caractères">
+              </div>
+            </div>
+            <div class="form-group" id="sms-username-group" style="display:${smsConfig.provider === 'africastalking' ? 'block' : 'none'}">
+              <label>Nom d'utilisateur (Username)</label>
+              <input type="text" name="username" class="form-control" value="${smsConfig.username || ''}" placeholder="Ex: sandbox">
+            </div>
+            <div class="form-group">
+              <label>Clé API</label>
+              <input type="password" name="apiKey" class="form-control" value="${smsConfig.apiKey || ''}" placeholder="Votre clé secrète">
+            </div>
+            <div class="form-group">
+              <label>Préfixe téléphonique pays</label>
+              <input type="text" name="countryCode" class="form-control" value="${smsConfig.countryCode || '+224'}" placeholder="+224" style="max-width:140px">
+            </div>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn btn-primary" onclick="saveSmsConfig()"><i data-lucide="save"></i> Enregistrer</button>
+              <button type="button" class="btn btn-secondary" onclick="testSmsConnection()"><i data-lucide="send"></i> Tester</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Rendre les icônes Lucide IMMÉDIATEMENT pour éviter le layout shift
+  if (window.lucide) lucide.createIcons();
+
+  // Charger le compteur d'appareils automatiquement
+  setTimeout(() => { if (window.loadDeviceCount) loadDeviceCount(); }, 500);
+}
+
+window.switchSettingsTab = function(tabName, btn) {
+  document.querySelectorAll('.settings-tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.settings-tab-btn').forEach(b => b.classList.remove('active'));
+  const pane = document.getElementById('tab-' + tabName);
+  if (pane) pane.classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (window.lucide) lucide.createIcons();
+};
+
+window.simulatePrice = function(price) {
+  const val = parseFloat(price);
+  const result = document.getElementById('sim-result');
+  if (!result) return;
+  if (!val || isNaN(val)) { result.style.display = 'none'; return; }
+  result.style.display = 'block';
+  const cs = parseFloat(document.getElementById('coeff-specialty')?.value || 1.4);
+  const cg = parseFloat(document.getElementById('coeff-generic')?.value || 1.12);
+  document.getElementById('sim-coeff-s').textContent = cs.toFixed(2);
+  document.getElementById('sim-coeff-g').textContent = cg.toFixed(2);
+  document.getElementById('sim-price-s').textContent = UI.formatCurrency(Math.round(val * cs));
+  document.getElementById('sim-price-g').textContent = UI.formatCurrency(Math.round(val * cg));
+};
+
+window.saveSecurityLockSettings = async function() {
+
         <form id="settings-form" class="form-grid">
           <div class="form-group">
             <label>Nom de la pharmacie</label>
