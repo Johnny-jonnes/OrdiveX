@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47t",
+  "version": "9.7.47u",
   "date": "2026-07-05",
-  "changelog": "Stabilité réseau globale : intégration et déploiement de la gestion instantanée de la déconnexion Supabase et de la correction de l'onglet paramètres."
+  "changelog": "Reconnexion automatique intelligente : levée temporaire du flag offline pour permettre au probe HEAD de passer, vérification réelle de la connectivité internet, puis réactivation complète de Supabase, du realtime et du sync si le réseau est confirmé."
 }
