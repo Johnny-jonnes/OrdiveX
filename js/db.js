@@ -2077,19 +2077,20 @@ function startAutoPull() {
       AppState._confirmedOffline = false;
 
       // PUSH des données (garantit que ce qui a été fait hors-ligne part vers Supabase)
-      if (typeof syncToSupabase === 'function') {
-        setTimeout(function() { syncToSupabase().catch(function(){}); }, 1000);
+      if (typeof syncToSupabase === 'function' && !AppState._confirmedOffline) {
+        setTimeout(function() {
+          if (AppState._confirmedOffline) return;
+          syncToSupabase().catch(function(){});
+        }, 1000);
       }
 
       // Restaurer les WebSockets seulement si on est vraiment en ligne
-      if (navigator.onLine) {
+      if (navigator.onLine && !AppState._confirmedOffline) {
         setTimeout(async function() {
-          if (!navigator.onLine) return; // re-check au moment d'exécuter
+          if (!navigator.onLine || AppState._confirmedOffline) return;
           try {
             var sb = await getSupabaseClient();
             if (sb) {
-              // startAutoRefresh uniquement si en ligne (sinon erreurs token en boucle)
-              if (sb.auth && sb.auth.startAutoRefresh) sb.auth.startAutoRefresh();
               if (!_realtimeSubscription) {
                 try { _setupRealtime(sb); } catch(e) {}
               }
@@ -2106,6 +2107,11 @@ function startAutoPull() {
       // Échec (probe offline) → SILENCE TOTAL ABSOLU
       _pullFailCount++;
       AppState._confirmedOffline = true;
+      AppState.isOnline = false;
+      // Tuer le timer interne de Supabase qui fait des POST auth/token en boucle
+      if (_supabaseInstance && _supabaseInstance.auth) {
+        try { _supabaseInstance.auth.stopAutoRefresh(); } catch(e) {}
+      }
       // PAS de timer de retry en boucle ! L'application se met en veille profonde.
       // Elle ne se réveillera que si 'online' se déclenche au niveau OS,
       // ou si l'utilisateur interagit physiquement avec la page (wakeUpCheck).

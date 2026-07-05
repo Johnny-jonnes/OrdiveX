@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47g",
+  "version": "9.7.47h",
   "date": "2026-07-05",
   "changelog": "Fiabilisation du mode hors-ligne : arrêt total de toutes requêtes réseau dès la première erreur détectée (sync, pull, heartbeat, token refresh), correction du faux indicateur 'En ligne' basé sur WiFi sans internet, et throttle 5 min sur les tentatives de reconnexion automatique."
 }
