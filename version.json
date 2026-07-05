@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47s",
+  "version": "9.7.47t",
   "date": "2026-07-05",
-  "changelog": "Détection instantanée de la déconnexion : interception de tout échec de requête Supabase dans le wrapper fetch global pour basculer l'application en mode hors-ligne sans attendre les timers en tâche de fond, et garde confirmedOffline sur le chargement des appareils dans l'onglet paramètres."
+  "changelog": "Stabilité réseau globale : intégration et déploiement de la gestion instantanée de la déconnexion Supabase et de la correction de l'onglet paramètres."
 }
