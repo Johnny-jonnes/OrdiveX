@@ -351,6 +351,7 @@ const UI = {
     var list = document.getElementById('sync-monitor-list');
     document.getElementById('current-device-id-display').textContent = 'ID : ' + (DB.AppState.deviceId || localStorage.getItem('pharma_device_id') || '?');
     
+    if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
     list.innerHTML = '<div style="text-align:center; padding: 20px;"><div class="spinner"></div><p>Analyse du réseau...</p></div>';
     modal.style.display = 'flex';
 
@@ -362,7 +363,16 @@ const UI = {
 
     try {
         var sb = await DB.getSupabaseClient();
-        if (!sb) throw new Error('Supabase non configuré');
+        if (!sb) {
+            // Distinguer entre hors-ligne réel et non configuré
+            const settings = await DB.dbGetAll('settings');
+            const url = settings.find(s => s.key === 'supabase_url')?.value;
+            if (url) {
+                throw new Error('Connexion à Supabase impossible (Hors-ligne)');
+            } else {
+                throw new Error('Supabase non configuré');
+            }
+        }
 
         var res = await sb.from('settings').select('key, value').like('key', 'device_status_%');
         if (res.error) throw res.error;
