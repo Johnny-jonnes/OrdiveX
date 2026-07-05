@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.7.47k';
+const CACHE_NAME = 'pharma-cache-v9.7.47l';
 const ASSETS = [
   './',
   './index.html',
@@ -90,24 +90,48 @@ self.addEventListener('activate', event => {
   );
 });
 
+// Shared offline state between SW and page
+// Page posts a message { type: 'OFFLINE_STATE', offline: true/false } to SW
+let _swConfirmedOffline = false;
+
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'OFFLINE_STATE') {
+    _swConfirmedOffline = event.data.offline;
+  }
+});
+
 // Fetch: cache-first strategy
 self.addEventListener('fetch', event => {
   const url = event.request.url;
 
-  // 🛡️ REQUÊTES EXTERNES (Supabase, fonts, CDN)
-  if (!url.startsWith(self.location.origin)) {
-    // Ne JAMAIS intercepter les requêtes Supabase ou autres API externes.
-    // Laisser le navigateur planter naturellement si le réseau coupe,
-    // ce qui permet à db.js de détecter la coupure et de s'arrêter proprement.
-    return; 
+  // ── REQUÊTES SUPABASE (API + Realtime + Auth) ──
+  // Si offline confirmé : retourner une réponse 503 propre, SANS erreur console
+  // C'est le seul moyen de supprimer les "net::ERR_NAME_NOT_RESOLVED" rouges dans la console
+  if (url.includes('supabase.co') || url.includes('supabase.io')) {
+    if (_swConfirmedOffline) {
+      event.respondWith(
+        Promise.resolve(new Response(
+          JSON.stringify({ error: 'offline', message: 'Hors ligne' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        ))
+      );
+      return;
+    }
+    // En ligne : laisser passer sans interception
+    return;
   }
 
-  // Skip non-GET and chrome-extension for normal caching
+  // Requêtes non-GET et extensions navigateur : ne pas toucher
   if (event.request.method !== 'GET') return;
   if (url.startsWith('chrome-extension')) return;
 
-  // Pour les assets locaux (.js, .css) : normaliser l'URL sans query string
-  // Cela évite le double cache entre "./js/db.js" et "./js/db.js?v=9.6.2"
+  // Requêtes externes non-Supabase (fonts, CDN) : laisser passer
+  if (!url.startsWith(self.location.origin)) return;
+
+  // ── ASSETS LOCAUX : cache-first ──
   const urlObj = new URL(url);
   const isLocalAsset = /\.(js|css|html|json|png|svg|ico|webp)(\?|$)/.test(urlObj.pathname);
   const cacheKey = isLocalAsset
@@ -165,10 +189,5 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(clients.openWindow(url));
 });
 
-// ── Réception du signal SKIP_WAITING depuis la bannière de mise à jour ──
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
+// (message listener moved to fetch section above)
 

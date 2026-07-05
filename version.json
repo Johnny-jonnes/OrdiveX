@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47k",
+  "version": "9.7.47l",
   "date": "2026-07-05",
-  "changelog": "Correction de la reconnexion automatique : ré-injection d'un timer de vérification en arrière-plan toutes les 30s après déconnexion pour réactiver le mode En ligne automatiquement sans rechargement ni clic, et clarification des libellés du moniteur réseau."
+  "changelog": "Silence total hors-ligne : intégration d'un pont entre la base locale et le Service Worker pour intercepter et neutraliser les requêtes Supabase en mode hors-ligne, supprimant définitivement toutes les erreurs réseau rouges de la console du navigateur."
 }

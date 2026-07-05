@@ -1843,13 +1843,15 @@ async function pullFromSupabase(isManual = false) {
 
 
   } catch (e) {
-    const msg = e.message || '';
-    if (!msg.includes('probe_offline')) {
-      if (!msg.includes('Failed to fetch') && !msg.includes('NetworkError') && !msg.includes('network error')) {
-        console.warn('[Flash] Pull general error:', e);
-      }
+    const msg = e?.message || '';
+    const isNetErr = msg.includes('probe_offline') || msg.includes('Failed to fetch') ||
+      msg.includes('NetworkError') || msg.includes('network error') ||
+      msg.includes('ERR_') || msg.includes('timeout');
+    // Erreurs réseau : silencieuses — comportement normal en mode offline
+    if (!isNetErr) {
+      console.warn('[Flash] Pull inattendu:', msg || e);
     }
-    throw e; // IMPORTANT: Re-throw l'erreur pour que runPull.catch() la capte
+    throw e; // Re-throw pour que runPull.catch() capte et planifie le retry
   } finally {
     clearTimeout(_pullLockTimeout);
     _isPulling = false;
@@ -2349,6 +2351,38 @@ function _handleConnectivityChange(isOnline) {
     }
   }, isOnline ? 5000 : 500); // Offline: réaction rapide 500ms, Online: debounce 5s
 }
+
+// ─────────────────────────────────────────────────────────────────
+// SW OFFLINE BRIDGE — Notifie le Service Worker de l'état réel du réseau
+// Permet au SW d'intercepter les requêtes Supabase AVANT qu'elles partent
+// vers le réseau, supprimant ainsi les erreurs console "net::ERR_NAME_NOT_RESOLVED"
+// ─────────────────────────────────────────────────────────────────
+function _notifySwOfflineState(isOffline) {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    try {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'OFFLINE_STATE',
+        offline: isOffline
+      });
+    } catch (e) { /* SW pas disponible */ }
+  }
+}
+
+// Intercepter tous les changements de _confirmedOffline pour notifier le SW
+var _origConfirmedOfflineSetter = Object.getOwnPropertyDescriptor(AppState, '_confirmedOffline');
+var _lastSwState = false;
+Object.defineProperty(AppState, '_confirmedOffline', {
+  get() { return this.__confirmedOffline; },
+  set(val) {
+    this.__confirmedOffline = val;
+    if (val !== _lastSwState) {
+      _lastSwState = val;
+      _notifySwOfflineState(val);
+      // Mettre à jour l'indicateur UI en temps réel
+      if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+    }
+  }
+});
 
 window.addEventListener('online', () => _handleConnectivityChange(true));
 window.addEventListener('offline', () => _handleConnectivityChange(false));
