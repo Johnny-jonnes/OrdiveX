@@ -1546,21 +1546,27 @@ async function pullFromSupabase(isManual = false) {
   let hasChanges = false;
   let totalItemsPulled = 0;
   try {
-    // --- SILENT NATIVE PROBE ---
-    // Utilise l'URL de l'app elle-même (GitHub Pages) pour éviter les erreurs DNS Supabase
+    // --- PROBE RÉSEAU NATIF (si mode hors-ligne confirmé) ---
+    // Si _confirmedOffline, vérifier la vraie connectivité avant tout
     if (AppState._confirmedOffline) {
       try {
         var _nativeCtrl = new AbortController();
         var _nativeTimeout = setTimeout(function() { _nativeCtrl.abort(); }, 5000);
-        // Probe l'app elle-même — si GitHub Pages répond, le réseau est de retour
-        await fetch(location.origin + location.pathname, {
-          method: 'HEAD', cache: 'no-store', signal: _nativeCtrl.signal
+        // CRITIQUE : _bypassOfflineGuard:true pour ne pas être bloqué par le fetch interceptor
+        var _probeResp = await fetch(location.origin + location.pathname, {
+          method: 'HEAD', cache: 'no-store', signal: _nativeCtrl.signal,
+          _bypassOfflineGuard: true
         });
         clearTimeout(_nativeTimeout);
-        // Si on est là, le réseau est de retour !
-        AppState._confirmedOffline = false;
+        // Réseau disponible (même si GitHub répond 404, le réseau fonctionne)
+        AppState.__confirmedOffline = false; // écriture directe pour éviter le setter
         AppState.isOnline = true;
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          try { navigator.serviceWorker.controller.postMessage({ type: 'OFFLINE_STATE', offline: false }); } catch(e) {}
+        }
+        if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
       } catch (e) {
+        // Erreur réseau réelle (pas de réponse du tout)
         throw new Error('probe_offline');
       }
     }
@@ -1576,13 +1582,25 @@ async function pullFromSupabase(isManual = false) {
       'cashRegister', 'returns', 'invoices', 'shifts'
     ];
 
-    // --- GARDE RÉSEAU CENTRALISÉ (zéro requête inutile) ---
+    // --- PROBE SUPABASE ---
     if (!navigator.onLine) { AppState.isOnline = false; return; }
-    // Si on est en mode hors-ligne confirmé, éviter le probe réseau
     if (AppState._confirmedOffline) { return; }
     try {
       const probeReq = await _withTimeout(sb.from('settings').select('key').limit(1), 8000);
-      if (probeReq.error) throw probeReq.error;
+      if (probeReq.error) {
+        var errMsg = String(probeReq.error?.message || probeReq.error || '');
+        // 503 / 502 = serveur temporairement indisponible, mais le réseau fonctionne
+        // Ne pas passer en mode offline pour ça — juste sortir silencieusement
+        var isServerError = errMsg.includes('503') || errMsg.includes('502') ||
+          (probeReq.status >= 500 && probeReq.status < 600);
+        if (isServerError) {
+          // Réseau OK, Supabase temporairement down — on sort sans toucher aux flags
+          _isPulling = false;
+          clearTimeout(_pullLockTimeout);
+          return;
+        }
+        throw probeReq.error;
+      }
       AppState.isOnline = true;
       AppState._confirmedOffline = false;
     } catch (err) {
