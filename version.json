@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47q",
+  "version": "9.7.47r",
   "date": "2026-07-05",
-  "changelog": "Optimisation du silence réseau hors-ligne : réduction de la fréquence des sondes d'arrière-plan à 5 minutes pour éviter l'accumulation d'erreurs dans la console, et ajout d'un bouton interactif 'Réessayer la connexion' dans le moniteur de synchronisation pour forcer manuellement la reconnexion."
+  "changelog": "Silence console absolu hors-ligne : désactivation complète des sondes automatiques en arrière-plan et des vérifications sur clic de l'utilisateur pour éliminer la moindre ligne d'erreur réseau rouge, reposant exclusivement sur la reconnexion manuelle ou via l'événement réseau natif de l'OS."
 }

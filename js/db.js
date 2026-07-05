@@ -2038,18 +2038,10 @@ function startAutoPull() {
   };
   
   // Réveil sur interaction utilisateur (throttle 2 min pour zéro spam d'erreur HEAD)
-  var _lastWakeUp = 0;
   function wakeUpCheck() {
-    // Guard absolu : si l'OS dit qu'on est hors-ligne, silence total, zéro requête
+    // Si on est déjà confirmé hors-ligne, silence total : aucun probe automatique
+    if (AppState._confirmedOffline) return;
     if (!navigator.onLine) return;
-    if (AppState._confirmedOffline) {
-      // Throttle strict à 5 minutes : navigator.onLine est FAUX POSITIF sur WiFi sans internet
-      if (Date.now() - _lastWakeUp < 300000) return;
-      _lastWakeUp = Date.now();
-      _pullFailCount = 0;
-      if (_autoPullTimer) clearTimeout(_autoPullTimer);
-      _autoPullTimer = window.setTimeout(runPull, 1000);
-    }
   }
   document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') wakeUpCheck(); });
   window.addEventListener('focus', wakeUpCheck);
@@ -2115,9 +2107,9 @@ function startAutoPull() {
       if (_supabaseInstance && _supabaseInstance.auth) {
         try { _supabaseInstance.auth.stopAutoRefresh(); } catch(e) {}
       }
-      // Re-planifier un probe léger dans 5 minutes pour détecter le retour d'internet en arrière-plan
-      if (_autoPullTimer) clearTimeout(_autoPullTimer);
-      _autoPullTimer = window.setTimeout(runPull, 300000);
+      // Veille profonde offline : aucun probe automatique pour un silence console total et absolu.
+      // La reconnexion se fera via l'événement 'online' du navigateur ou via le bouton 'Réessayer' du moniteur.
+      if (_autoPullTimer) { clearTimeout(_autoPullTimer); _autoPullTimer = null; }
     });
   }
 
