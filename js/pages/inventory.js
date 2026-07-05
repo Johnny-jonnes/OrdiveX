@@ -117,7 +117,7 @@ function renderHistoryView(container) {
               <th>Détails Périmètre</th>
               <th class="ta-c">Produits</th>
               <th class="ta-c">Écarts</th>
-              <th class="ta-r">Valeur Écarts (P.A.)</th>
+              <th class="ta-r">Valeur Écarts (Achat)</th>
               <th class="ta-c">Statut Stock</th>
               <th class="ta-r" style="width: 130px;">Actions</th>
             </tr>
@@ -434,7 +434,7 @@ function startInventorySetup(event) {
         name: p.name,
         form: p.form || '—',
         category: p.category || '—',
-        purchasePrice: p.purchasePrice || 0,
+        purchasePrice: parseFloat(p.purchasePrice || p.prixAchat || 0),
         supplierName: state.productSupplierMap[p.id] || 'Aucun d\'achat',
         systemQty: theory,
         physicalQty: theory, // Initialisé à la qté théorique pour simplifier
@@ -1027,7 +1027,7 @@ window.viewInventoryDetails = async function(inventoryId) {
               <th class="ta-c">Théorique</th>
               <th class="ta-c">Physique</th>
               <th class="ta-c">Écart</th>
-              <th class="ta-r">Valeur (P.A.)</th>
+              <th class="ta-r">Valeur (Achat)</th>
             </tr>
           </thead>
           <tbody>
@@ -1154,7 +1154,7 @@ window.exportPastInventoryCSV = async function(inventoryId) {
   }
 
   const csvRows = [
-    ["Code", "Medicament", "Forme", "Categorie", "Dernier Fournisseur", "Stock Theorique", "Stock Physique", "Ecart", "Valeur Ecart (PA)", "Observation"]
+    ["Code", "Medicament", "Forme", "Categorie", "Dernier Fournisseur", "Stock Theorique", "Stock Physique", "Ecart", "Valeur Ecart (Achat)", "Observation"]
   ];
 
   (inv.items || []).forEach(it => {

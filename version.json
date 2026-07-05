@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47d",
-  "date": "2026-07-04",
-  "changelog": "Optimisation de la synchronisation temps réel : ajout d'un keep-alive sur les canaux de communication temps réel Supabase, déclenchement instantané des envois de données mobiles en arrière-plan (lorsque l'écran s'éteint ou l'app passe en tâche de fond), arrêt immédiat du pull incrémental en cas d'erreur réseau, et correction du PDF d'export d'inventaires pour inclure tous les produits."
+  "version": "9.7.47e",
+  "date": "2026-07-05",
+  "changelog": "Optimisation de la synchronisation temps réel : fiabilisation du mode hors-ligne sans connexion internet par suppression des erreurs DNS en veille et suppression des clones GoTrueClient multiples. Correction de l'inventaire physique : renommage de la mention PA en Achat pour clarté utilisateur, et fallback correct sur prixAchat pour les calculs d'écarts financiers."
 }

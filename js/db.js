@@ -283,12 +283,12 @@ function _silentRefreshPage(page, storeNames) {
 
 let _lastSessionCheck = 0;
 async function getSupabaseClient() {
-  // Guard strict : ne rien faire si hors-ligne
+  // Guard strict : si hors-ligne, retourner l'instance existante sans détruire ni recréer
+  // (détruire = forcer une recréation = Multiple GoTrueClient warnings)
   if (!navigator.onLine || AppState._confirmedOffline) {
     if (_supabaseInstance) {
+      // Suspendre le refresh token silencieusement sans détruire l'instance
       try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch (e) { }
-      try { _supabaseInstance.realtime?.disconnect?.(); } catch(e) {}
-      _supabaseInstance = null;
     }
     return null;
   }
@@ -1916,16 +1916,8 @@ async function autoBackupToStorage() {
     const json = JSON.stringify(backup);
     // Vérifier que la taille ne dépasse pas 4 MB (limite localStorage ~5-10 MB)
     if (json.length > 4 * 1024 * 1024) {
-      // Base volumineuse : le Cloud Supabase sert de backup principal — pas de warning
+      // Base volumineuse : stockage cloud uniquement si on est en ligne
       localStorage.setItem('pharma_last_backup', new Date().toISOString());
-      // Déclenchement d'un mini backup cloud silencieux (seulement les stores critiques)
-      try {
-        const sb = await getSupabaseClient();
-        if (sb) {
-          // La sync Supabase EST le backup cloud — on s'assure juste que le timestamp est à jour
-          localStorage.setItem('pharma_last_backup', new Date().toISOString());
-        }
-      } catch(_) {}
       return backup;
     }
     localStorage.setItem(key, json);
@@ -2039,6 +2031,8 @@ function startAutoPull() {
   // Réveil sur interaction utilisateur (throttle 2 min pour zéro spam d'erreur HEAD)
   var _lastWakeUp = 0;
   function wakeUpCheck() {
+    // Guard absolu : si l'OS dit qu'on est hors-ligne, silence total, zéro requête
+    if (!navigator.onLine) return;
     if (AppState._confirmedOffline) {
       if (Date.now() - _lastWakeUp < 120000) return; // 1 test max toutes les 2 minutes SI on clique
       _lastWakeUp = Date.now();
@@ -2080,21 +2074,25 @@ function startAutoPull() {
         setTimeout(function() { syncToSupabase().catch(function(){}); }, 1000);
       }
 
-      // Vérifier et restaurer systématiquement les WebSockets s'ils sont déconnectés ou perdus
-      setTimeout(async function() {
-        try {
-          var sb = await getSupabaseClient();
-          if (sb) {
-            if (sb.auth && sb.auth.startAutoRefresh) sb.auth.startAutoRefresh();
-            if (!_realtimeSubscription) {
-              try { _setupRealtime(sb); } catch(e) {}
+      // Restaurer les WebSockets seulement si on est vraiment en ligne
+      if (navigator.onLine) {
+        setTimeout(async function() {
+          if (!navigator.onLine) return; // re-check au moment d'exécuter
+          try {
+            var sb = await getSupabaseClient();
+            if (sb) {
+              // startAutoRefresh uniquement si en ligne (sinon erreurs token en boucle)
+              if (sb.auth && sb.auth.startAutoRefresh) sb.auth.startAutoRefresh();
+              if (!_realtimeSubscription) {
+                try { _setupRealtime(sb); } catch(e) {}
+              }
+              if (!_broadcastChannel) {
+                try { _setupBroadcast(sb); } catch(e) {}
+              }
             }
-            if (!_broadcastChannel) {
-              try { _setupBroadcast(sb); } catch(e) {}
-            }
-          }
-        } catch(e) {}
-      }, 1500);
+          } catch(e) {}
+        }, 1500);
+      }
 
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
