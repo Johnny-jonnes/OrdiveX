@@ -1803,7 +1803,7 @@ async function pullFromSupabase(isManual = false) {
           AppState.isOnline = false;
           AppState._confirmedOffline = true;
           console.log('[Flash] ⚠️ Pull interrompu: erreur réseau détectée');
-          break;
+          throw storeErr; // Re-jeter pour rejeter la promesse globale de pull
         }
         if (errMsg && !errMsg.includes('null')) {
           console.warn(`[Flash] Store error ${storeName}:`, errMsg);
@@ -2112,9 +2112,9 @@ function startAutoPull() {
       if (_supabaseInstance && _supabaseInstance.auth) {
         try { _supabaseInstance.auth.stopAutoRefresh(); } catch(e) {}
       }
-      // PAS de timer de retry en boucle ! L'application se met en veille profonde.
-      // Elle ne se réveillera que si 'online' se déclenche au niveau OS,
-      // ou si l'utilisateur interagit physiquement avec la page (wakeUpCheck).
+      // Re-planifier un probe léger dans 30 secondes pour détecter le retour d'internet en arrière-plan
+      if (_autoPullTimer) clearTimeout(_autoPullTimer);
+      _autoPullTimer = window.setTimeout(runPull, 30000);
     });
   }
 

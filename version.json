@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47j",
+  "version": "9.7.47k",
   "date": "2026-07-05",
-  "changelog": "Optimisation du moniteur réseau : correction de l'indicateur d'état réseau du menu latéral basé sur la connectivité réelle et non plus le statut brut de l'OS, et distinction claire entre 'Hors-ligne' et 'Supabase non configuré' dans le moniteur de synchronisation."
+  "changelog": "Correction de la reconnexion automatique : ré-injection d'un timer de vérification en arrière-plan toutes les 30s après déconnexion pour réactiver le mode En ligne automatiquement sans rechargement ni clic, et clarification des libellés du moniteur réseau."
 }
