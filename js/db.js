@@ -154,6 +154,7 @@ const AppState = {
   pendingSyncCount: 0,
   deviceId: localStorage.getItem('pharma_device_id'),
   deviceName: localStorage.getItem('pharma_device_name'),
+  __confirmedOffline: false,
 };
 
 let _realtimeSubscription = null;
@@ -2114,9 +2115,9 @@ function startAutoPull() {
       if (_supabaseInstance && _supabaseInstance.auth) {
         try { _supabaseInstance.auth.stopAutoRefresh(); } catch(e) {}
       }
-      // Re-planifier un probe léger dans 30 secondes pour détecter le retour d'internet en arrière-plan
+      // Re-planifier un probe léger dans 5 minutes pour détecter le retour d'internet en arrière-plan
       if (_autoPullTimer) clearTimeout(_autoPullTimer);
-      _autoPullTimer = window.setTimeout(runPull, 30000);
+      _autoPullTimer = window.setTimeout(runPull, 300000);
     });
   }
 

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47l",
+  "version": "9.7.47m",
   "date": "2026-07-05",
-  "changelog": "Silence total hors-ligne : intégration d'un pont entre la base locale et le Service Worker pour intercepter et neutraliser les requêtes Supabase en mode hors-ligne, supprimant définitivement toutes les erreurs réseau rouges de la console du navigateur."
+  "changelog": "Optimisation du silence réseau hors-ligne : réduction de la fréquence des sondes d'arrière-plan à 5 minutes pour éviter l'accumulation d'erreurs dans la console, et ajout d'un bouton interactif 'Réessayer la connexion' dans le moniteur de synchronisation pour forcer manuellement la reconnexion."
 }

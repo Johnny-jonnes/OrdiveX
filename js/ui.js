@@ -368,7 +368,7 @@ const UI = {
             const settings = await DB.dbGetAll('settings');
             const url = settings.find(s => s.key === 'supabase_url')?.value;
             if (url) {
-                throw new Error('Connexion à Supabase impossible (Hors-ligne)');
+                throw new Error('Pas de connexion internet (Hors-ligne)');
             } else {
                 throw new Error('Supabase non configuré');
             }
@@ -522,9 +522,31 @@ const UI = {
         }
 
     } catch (e) {
-        list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--danger);"><p>Erreur : ' + e.message + '</p></div>';
+        var isOffline = e.message.includes('Hors-ligne') || e.message.includes('offline');
+        if (isOffline) {
+            list.innerHTML = '<div style="padding:30px 20px; text-align:center; color:var(--text-muted);">'
+                + '<div style="font-size:3rem; margin-bottom:12px; opacity:0.8;">📡</div>'
+                + '<p style="font-weight:700; margin-bottom:6px; color:var(--text);">Pas de connexion internet</p>'
+                + '<p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:20px; max-width:280px; margin-left:auto; margin-right:auto;">L\'application fonctionne localement sans perte de données. Vos modifications seront synchronisées dès le retour du réseau.</p>'
+                + '<button onclick="window._retrySyncMonitor()" style="background:var(--primary); color:white; border:none; padding:8px 20px; border-radius:8px; cursor:pointer; font-size:0.85rem; font-weight:600; display:inline-flex; align-items:center; gap:8px;">'
+                + '🔄 Réessayer la connexion'
+                + '</button></div>';
+        } else {
+            list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--danger);"><p>Erreur : ' + e.message + '</p></div>';
+        }
     }
   }
+};
+
+window._retrySyncMonitor = function() {
+  if (window.DB && window.DB.AppState) {
+    window.DB.AppState._confirmedOffline = false;
+  }
+  if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+  if (window.DB && typeof window.DB.pullFromSupabase === 'function') {
+    window.DB.pullFromSupabase().catch(function(){});
+  }
+  UI.openSyncMonitor();
 };
 
 // Fonction de purge globale
