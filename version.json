@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47f",
+  "version": "9.7.47g",
   "date": "2026-07-05",
-  "changelog": "Correction de l'inventaire : recherche proactive du prix d'achat dans l'historique des factures fournisseurs si le produit n'a pas de prix défini dans le catalogue principal, garantissant que les calculs financiers d'écarts d'inventaire ne soient jamais à 0."
+  "changelog": "Fiabilisation du mode hors-ligne : arrêt total de toutes requêtes réseau dès la première erreur détectée (sync, pull, heartbeat, token refresh), correction du faux indicateur 'En ligne' basé sur WiFi sans internet, et throttle 5 min sur les tentatives de reconnexion automatique."
 }

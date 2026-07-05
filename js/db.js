@@ -722,17 +722,17 @@ let _syncNeededAfter = false;
 let _restoreInProgress = false;
 
 function _scheduleSyncToSupabase() {
-  if (!navigator.onLine || _restoreInProgress) return; // Ne rien faire si hors-ligne ou restauration en cours
+  if (!navigator.onLine || _restoreInProgress || AppState._confirmedOffline) return;
   if (_syncTimer) clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
     _syncTimer = null;
-    if (!navigator.onLine) return; // Double vérification
+    if (!navigator.onLine || AppState._confirmedOffline) return;
     if (_syncInProgress) {
       _syncNeededAfter = true;
       return;
     }
     syncToSupabase().catch(() => { });
-  }, 2000); // Réduit de 5s → 2s pour une réactivité cloud optimale
+  }, 2000);
 }
 
 // Flush de secours en arrière-plan (surtout pour mobile lors de la fermeture/veille de l'écran)
@@ -1433,7 +1433,7 @@ async function syncToSupabase() {
         name: currentDeviceName,
         last_sync: Date.now(),
         pending: 0,
-        online: true,
+        online: !AppState._confirmedOffline,
         type: isMobileDevice ? 'mobile' : 'desktop'
       };
       var hbPayload = {
@@ -1490,14 +1490,19 @@ async function syncToSupabase() {
     // (supprimé pour éviter les erreurs silencieuses en prod)
 
   } catch (globalError) {
-    console.error('[Flash] Critical sync error:', globalError);
+    // Détecter si c'est une erreur réseau pour basculer en mode offline
+    const errStr = String(globalError?.message || globalError || '');
+    if (errStr.includes('fetch') || errStr.includes('network') || errStr.includes('ERR_') || errStr.includes('timeout') || errStr.includes('Failed')) {
+      AppState._confirmedOffline = true;
+      AppState.isOnline = false;
+    }
   } finally {
     _syncInProgress = false;
     _showSyncIndicator(false);
     // P5 — Si des items n'ont pas pu être envoyés (chunking 500), relancer un cycle dans 5s
-    if (_hasMorePending && navigator.onLine) {
+    if (_hasMorePending && navigator.onLine && !AppState._confirmedOffline) {
       setTimeout(function() { syncToSupabase().catch(function(){}); }, 5000);
-    } else if (_syncNeededAfter && navigator.onLine) {
+    } else if (_syncNeededAfter && navigator.onLine && !AppState._confirmedOffline) {
       _syncNeededAfter = false;
       _scheduleSyncToSupabase();
     }
@@ -1792,12 +1797,13 @@ async function pullFromSupabase(isManual = false) {
           }
         }
       } catch (storeErr) {
-        const errMsg = storeErr?.message || String(storeErr || '');
-        const isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_INTERNET_DISCONNECTED') || errMsg.includes('ERR_QUIC_PROTOCOL_ERROR') || errMsg.includes('ERR_NAME_NOT_RESOLVED') || errMsg.includes('CORS') || errMsg.includes('Access-Control') || errMsg.includes('ERR_CONNECTION_RESET') || errMsg.includes('preflight');
-        if (isNetworkError) {
-          AppState.isOnline = false;
-          console.log('[Flash] ⚠️ Pull interrompu: erreur réseau détectée');
-          break;
+        const errMsg = storeErr?.message || String(storeErr || '');\r
+        const isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_INTERNET_DISCONNECTED') || errMsg.includes('ERR_QUIC_PROTOCOL_ERROR') || errMsg.includes('ERR_NAME_NOT_RESOLVED') || errMsg.includes('CORS') || errMsg.includes('Access-Control') || errMsg.includes('ERR_CONNECTION_RESET') || errMsg.includes('ERR_CONNECTION_CLOSED') || errMsg.includes('ERR_NETWORK_IO_SUSPENDED') || errMsg.includes('preflight') || errMsg.includes('timeout');\r
+        if (isNetworkError) {\r
+          AppState.isOnline = false;\r
+          AppState._confirmedOffline = true;\r
+          console.log('[Flash] ⚠️ Pull interrompu: erreur réseau détectée');\r
+          break;\r
         }
         if (errMsg && !errMsg.includes('null')) {
           console.warn(`[Flash] Store error ${storeName}:`, errMsg);
@@ -2034,7 +2040,8 @@ function startAutoPull() {
     // Guard absolu : si l'OS dit qu'on est hors-ligne, silence total, zéro requête
     if (!navigator.onLine) return;
     if (AppState._confirmedOffline) {
-      if (Date.now() - _lastWakeUp < 120000) return; // 1 test max toutes les 2 minutes SI on clique
+      // Throttle strict à 5 minutes : navigator.onLine est FAUX POSITIF sur WiFi sans internet
+      if (Date.now() - _lastWakeUp < 300000) return;
       _lastWakeUp = Date.now();
       _pullFailCount = 0;
       if (_autoPullTimer) clearTimeout(_autoPullTimer);
