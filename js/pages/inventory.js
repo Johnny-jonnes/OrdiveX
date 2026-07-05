@@ -25,8 +25,9 @@ async function renderInventory(container) {
   const supplierMap = {};
   suppliers.forEach(s => { supplierMap[s.id] = s.name; });
 
-  // Mapping de chaque produit vers son dernier fournisseur connu (via les factures d'achat)
+  // Mapping de chaque produit vers son dernier fournisseur connu (via les factures d'achat) et son dernier prix d'achat
   const productSupplierMap = {};
+  const productInvoicePriceMap = {};
   const sortedInvoices = [...invoices].sort((a, b) => new Date(a.date) - new Date(b.date));
   sortedInvoices.forEach(inv => {
     const sName = supplierMap[inv.supplierId] || inv.supplierName || 'Inconnu';
@@ -34,6 +35,9 @@ async function renderInventory(container) {
       inv.items.forEach(it => {
         if (it.productId) {
           productSupplierMap[it.productId] = sName;
+          if (it.purchasePrice || it.unitPrice || it.prixAchat) {
+            productInvoicePriceMap[it.productId] = parseFloat(it.purchasePrice || it.unitPrice || it.prixAchat || 0);
+          }
         }
       });
     }
@@ -46,6 +50,7 @@ async function renderInventory(container) {
     stockMap,
     supplierMap,
     productSupplierMap,
+    productInvoicePriceMap,
     userMap,
     inventories: inventories.sort((a, b) => new Date(b.datetime || 0) - new Date(a.datetime || 0)),
     
@@ -434,7 +439,7 @@ function startInventorySetup(event) {
         name: p.name,
         form: p.form || '—',
         category: p.category || '—',
-        purchasePrice: parseFloat(p.purchasePrice || p.prixAchat || 0),
+        purchasePrice: parseFloat(p.purchasePrice || p.prixAchat || state.productInvoicePriceMap[p.id] || 0),
         supplierName: state.productSupplierMap[p.id] || 'Aucun d\'achat',
         systemQty: theory,
         physicalQty: theory, // Initialisé à la qté théorique pour simplifier

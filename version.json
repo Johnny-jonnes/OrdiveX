@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47e",
+  "version": "9.7.47f",
   "date": "2026-07-05",
-  "changelog": "Optimisation de la synchronisation temps réel : fiabilisation du mode hors-ligne sans connexion internet par suppression des erreurs DNS en veille et suppression des clones GoTrueClient multiples. Correction de l'inventaire physique : renommage de la mention PA en Achat pour clarté utilisateur, et fallback correct sur prixAchat pour les calculs d'écarts financiers."
+  "changelog": "Correction de l'inventaire : recherche proactive du prix d'achat dans l'historique des factures fournisseurs si le produit n'a pas de prix défini dans le catalogue principal, garantissant que les calculs financiers d'écarts d'inventaire ne soient jamais à 0."
 }
