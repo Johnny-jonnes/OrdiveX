@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47u",
+  "version": "9.7.47v",
   "date": "2026-07-05",
-  "changelog": "Reconnexion automatique intelligente : levée temporaire du flag offline pour permettre au probe HEAD de passer, vérification réelle de la connectivité internet, puis réactivation complète de Supabase, du realtime et du sync si le réseau est confirmé."
+  "changelog": "Reconnexion automatique intelligente : déploiement de la version stable."
 }
