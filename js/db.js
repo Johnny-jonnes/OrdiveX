@@ -1797,13 +1797,13 @@ async function pullFromSupabase(isManual = false) {
           }
         }
       } catch (storeErr) {
-        const errMsg = storeErr?.message || String(storeErr || '');\r
-        const isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_INTERNET_DISCONNECTED') || errMsg.includes('ERR_QUIC_PROTOCOL_ERROR') || errMsg.includes('ERR_NAME_NOT_RESOLVED') || errMsg.includes('CORS') || errMsg.includes('Access-Control') || errMsg.includes('ERR_CONNECTION_RESET') || errMsg.includes('ERR_CONNECTION_CLOSED') || errMsg.includes('ERR_NETWORK_IO_SUSPENDED') || errMsg.includes('preflight') || errMsg.includes('timeout');\r
-        if (isNetworkError) {\r
-          AppState.isOnline = false;\r
-          AppState._confirmedOffline = true;\r
-          console.log('[Flash] ⚠️ Pull interrompu: erreur réseau détectée');\r
-          break;\r
+        const errMsg = storeErr?.message || String(storeErr || '');
+        const isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_INTERNET_DISCONNECTED') || errMsg.includes('ERR_QUIC_PROTOCOL_ERROR') || errMsg.includes('ERR_NAME_NOT_RESOLVED') || errMsg.includes('CORS') || errMsg.includes('Access-Control') || errMsg.includes('ERR_CONNECTION_RESET') || errMsg.includes('ERR_CONNECTION_CLOSED') || errMsg.includes('ERR_NETWORK_IO_SUSPENDED') || errMsg.includes('preflight') || errMsg.includes('timeout');
+        if (isNetworkError) {
+          AppState.isOnline = false;
+          AppState._confirmedOffline = true;
+          console.log('[Flash] ⚠️ Pull interrompu: erreur réseau détectée');
+          break;
         }
         if (errMsg && !errMsg.includes('null')) {
           console.warn(`[Flash] Store error ${storeName}:`, errMsg);
