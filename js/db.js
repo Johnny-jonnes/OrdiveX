@@ -68,19 +68,22 @@
     return _origFetch.apply(this, arguments).catch(function (err) {
       if (isSupabase) {
         var errMsg = err?.message || String(err || '');
-        var isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_') || errMsg.includes('timeout');
+        var isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_') || errMsg.includes('timeout') || errMsg.includes('Load failed') || errMsg.includes('AbortError');
         if (isNetworkError && typeof AppState !== 'undefined') {
+          // ── Transition d'état offline atomique ──
+          var wasOnline = AppState.isOnline;
           AppState.isOnline = false;
-          AppState._confirmedOffline = true;
+          AppState.__confirmedOffline = true; // Écriture directe pour éviter la boucle du setter
+          // Notifier le SW directement sans passer par le setter
           if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            try {
-              navigator.serviceWorker.controller.postMessage({
-                type: 'OFFLINE_STATE',
-                offline: true
-              });
-            } catch (e) { }
+            try { navigator.serviceWorker.controller.postMessage({ type: 'OFFLINE_STATE', offline: true }); } catch (e) { }
           }
           if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+          // Déclencher la machine à états de connectivité si on était en ligne avant
+          if (wasOnline && typeof _handleConnectivityChange === 'function') {
+            // Appel différé pour ne pas bloquer la chaîne de promesses courante
+            setTimeout(function() { _handleConnectivityChange(false); }, 0);
+          }
         }
       }
       throw err;
@@ -2050,9 +2053,11 @@ function startAutoPull() {
   // On expose _triggerAutoPull pour que _handleConnectivityChange puisse déclencher un pull
   window._triggerAutoPull = function() {
     _pullFailCount = 0;
-    AppState._confirmedOffline = false;
+    // NE PAS remettre _confirmedOffline ici — c'est pullFromSupabase qui le fera
+    // après confirmation réseau réelle. Remettre ici trop tôt peut déclencher
+    // des requêtes Supabase alors qu'on est encore offline.
     if (_autoPullTimer) clearTimeout(_autoPullTimer);
-    _autoPullTimer = window.setTimeout(runPull, 3000);
+    _autoPullTimer = window.setTimeout(runPull, 2000);
   };
   
   // Réveil sur interaction utilisateur (throttle 2 min pour zéro spam d'erreur HEAD)
@@ -2117,17 +2122,23 @@ function startAutoPull() {
 
       _autoPullTimer = window.setTimeout(runPull, 60000);
     }).catch(function() {
-      // Échec (probe offline) → SILENCE TOTAL ABSOLU
+      // Échec réseau → mode offline confirmé
       _pullFailCount++;
-      AppState._confirmedOffline = true;
       AppState.isOnline = false;
-      // Tuer le timer interne de Supabase qui fait des POST auth/token en boucle
+      AppState.__confirmedOffline = true; // Écriture directe pour éviter boucle setter→_handleConnectivity
+      // Notifier le SW
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        try { navigator.serviceWorker.controller.postMessage({ type: 'OFFLINE_STATE', offline: true }); } catch(e) {}
+      }
+      if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+      // Tuer le timer interne Supabase (POST auth/token en boucle)
       if (_supabaseInstance && _supabaseInstance.auth) {
         try { _supabaseInstance.auth.stopAutoRefresh(); } catch(e) {}
       }
-      // Veille profonde offline : aucun probe automatique pour un silence console total et absolu.
-      // La reconnexion se fera via l'événement 'online' du navigateur ou via le bouton 'Réessayer' du moniteur.
-      if (_autoPullTimer) { clearTimeout(_autoPullTimer); _autoPullTimer = null; }
+      // Veille légère : relancer toutes les 2 min pour auto-détecter le retour internet
+      // sans spam d'erreurs (pullFromSupabase a son propre probe natif silencieux)
+      if (_autoPullTimer) clearTimeout(_autoPullTimer);
+      _autoPullTimer = window.setTimeout(runPull, 120000);
     });
   }
 
@@ -2271,124 +2282,132 @@ if (typeof indexedDB !== 'undefined') {
 // Empêche les boucles online/offline et les reconnexions en rafale
 // ═══════════════════════════════════════════════════════════════════
 
-function _handleConnectivityChange(isOnline) {
-  // Ignorer si l'état n'a pas réellement changé
-  if (isOnline === _lastConnState) return;
-  _lastConnState = isOnline;
+// ═══════════════════════════════════════════════════════════════════
+// CONNEXION RESILIENCE ENGINE v2
+// Machine à états stricte pour la détection réseau.
+// Un seul flag de vérité : AppState._confirmedOffline
+// ── States ──
+//   ONLINE  : isOnline=true,  _confirmedOffline=false → Supabase actif
+//   OFFLINE : isOnline=false, _confirmedOffline=true  → Silence total
+// ═══════════════════════════════════════════════════════════════════
 
-  // Debounce : attendre avant de réagir
+// Transition atomique vers le mode OFFLINE (peut être appelée depuis n'importe où)
+function _goOffline() {
+  if (AppState.__confirmedOffline && !AppState.isOnline) return; // déjà offline
+  _logOnce('log', '[App] Mode hors-ligne activé');
+  AppState.isOnline = false;
+  AppState.__confirmedOffline = true;
+  _notifySwOfflineState(true);
+  // Annuler tout sync/pull en cours
+  _syncInProgress = false;
+  _isPulling = false;
+  if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
+  // Stopper le refresh token Supabase
+  if (_supabaseInstance) {
+    try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch (e) { }
+    try {
+      if (_realtimeSubscription) {
+        _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { });
+        _realtimeSubscription = null;
+      }
+      if (_broadcastChannel) {
+        _supabaseInstance.removeChannel(_broadcastChannel).catch(() => { });
+        _broadcastChannel = null;
+      }
+      _supabaseInstance.realtime?.disconnect?.();
+      _realtimeCooldown = false;
+    } catch (e) { }
+    _supabaseInstance = null;
+  }
+  if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+}
+
+// Transition atomique vers le mode ONLINE après confirmation réseau réelle
+async function _attemptReconnect() {
+  // Étape 1 : Lever temporairement le guard pour permettre le probe
+  AppState.__confirmedOffline = false;
+  _notifySwOfflineState(false);
+
+  // Étape 2 : Probe silencieux vers GitHub Pages (notre propre domaine, pas Supabase)
+  try {
+    var _ctrl = new AbortController();
+    var _tm = setTimeout(function() { _ctrl.abort(); }, 6000);
+    var resp = await fetch(location.origin + location.pathname, {
+      method: 'HEAD', cache: 'no-store', signal: _ctrl.signal,
+      _bypassOfflineGuard: true
+    });
+    clearTimeout(_tm);
+    if (!resp.ok && resp.status !== 304) throw new Error('probe failed: ' + resp.status);
+  } catch (e) {
+    // Toujours pas de réseau — remettre offline
+    _logOnce('warn', '[App] Retour réseau signalé mais internet non disponible');
+    AppState.__confirmedOffline = true;
+    _notifySwOfflineState(true);
+    AppState.isOnline = false;
+    if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+    // Replanifier une tentative dans 30s
+    clearTimeout(_connectivityDebounceTimer);
+    _connectivityDebounceTimer = setTimeout(() => {
+      if (navigator.onLine) _attemptReconnect();
+    }, 30000);
+    return;
+  }
+
+  // ✅ Internet réellement disponible !
+  _reconnectAttempts = 0;
+  AppState.isOnline = true;
+  AppState.__confirmedOffline = false;
+  _notifySwOfflineState(false);
+  _logOnce('log', '[App] ✅ Connexion internet rétablie — synchronisation...');
+
+  // Recréer l'instance Supabase proprement
+  const sb = await getSupabaseClient();
+  if (sb) {
+    if (sb.auth?.startAutoRefresh) { try { sb.auth.startAutoRefresh(); } catch(e) {} }
+    try { _setupRealtime(sb); } catch (e) { }
+    try { _setupBroadcast(sb); } catch (e) { }
+  }
+
+  // Déclencher le pull (récupérer les données des autres appareils)
+  if (typeof window._triggerAutoPull === 'function') {
+    window._triggerAutoPull();
+  }
+
+  // Traiter la file d'attente des opérations offline
+  if (typeof window._triggerQueueProcess === 'function') {
+    window._triggerQueueProcess();
+  }
+
+  // Pousser les données locales non-synchronisées
+  setTimeout(() => {
+    if (AppState._confirmedOffline) return;
+    syncToSupabase().then(() => {
+      _logOnce('log', '[App] ✅ Synchronisation post-reconnexion terminée');
+    }).catch(() => { });
+  }, 1500);
+
+  if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+}
+
+function _handleConnectivityChange(isOnline) {
+  // Debounce : éviter les rebonds online/offline rapides
   clearTimeout(_connectivityDebounceTimer);
   _connectivityDebounceTimer = setTimeout(() => {
     const actuallyOnline = navigator.onLine;
 
-    if (actuallyOnline && !AppState.isOnline) {
-      // ── TENTATIVE DE RECONNEXION ──
-      _logOnce('log', '[App] Signal réseau détecté, vérification...');
-
-      // Lever temporairement le flag pour que le probe puisse passer
-      var wasConfirmedOffline = AppState.__confirmedOffline;
-      AppState.__confirmedOffline = false;
-      // Informer le SW immédiatement
-      _notifySwOfflineState(false);
-
-      const delay = _getBackoffDelay();
-      _reconnectAttempts++;
-
-      setTimeout(async () => {
-        if (!navigator.onLine) {
-          // Remettre le flag si plus de réseau
-          AppState.__confirmedOffline = true;
-          _notifySwOfflineState(true);
-          return;
-        }
-
-        // Probe silencieux avec _bypassOfflineGuard pour ne pas être bloqué par le fetch wrapper
-        try {
-          var _ctrl = new AbortController();
-          var _tm = setTimeout(function() { _ctrl.abort(); }, 5000);
-          await fetch(location.origin + location.pathname, {
-            method: 'HEAD', cache: 'no-store', signal: _ctrl.signal,
-            _bypassOfflineGuard: true
-          });
-          clearTimeout(_tm);
-        } catch (e) {
-          // Internet pas réellement disponible
-          _logOnce('warn', '[App] Signal réseau sans accès internet, retour hors-ligne');
-          AppState.__confirmedOffline = true;
-          _notifySwOfflineState(true);
-          if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
-          return;
-        }
-
-        // ✅ Internet confirmé !
-        AppState.isOnline = true;
-        AppState.__confirmedOffline = false;
-        _notifySwOfflineState(false);
-        _logOnce('log', '[App] ✅ Connexion internet rétablie');
-
-        // Recréer l'instance Supabase
-        const sb = await getSupabaseClient();
-        if (!sb) return;
-
-        // Relancer le auto-refresh du token
-        if (sb.auth?.startAutoRefresh) {
-          sb.auth.startAutoRefresh();
-        }
-        // Relancer le realtime + broadcast
-        try { _setupRealtime(sb); } catch (e) { }
-        try { _setupBroadcast(sb); } catch (e) { }
-        
-        // Déclencher le auto-pull
-        if (typeof window._triggerAutoPull === 'function') {
-          window._triggerAutoPull();
-        }
-
-        // Déclencher le traitement de la file d'attente
-        if (typeof window._triggerQueueProcess === 'function') {
-          window._triggerQueueProcess();
-        }
-
-        // Sync vers Supabase
-        syncToSupabase().then(() => {
-          _reconnectAttempts = 0;
-        }).catch(() => { });
-
-        // Mettre à jour l'UI
-        if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
-      }, delay);
-
-    } else if (!actuallyOnline) {
-      // ── DÉCONNEXION IMMÉDIATE ──
-      AppState.isOnline = false;
-      AppState.__confirmedOffline = true;
-      _notifySwOfflineState(true);
-      // Annuler tout sync/pull en cours
-      _syncInProgress = false;
-      _isPulling = false;
-      if (_syncTimer) { clearTimeout(_syncTimer); _syncTimer = null; }
-      _logOnce('log', '[App] Mode hors-ligne activé');
-
-      // DESTRUCTION TOTALE de l'instance Supabase pour tuer TOUS ses timers internes
-      if (_supabaseInstance) {
-        try {
-          _supabaseInstance.auth?.stopAutoRefresh?.();
-          if (_realtimeSubscription) {
-            _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { });
-            _realtimeSubscription = null;
-          }
-          if (_broadcastChannel) {
-            _supabaseInstance.removeChannel(_broadcastChannel).catch(() => { });
-            _broadcastChannel = null;
-          }
-          _supabaseInstance.realtime?.disconnect?.();
-          _realtimeCooldown = false;
-        } catch (e) { }
-        _supabaseInstance = null;
-      }
-
-      if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+    if (!actuallyOnline) {
+      // ── DÉCONNEXION — Transition immédiate ──
+      _lastConnState = false;
+      _goOffline();
+    } else if (actuallyOnline && (AppState._confirmedOffline || !AppState.isOnline)) {
+      // ── RETOUR RÉSEAU — Vérification réelle avant de reprendre ──
+      // On réagit si : navigator.onLine=true ET (app en mode offline confirmé OU isOnline=false)
+      _lastConnState = true;
+      _logOnce('log', '[App] Signal réseau détecté, vérification de la connectivité...');
+      _attemptReconnect();
     }
-  }, isOnline ? 3000 : 500); // Online: debounce 3s, Offline: réaction rapide 500ms
+    // Si actuallyOnline && isOnline && !_confirmedOffline → déjà en ligne, rien à faire
+  }, isOnline ? 2000 : 300); // Online: debounce 2s, Offline: réaction quasi-immédiate
 }
 
 // ─────────────────────────────────────────────────────────────────

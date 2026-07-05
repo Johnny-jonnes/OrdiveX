@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47v",
+  "version": "9.7.47w",
   "date": "2026-07-05",
-  "changelog": "Reconnexion automatique intelligente : déploiement de la version stable."
+  "changelog": "Machine à états réseau v2 : reconnexion automatique robuste avec transitions atomiques online/offline, probe silencieux via GitHub Pages, veille légère avec retry toutes les 2 min, zéro boucle infinie et zéro erreur console."
 }
