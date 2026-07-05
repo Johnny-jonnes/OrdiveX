@@ -53,20 +53,38 @@
 (function () {
   var _origFetch = window.fetch;
   window.fetch = function (url, opts) {
-    // Si offline (OS ou confirmé) ET la requête va vers Supabase → réponse vide silencieuse
     var isOffline = !navigator.onLine || (typeof AppState !== 'undefined' && AppState._confirmedOffline);
-    if (isOffline) {
-      var urlStr = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
-      if (urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('gohfpvvmxsoujpnbmtcl') !== -1) {
-        // Vérifier si c'est un appel du probe natif (marqué _bypassOfflineGuard)
-        if (!(opts && opts._bypassOfflineGuard)) {
-          return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
-          }));
-        }
+    var urlStr = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
+    var isSupabase = urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('gohfpvvmxsoujpnbmtcl') !== -1;
+
+    if (isOffline && isSupabase) {
+      if (!(opts && opts._bypassOfflineGuard)) {
+        return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
+          status: 200, headers: { 'Content-Type': 'application/json' }
+        }));
       }
     }
-    return _origFetch.apply(this, arguments);
+
+    return _origFetch.apply(this, arguments).catch(function (err) {
+      if (isSupabase) {
+        var errMsg = err?.message || String(err || '');
+        var isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_') || errMsg.includes('timeout');
+        if (isNetworkError && typeof AppState !== 'undefined') {
+          AppState.isOnline = false;
+          AppState._confirmedOffline = true;
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            try {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'OFFLINE_STATE',
+                offline: true
+              });
+            } catch (e) { }
+          }
+          if (typeof window.updateNetworkStatus === 'function') window.updateNetworkStatus();
+        }
+      }
+      throw err;
+    });
   };
 })();
 

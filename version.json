@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47r",
+  "version": "9.7.47s",
   "date": "2026-07-05",
-  "changelog": "Silence console absolu hors-ligne : désactivation complète des sondes automatiques en arrière-plan et des vérifications sur clic de l'utilisateur pour éliminer la moindre ligne d'erreur réseau rouge, reposant exclusivement sur la reconnexion manuelle ou via l'événement réseau natif de l'OS."
+  "changelog": "Détection instantanée de la déconnexion : interception de tout échec de requête Supabase dans le wrapper fetch global pour basculer l'application en mode hors-ligne sans attendre les timers en tâche de fond, et garde confirmedOffline sur le chargement des appareils dans l'onglet paramètres."
 }

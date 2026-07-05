@@ -1593,11 +1593,11 @@ async function loadDeviceCount() {
   const el = document.getElementById('settings-device-count');
   if (!el) return;
   try {
-    if (!navigator.onLine) { el.textContent = 'Hors ligne'; return; }
+    if (!navigator.onLine || (window.DB && window.DB.AppState && window.DB.AppState._confirmedOffline)) { el.textContent = 'Hors ligne'; return; }
     const sb = await DB.getSupabaseClient();
     if (!sb) { el.textContent = 'Non configuré'; return; }
     const { data, error } = await sb.from('settings').select('value').like('key', 'device_status_%');
-    if (error) { el.textContent = 'Erreur'; return; }
+    if (error) { el.textContent = 'Hors ligne'; return; }
 
     // Chaque device_id = un appareil distinct (pas de dédup par nom)
     var allDevices = [];
