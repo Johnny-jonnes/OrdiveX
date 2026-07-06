@@ -160,6 +160,13 @@ const OperationQueue = (function () {
         } catch (err) {
           await updateStatus(op.id, 'error', err && err.message ? err.message : String(err));
           console.warn('[Queue] Echec: ' + op.type + ' (retry ' + (op.retries + 1) + '/' + MAX_RETRIES + ')');
+          
+          // Vérifier si le réseau a été coupé suite à cet échec, et arrêter la boucle si oui
+          const checkOnline = window.NM && typeof window.NM.isOnline === 'function' ? window.NM.isOnline() : navigator.onLine;
+          if (!checkOnline) {
+            console.log('[Queue] Réseau déconnecté détecté pendant l\'exécution -> arrêt immédiat de la file.');
+            break;
+          }
         }
       }
 

@@ -411,9 +411,11 @@
           try {
             if (window.OperationQueue?.process) await window.OperationQueue.process();
             if (window.DB?._internalSyncToSupabase) await window.DB._internalSyncToSupabase();
-            this.lastSuccessTime = Date.now();
-            this.consecutiveFailures = 0;
-            this.transition(NetworkState.ONLINE);
+            if (this.state === NetworkState.SYNCING) {
+              this.lastSuccessTime = Date.now();
+              this.consecutiveFailures = 0;
+              this.transition(NetworkState.ONLINE);
+            }
           } catch (err) {
             this._handleSyncError(err, 'PUSH');
           } finally {
@@ -438,9 +440,11 @@
           this.transition(NetworkState.SYNCING);
           try {
             if (window.DB?._internalPullFromSupabase) await window.DB._internalPullFromSupabase(isManual);
-            this.lastSuccessTime = Date.now();
-            this.consecutiveFailures = 0;
-            this.transition(NetworkState.ONLINE);
+            if (this.state === NetworkState.SYNCING) {
+              this.lastSuccessTime = Date.now();
+              this.consecutiveFailures = 0;
+              this.transition(NetworkState.ONLINE);
+            }
           } catch (err) {
             this._handleSyncError(err, 'PULL');
           } finally {
@@ -452,7 +456,7 @@
 
     _handleSyncError(err, label) {
       const errStr = err?.message || String(err || '');
-      if (_isNetworkError(errStr)) {
+      if (errStr === 'network_offline' || _isNetworkError(errStr)) {
         this._goOfflineFromNetworkError(errStr);
       } else {
         this._logOnce('warn', `[NM] Erreur ${label}: ${errStr.substring(0, 100)}`);

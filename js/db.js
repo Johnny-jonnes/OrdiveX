@@ -371,7 +371,7 @@ async function getSupabaseClient() {
 
 function _setupRealtime(sbClient) {
   // Gardes strictes : ne pas reconnecter si déjà connecté, hors-ligne, ou en cooldown
-  if (_realtimeSubscription || !navigator.onLine || _realtimeCooldown) return;
+  if (_realtimeSubscription || !navigator.onLine || _realtimeCooldown || (window.NM && !window.NM.isOnline())) return;
 
   // Cooldown de 30s pour éviter les boucles de reconnexion WebSocket sur réseau instable
   _realtimeCooldown = true;
@@ -445,7 +445,7 @@ function _setupRealtime(sbClient) {
 // Flux : Appareil A push → broadcast "j'ai pushé" → Appareil B pull immédiat
 // ═══════════════════════════════════════════════════════════════════
 function _setupBroadcast(sbClient) {
-  if (_broadcastChannel || !navigator.onLine) return;
+  if (_broadcastChannel || !navigator.onLine || (window.NM && !window.NM.isOnline())) return;
 
   try {
     _broadcastChannel = sbClient.channel('ordivex-live-sync', {
@@ -1250,6 +1250,11 @@ async function _internalSyncToSupabase() {
 
     // ⚡ FLASH SEND — Envoi séquentiel pour ne pas étouffer le réseau (surtout avec 30k produits)
     for (const storeName of storesToSync) {
+      // S'arrêter immédiatement si on a perdu la connexion
+      if ((window.NM && !window.NM.isOnline()) || !navigator.onLine) {
+        throw new Error('network_offline');
+      }
+
       try {
         const all = await dbGetAll(storeName);
         let pending = all.filter(item => item._synced === false);
@@ -1308,16 +1313,9 @@ async function _internalSyncToSupabase() {
             }
           }
 
-          // ── COLONNES LOCAL-ONLY : à supprimer au fur et à mesure qu'elles sont ajoutées à Supabase ──
-          // Vides pour la refonte - toutes les colonnes doivent être envoyées
-          const _localOnlyColumns = {};
           // Exclure les clés settings qui contiennent du JSON complexe non-compatible Supabase
           if (storeName === 'settings' && payload.key === 'held_carts') {
             return null;
-          }
-          const localOnly = _localOnlyColumns[storeName];
-          if (localOnly) {
-            localOnly.forEach(c => delete payload[c]);
           }
 
           // Filtrer les colonnes invalides DANS le payload (via auto-apprentissage du cache)
@@ -1345,7 +1343,7 @@ async function _internalSyncToSupabase() {
         let retries = 0;
         const maxRetries = 10;
         let lastError = null;
-        // Délais backoff exponentiel : 0, 500ms, 1s, 2s, 5s, 10s...
+        // Délais backoff exponentiel : 0, 500ms, 1s, 2s, 5s...
         const _backoffDelays = [0, 500, 1000, 2000, 5000, 10000, 15000, 20000, 30000, 60000];
 
         // Découper en lots de 500 pour éviter les timeouts Supabase
@@ -1354,16 +1352,18 @@ async function _internalSyncToSupabase() {
 
         while (retries <= maxRetries) {
           // Vérifier l'état réseau AVANT chaque tentative
-          if (window.NM && !window.NM.isOnline()) break;
-          if (!navigator.onLine) break;
+          if ((window.NM && !window.NM.isOnline()) || !navigator.onLine) {
+            throw new Error('network_offline');
+          }
 
           // Backoff : attendre avant de réessayer (sauf premier essai)
           if (retries > 0) {
             const delay = _backoffDelays[Math.min(retries, _backoffDelays.length - 1)];
             await new Promise(r => setTimeout(r, delay));
             // Re-vérifier après le délai d'attente
-            if (window.NM && !window.NM.isOnline()) break;
-            if (!navigator.onLine) break;
+            if ((window.NM && !window.NM.isOnline()) || !navigator.onLine) {
+              throw new Error('network_offline');
+            }
           }
 
           lastError = null;
@@ -1371,7 +1371,9 @@ async function _internalSyncToSupabase() {
 
           for (let bi = 0; bi < currentPayloads.length; bi += PUSH_BATCH) {
             // Vérifier l'état réseau avant chaque batch
-            if (window.NM && !window.NM.isOnline()) { allSuccess = false; break; }
+            if ((window.NM && !window.NM.isOnline()) || !navigator.onLine) {
+              throw new Error('network_offline');
+            }
 
             const batch = currentPayloads.slice(bi, bi + PUSH_BATCH);
             const { error } = await _withTimeout(
@@ -1392,6 +1394,57 @@ async function _internalSyncToSupabase() {
             // Marquer les items de ce batch comme synchronisés
             const batchPending = pending.slice(bi, bi + PUSH_BATCH);
             for (const item of batchPending) {
+              item._synced = true;
+              await _dbPutRaw(storeName, item);
+              // Anti-écho : marquer pour ignorer l'événement Realtime retour
+              _markAsSynced(storeName, item.id || item.key);
+            }
+          }
+
+          if (allSuccess) {
+            lastError = null;
+            break;
+          }
+
+          const colMatch = (lastError?.message || '').match(/Could not find the '([^']+)' column/);
+          if (colMatch && retries < maxRetries) {
+            const badCol = colMatch[1];
+            // On ne log que si c'est une nouvelle découverte
+            if (!_colCache[storeName] || !_colCache[storeName].includes(badCol)) {
+              console.log('[Flash] ⚡ ' + storeName + ': apprentissage nouvelle colonne local-only \'' + badCol + '\'');
+            }
+            currentPayloads = currentPayloads.map(p => {
+              const { [badCol]: _, ...rest } = p;
+              return rest;
+            });
+            // Sauvegarder dans le cache
+            if (!_colCache[storeName]) _colCache[storeName] = [];
+            if (!_colCache[storeName].includes(badCol)) _colCache[storeName].push(badCol);
+            localStorage.setItem('pharma_bad_columns', JSON.stringify(_colCache));
+            retries++;
+          } else {
+            // Si c'est une erreur réseau, lever l'exception immédiatement
+            if (window.NM && !window.NM.isOnline()) {
+              throw new Error('network_offline');
+            }
+            break;
+          }
+        }
+
+        if (lastError && navigator.onLine) {
+          // Ignorer les erreurs RLS connues (settings upsert en anon mode)
+          if (!lastError.message?.includes('row-level security')) {
+            console.error(`[Flash] ❌ ${storeName}:`, lastError.message || lastError);
+          }
+        }
+      } catch (storeError) {
+        if (storeError.message === 'network_offline') {
+          throw storeError; // Propager pour arrêter le sync global
+        }
+        // Silencieux si hors-ligne
+        if (navigator.onLine) console.error(`[Flash] Exception ${storeName}:`, storeError);
+      }
+    }    for (const item of batchPending) {
               item._synced = true;
               await _dbPutRaw(storeName, item);
               // Anti-écho : marquer pour ignorer l'événement Realtime retour
@@ -1700,9 +1753,8 @@ async function _internalPullFromSupabase(isManual = false) {
     };
 
     for (const storeName of storesToPull) {
-      if (!navigator.onLine) {
-        console.log('[Flash] ⚠️ Pull interrompu: connexion perdue');
-        break;
+      if ((window.NM && !window.NM.isOnline()) || !navigator.onLine) {
+        throw new Error('network_offline');
       }
       try {
         const tableName = storeName === 'users' ? 'app_users' : storeName;
@@ -1720,12 +1772,12 @@ async function _internalPullFromSupabase(isManual = false) {
             const results = await Promise.all(batch.map(async ({ storeName: sn, tableName: tn }) => {
               try {
                 const { data, error } = await _withTimeout(
-                sb.from(tn)
-                  .select('*')
-                  .gte('updatedAt', pullSince)
-                  .order('updatedAt', { ascending: true })
-                  .limit(5000)
-              );
+                  sb.from(tn)
+                    .select('*')
+                    .gte('updatedAt', pullSince)
+                    .order('updatedAt', { ascending: true })
+                    .limit(5000)
+                );
                 if (error) return { sn, data: null, error };
                 return { sn, data, error: null };
               } catch (e) { return { sn, data: null, error: e }; }
@@ -1733,6 +1785,9 @@ async function _internalPullFromSupabase(isManual = false) {
 
             for (const r of results) {
               if (r.error) {
+                if (window.NM && !window.NM.isOnline()) {
+                  throw new Error('network_offline');
+                }
                 throw r.error;
               }
               if (r.data && r.data.length > 0) {
@@ -1751,6 +1806,12 @@ async function _internalPullFromSupabase(isManual = false) {
         } else {
           // ── PULL COMPLET (manuel ou premier pull) ──
           const countRes = await _withTimeout(sb.from(tableName).select('*', { count: 'exact', head: true }));
+          if (countRes.error) {
+            if (window.NM && !window.NM.isOnline()) {
+              throw new Error('network_offline');
+            }
+            throw countRes.error;
+          }
           const totalCount = countRes.count || 0;
 
           if (totalCount > 0) {
@@ -1758,7 +1819,9 @@ async function _internalPullFromSupabase(isManual = false) {
             let storeItemCount = 0;
 
             for (let offset = 0; offset < totalCount; offset += fetchLimit * 5) {
-              if (!navigator.onLine) break;
+              if ((window.NM && !window.NM.isOnline()) || !navigator.onLine) {
+                throw new Error('network_offline');
+              }
               const batch = [];
               for (let j = 0; j < 5 && (offset + j * fetchLimit) < totalCount; j++) {
                 const o = offset + j * fetchLimit;
@@ -1766,7 +1829,12 @@ async function _internalPullFromSupabase(isManual = false) {
               }
               const results = await Promise.all(batch);
               for (const res of results) {
-                if (res.error) throw res.error;
+                if (res.error) {
+                  if (window.NM && !window.NM.isOnline()) {
+                    throw new Error('network_offline');
+                  }
+                  throw res.error;
+                }
                 if (res.data && res.data.length > 0) {
                   storeItemCount += await writeBatchToIDB(storeName, res.data);
                 }
@@ -1782,6 +1850,9 @@ async function _internalPullFromSupabase(isManual = false) {
           }
         }
       } catch (storeErr) {
+        if (storeErr.message === 'network_offline') {
+          throw storeErr; // Propager pour arrêter le pull global
+        }
         const errMsg = storeErr?.message || String(storeErr || '');
         const isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_INTERNET_DISCONNECTED') || errMsg.includes('ERR_QUIC_PROTOCOL_ERROR') || errMsg.includes('ERR_NAME_NOT_RESOLVED') || errMsg.includes('CORS') || errMsg.includes('Access-Control') || errMsg.includes('ERR_CONNECTION_RESET') || errMsg.includes('ERR_CONNECTION_CLOSED') || errMsg.includes('ERR_NETWORK_IO_SUSPENDED') || errMsg.includes('preflight') || errMsg.includes('timeout');
         if (isNetworkError) {
@@ -2106,7 +2177,8 @@ async function restoreFromBackup(backupData) {
 
 function resetSupabaseClient() {
   if (_supabaseInstance) {
-    try { _supabaseInstance.auth?.stopAutoRefresh(); } catch (e) { }
+    try { _supabaseInstance.auth?.stopAutoRefresh?.(); } catch (e) { }
+    try { _supabaseInstance.realtime?.disconnect?.(); } catch (e) { }
     try { if (_realtimeSubscription) { _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { }); _realtimeSubscription = null; } } catch (e) { }
     try { if (_broadcastChannel) { _supabaseInstance.removeChannel(_broadcastChannel).catch(() => { }); _broadcastChannel = null; } } catch (e) { }
   }
