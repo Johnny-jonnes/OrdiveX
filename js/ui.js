@@ -355,7 +355,7 @@ const UI = {
     list.innerHTML = '<div style="text-align:center; padding: 20px;"><div class="spinner"></div><p>Analyse du réseau...</p></div>';
     modal.style.display = 'flex';
 
-    if (!navigator.onLine) {
+    if (window.NM ? !window.NM.isOnline() : !navigator.onLine) {
         list.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted);"><i data-lucide="wifi-off" style="width:40px;height:40px;margin-bottom:8px;"></i><p>Vous êtes hors ligne</p></div>';
         if (window.lucide) lucide.createIcons({ root: list });
         return;

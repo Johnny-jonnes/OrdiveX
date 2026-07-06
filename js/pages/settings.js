@@ -57,9 +57,9 @@ function renderLogin(container) {
         
         <div class="login-footer-elite">
           <span class="version-tag">OrdiveX v9.5.0</span>
-          <div class="network-tag ${navigator.onLine ? 'online' : 'offline'}">
-            <i data-lucide="${navigator.onLine ? 'wifi' : 'wifi-off'}"></i>
-            ${navigator.onLine ? 'Système synchronisé' : 'Mode hors-ligne'}
+          <div class="network-tag ${(window.NM ? window.NM.isOnline() : navigator.onLine) ? 'online' : 'offline'}">
+            <i data-lucide="${(window.NM ? window.NM.isOnline() : navigator.onLine) ? 'wifi' : 'wifi-off'}"></i>
+            ${(window.NM ? window.NM.isOnline() : navigator.onLine) ? 'Système synchronisé' : 'Mode hors-ligne'}
           </div>
         </div>
       </div>
@@ -745,7 +745,7 @@ async function renderSettings(container) {
           <div class="sync-panel">
             <div class="sync-status-row">
               <span>Statut réseau</span>
-              <span class="${navigator.onLine ? 'text-success' : 'text-danger'}">${navigator.onLine ? '<i data-lucide="wifi"></i> En ligne' : '<i data-lucide="wifi-off"></i> Hors ligne'}</span>
+              <span class="${(window.NM ? window.NM.isOnline() : navigator.onLine) ? 'text-success' : 'text-danger'}">${(window.NM ? window.NM.isOnline() : navigator.onLine) ? '<i data-lucide="wifi"></i> En ligne' : '<i data-lucide="wifi-off"></i> Hors ligne'}</span>
             </div>
             <div class="sync-status-row">
               <span>Mode opération</span>
@@ -1593,9 +1593,9 @@ async function loadDeviceCount() {
   const el = document.getElementById('settings-device-count');
   if (!el) return;
   try {
-    if (!navigator.onLine || (window.DB && window.DB.AppState && (window.DB.AppState._confirmedOffline || !window.DB.AppState.isOnline))) { el.textContent = 'Hors ligne'; return; }
+    if ((window.NM && !window.NM.isOnline()) || !navigator.onLine || (window.DB && window.DB.AppState && (window.DB.AppState._confirmedOffline || !window.DB.AppState.isOnline))) { el.textContent = 'Hors ligne'; return; }
     const sb = await DB.getSupabaseClient();
-    if (!sb) { el.textContent = 'Non configuré'; return; }
+    if (!sb || (window.NM && !window.NM.isOnline())) { el.textContent = 'Non configuré'; return; }
     // Entourer la requête Supabase dans son propre try/catch pour absorber
     // silencieusement les échecs réseau si la connexion tombe en cours de requête
     var data;

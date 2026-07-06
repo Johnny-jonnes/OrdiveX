@@ -92,6 +92,7 @@
       this.lastError = '';
       this._retryTimer = null;
       this._reconnectAttempts = 0;
+      this._probing = false; // Verrou anti-probes concurrents
       this._mutex = new Mutex();
       this._syncCoalescePending = false;
       this._pullCoalescePending = false;
@@ -227,6 +228,13 @@
       const errStr = error ? String(error.message || error) : 'Erreur réseau';
       this.lastError = errStr;
 
+      // ── GUARD: Si on est déjà offline/retrying, ignorer silencieusement ──
+      // Les requêtes Supabase en vol qui échouent après la détection initiale
+      // ne doivent PAS re-déclencher le cycle de reconnexion.
+      if (this.state === NetworkState.RETRYING || this.state === NetworkState.OFFLINE) {
+        return;
+      }
+
       // 1. Erreurs d'authentification ou de ressource → pas de changement d'état réseau
       if (_isAuthError(errStr, httpStatus)) {
         this._logOnce('warn', `[NM] Erreur auth Supabase (ignorée pour état réseau): ${errStr.substring(0, 80)}`);
@@ -239,7 +247,7 @@
         return;
       }
 
-      // 3. Erreur réseau réelle → OFFLINE immédiat, pas d'attente
+      // 3. Erreur réseau réelle → OFFLINE immédiat
       if (_isNetworkError(errStr)) {
         this._goOfflineFromNetworkError(errStr);
         return;
@@ -356,62 +364,76 @@
       }, delay);
     }
 
-    // ── Probe réseau léger ───────────────────────────────────────────────────
+    // ── Probe réseau SILENCIEUX (Image) ───────────────────────────────────────
+    // Contrairement à fetch/HEAD, les échecs de chargement d'Image ne génèrent
+    // JAMAIS d'erreur rouge (net::ERR_*) dans la console Chrome.
+
+    _silentProbe() {
+      return new Promise(resolve => {
+        const img = new Image();
+        const timeout = setTimeout(() => { img.src = ''; resolve(false); }, 8000);
+        img.onload = () => { clearTimeout(timeout); resolve(true); };
+        img.onerror = () => { clearTimeout(timeout); resolve(false); };
+        // Charger le favicon de notre propre domaine avec cache-buster
+        img.src = location.origin + '/favicon.ico?_probe=' + Date.now();
+      });
+    }
 
     async _attemptReconnect() {
-      if (!navigator.onLine) {
-        this.transition(NetworkState.OFFLINE);
-        return;
-      }
+      // Verrou : empêcher les probes concurrents
+      if (this._probing) return;
+      this._probing = true;
 
-      // ── Probe léger vers notre propre domaine (pas Supabase) ──
       try {
-        const ctrl = new AbortController();
-        const tm = setTimeout(() => ctrl.abort(), 6000);
-        const resp = await fetch(location.origin + location.pathname, {
-          method: 'HEAD',
-          cache: 'no-store',
-          signal: ctrl.signal
-        });
-        clearTimeout(tm);
-        if (!resp.ok && resp.status !== 304) throw new Error('probe failed: ' + resp.status);
-      } catch (e) {
-        // Internet pas encore disponible — planifier le prochain essai
-        if (!this._offlineLogged) {
-          this._offlineLogged = true;
-          console.warn('[NM] ⚡ Internet indisponible. Tentatives de reconnexion en arrière-plan...');
+        if (!navigator.onLine) {
+          this.transition(NetworkState.OFFLINE);
+          return;
         }
-        if (this.state !== NetworkState.RETRYING && this.state !== NetworkState.OFFLINE) {
-          this.transition(NetworkState.RETRYING);
-        }
-        this._scheduleRetry();
-        return;
-      }
 
-      // ── Internet confirmé — passer directement ONLINE ──
-      this.handleFetchSuccess();
-      this.lastSuccessTime = Date.now();
-      console.log('[NM] ✅ Connectivité internet confirmée.');
+        // Probe Image silencieux (zéro erreur rouge en console)
+        const internetOk = await this._silentProbe();
 
-      // Réactiver le client Supabase
-      try {
-        if (window.DB && typeof window.DB.getSupabaseClient === 'function') {
-          const sb = await window.DB.getSupabaseClient();
-          if (sb && sb.auth?.startAutoRefresh) {
-            try { sb.auth.startAutoRefresh(); } catch (e) {}
+        if (!internetOk) {
+          // Internet pas encore disponible
+          if (!this._offlineLogged) {
+            this._offlineLogged = true;
+            console.warn('[NM] ⚡ Internet indisponible. Mode hors-ligne actif.');
           }
+          if (this.state !== NetworkState.RETRYING && this.state !== NetworkState.OFFLINE) {
+            this.transition(NetworkState.RETRYING);
+          }
+          this._scheduleRetry();
+          return;
         }
-      } catch (e) {}
 
-      // Déclencher pull + sync après reconnexion
-      setTimeout(() => {
-        if (!this.isOnline()) return;
-        this.requestPull();
-        this.requestSync();
-      }, 500);
+        // ── Internet confirmé — passer directement ONLINE ──
+        this.handleFetchSuccess();
+        this.lastSuccessTime = Date.now();
+        console.log('[NM] ✅ Connectivité internet confirmée.');
 
-      // Reconnecter les canaux Realtime
-      this._reconnectRealtime();
+        // Réactiver le client Supabase
+        try {
+          if (window.DB && typeof window.DB.getSupabaseClient === 'function') {
+            const sb = await window.DB.getSupabaseClient();
+            if (sb && sb.auth?.startAutoRefresh) {
+              try { sb.auth.startAutoRefresh(); } catch (e) {}
+            }
+          }
+        } catch (e) {}
+
+        // Déclencher pull + sync après reconnexion
+        setTimeout(() => {
+          if (!this.isOnline()) return;
+          this.requestPull();
+          this.requestSync();
+        }, 500);
+
+        // Reconnecter les canaux Realtime
+        this._reconnectRealtime();
+
+      } finally {
+        this._probing = false;
+      }
     }
 
     _reconnectRealtime() {

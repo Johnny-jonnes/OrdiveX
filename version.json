@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48i",
+  "version": "9.7.48j",
   "date": "2026-07-06",
-  "changelog": "NM v2.6 : Ajout du mode Sommeil Profond Hors-Ligne après 6 essais infructueux (~2min) pour un fonctionnement solide pendant des mois sans connexion. Retardement de l'initialisation du NM pour éviter les concurrences IndexedDB au démarrage."
+  "changelog": "NM v2.7 : Remplacement du probe HTTP par un probe d'image silencieux sans erreur console. Nettoyage de tous les guards navigator.onLine par NM.isOnline() pour un fonctionnement solide hors connexion."
 }

@@ -202,7 +202,7 @@ function findGenericAlternatives(product) {
 async function checkSyncConflicts() {
   try {
     const sb = await getSupabaseClient();
-    if (!sb || !navigator.onLine) return false;
+    if (!sb || (window.NM && !window.NM.isOnline())) return false;
 
     const { data, error } = await sb.from('settings').select('value').like('key', 'device_status_%');
     if (error) return false;
