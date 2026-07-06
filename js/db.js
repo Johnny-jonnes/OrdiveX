@@ -53,34 +53,32 @@
 (function () {
   var _origFetch = window.fetch;
   window.fetch = function (url, opts) {
-    var isOffline = !navigator.onLine || (window.NM && typeof window.NM.isOnline === 'function' ? !window.NM.isOnline() : (typeof AppState !== 'undefined' && AppState._confirmedOffline));
+    // Vérifier l'état OFFLINE via NM (source de vérité unique)
+    var nmOffline = window.NM && typeof window.NM.isOnline === 'function' ? !window.NM.isOnline() : false;
+    var osOffline = !navigator.onLine;
+    var isOffline = osOffline || nmOffline;
     var urlStr = (typeof url === 'string') ? url : (url && url.url ? url.url : '');
     var isSupabase = urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('gohfpvvmxsoujpnbmtcl') !== -1;
 
-    if (isOffline && isSupabase) {
-      if (!(opts && opts._bypassOfflineGuard)) {
-        return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
-        }));
-      }
+    // Bloquer immédiatement si offline et requête Supabase non-critique
+    if (isOffline && isSupabase && !(opts && opts._bypassOfflineGuard)) {
+      return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
+        status: 200, headers: { 'Content-Type': 'application/json' }
+      }));
     }
 
     return _origFetch.apply(this, arguments).then(function (res) {
-      if (isSupabase) {
-        if (window.NM && typeof window.NM.handleFetchSuccess === 'function') {
+      if (isSupabase && window.NM && typeof window.NM.handleFetchSuccess === 'function') {
+        // Ne signaler succès que si c'est un vrai succès (pas un mock offline)
+        if (res.ok || (res.status >= 400 && res.status < 500)) {
           window.NM.handleFetchSuccess();
         }
       }
       return res;
     }).catch(function (err) {
-      if (isSupabase) {
-        var errMsg = err?.message || String(err || '');
-        var isNetworkError = errMsg.includes('Failed to fetch') || errMsg.includes('NetworkError') || errMsg.includes('ERR_') || errMsg.includes('timeout') || errMsg.includes('Load failed') || errMsg.includes('AbortError');
-        if (isNetworkError) {
-          if (window.NM && typeof window.NM.handleFetchFailure === 'function') {
-            window.NM.handleFetchFailure(err);
-          }
-        }
+      if (isSupabase && window.NM && typeof window.NM.handleFetchFailure === 'function') {
+        // Laisser le NM classifier l'erreur (réseau vs. serveur vs. auth)
+        window.NM.handleFetchFailure(err, null);
       }
       throw err;
     });
@@ -1355,11 +1353,16 @@ async function _internalSyncToSupabase() {
         let allSuccess = true;
 
         while (retries <= maxRetries) {
+          // Vérifier l'état réseau AVANT chaque tentative
+          if (window.NM && !window.NM.isOnline()) break;
+          if (!navigator.onLine) break;
+
           // Backoff : attendre avant de réessayer (sauf premier essai)
           if (retries > 0) {
             const delay = _backoffDelays[Math.min(retries, _backoffDelays.length - 1)];
             await new Promise(r => setTimeout(r, delay));
-            // Vérifier réseau avant chaque retry
+            // Re-vérifier après le délai d'attente
+            if (window.NM && !window.NM.isOnline()) break;
             if (!navigator.onLine) break;
           }
 
@@ -1367,6 +1370,9 @@ async function _internalSyncToSupabase() {
           allSuccess = true;
 
           for (let bi = 0; bi < currentPayloads.length; bi += PUSH_BATCH) {
+            // Vérifier l'état réseau avant chaque batch
+            if (window.NM && !window.NM.isOnline()) { allSuccess = false; break; }
+
             const batch = currentPayloads.slice(bi, bi + PUSH_BATCH);
             const { error } = await _withTimeout(
               sb

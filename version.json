@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48b",
+  "version": "9.7.48c",
   "date": "2026-07-06",
-  "changelog": "Détection réseau au démarrage : fiabilisation de la transition d'état initiale."
+  "changelog": "NM v2.0 : détection OFFLINE immédiate dès la 1ère erreur réseau, classification intelligente, arrêt immédiat des requêtes, reconnexion Realtime post-retour."
 }
