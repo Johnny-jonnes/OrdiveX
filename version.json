@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48a",
+  "version": "9.7.48b",
   "date": "2026-07-06",
-  "changelog": "Fix startup connect: lancement du health check réseau automatique au démarrage si navigator.onLine est déjà vrai."
+  "changelog": "Détection réseau au démarrage : fiabilisation de la transition d'état initiale."
 }
