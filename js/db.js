@@ -1444,51 +1444,6 @@ async function _internalSyncToSupabase() {
         // Silencieux si hors-ligne
         if (navigator.onLine) console.error(`[Flash] Exception ${storeName}:`, storeError);
       }
-    }    for (const item of batchPending) {
-              item._synced = true;
-              await _dbPutRaw(storeName, item);
-              // Anti-écho : marquer pour ignorer l'événement Realtime retour
-              _markAsSynced(storeName, item.id || item.key);
-            }
-          }
-
-          if (allSuccess) {
-            lastError = null;
-            break;
-          }
-
-          const colMatch = (lastError?.message || '').match(/Could not find the '([^']+)' column/);
-          if (colMatch && retries < maxRetries) {
-            const badCol = colMatch[1];
-            // On ne log que si c'est une nouvelle découverte
-            if (!_colCache[storeName] || !_colCache[storeName].includes(badCol)) {
-              console.log('[Flash] ⚡ ' + storeName + ': apprentissage nouvelle colonne local-only \'' + badCol + '\'');
-            }
-            currentPayloads = currentPayloads.map(p => {
-              const { [badCol]: _, ...rest } = p;
-              return rest;
-            });
-            // Sauvegarder dans le cache
-            if (!_colCache[storeName]) _colCache[storeName] = [];
-            if (!_colCache[storeName].includes(badCol)) _colCache[storeName].push(badCol);
-            localStorage.setItem('pharma_bad_columns', JSON.stringify(_colCache));
-            retries++;
-          } else {
-            break;
-          }
-        }
-
-
-        if (lastError && navigator.onLine) {
-          // Ignorer les erreurs RLS connues (settings upsert en anon mode)
-          if (!lastError.message?.includes('row-level security')) {
-            console.error(`[Flash] ❌ ${storeName}:`, lastError.message || lastError);
-          }
-        }
-      } catch (storeError) {
-        // Silencieux si hors-ligne
-        if (navigator.onLine) console.error(`[Flash] Exception ${storeName}:`, storeError);
-      }
     }
 
     // 📡 Push Device Heartbeat — permet aux autres appareils de voir notre état
