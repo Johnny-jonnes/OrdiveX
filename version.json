@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47x",
-  "date": "2026-07-05",
-  "changelog": "Fix probe réseau critique : _bypassOfflineGuard:true sur le probe GitHub Pages pour contourner le fetch interceptor, gestion 503 Supabase sans passer en mode offline, détection automatique du retour internet garantie."
+  "version": "9.7.47y",
+  "date": "2026-07-06",
+  "changelog": "Fix ReferenceError _hasMorePending (portée JS let dans try/finally), try/catch sur requête device_status dans paramètres pour absorber les erreurs réseau en cours de requête, vérification isOnline renforcée."
 }

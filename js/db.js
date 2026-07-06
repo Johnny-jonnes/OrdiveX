@@ -1201,6 +1201,11 @@ async function syncToSupabase() {
   // Phase 9 — Indicateur visuel furtif
   _showSyncIndicator(true);
 
+  // IMPORTANT : déclaré AVANT le try{} pour être accessible dans finally{}
+  // (let est block-scoped : un try{} et son finally{} sont deux blocs distincts)
+  let totalPendingCount = 0;
+  let _hasMorePending = false;
+
   try {
     const sb = await getSupabaseClient();
     if (!sb) return;
@@ -1214,9 +1219,6 @@ async function syncToSupabase() {
       'users', 'settings',
       'products' // Très lourd (33k+), toujours en dernier !
     ];
-
-    let totalPendingCount = 0;
-    let _hasMorePending = false;
 
     // Cache des colonnes invalides : éviter les 400 inutiles
     // Colonnes CONNUES comme inexistantes dans Supabase (fallback hardcodé)
