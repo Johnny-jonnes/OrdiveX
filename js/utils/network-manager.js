@@ -37,6 +37,14 @@
         }
       }
     }
+
+    // Vider toutes les opérations en attente (appelé lors de la transition offline)
+    flush() {
+      const pending = this._queue.splice(0);
+      for (const item of pending) {
+        try { item.reject(new Error('network_offline')); } catch (e) {}
+      }
+    }
   }
 
   // ─── Classification des erreurs ─────────────────────────────────────────────
@@ -282,6 +290,8 @@
     // ── Contrôle de l'instance Supabase ──────────────────────────────────────
 
     _shutdownSupabase() {
+      // Vider la file d'opérations en attente (empêche la cascade de setTimeout)
+      this._mutex.flush();
       // Couper les WebSockets et les timers de refresh token du SDK Supabase
       if (window.DB && typeof window.DB.resetSupabaseClient === 'function') {
         try { window.DB.resetSupabaseClient(); } catch (e) {}
@@ -320,7 +330,7 @@
       }, delay);
     }
 
-    // ── Health Check Supabase ────────────────────────────────────────────────
+    // ── Probe réseau léger + validation Supabase ─────────────────────────────
 
     async _attemptReconnect() {
       if (!navigator.onLine) {
@@ -328,84 +338,74 @@
         return;
       }
 
-      this._logOnce('log', '[NM] Health check Supabase...');
+      this._logOnce('log', '[NM] Vérification de la connectivité...');
+
+      // ── Étape 1 : Probe léger vers notre propre domaine (pas Supabase) ──
+      // Ce probe n'est PAS bloqué par le fetch interceptor car ce n'est pas une URL Supabase.
       try {
-        if (!window.DB || typeof window.DB.getSupabaseClient !== 'function') {
-          throw new Error('DB non chargé');
-        }
-
-        const sb = await window.DB.getSupabaseClient();
-        if (!sb) throw new Error('Client Supabase non initialisé');
-
         const ctrl = new AbortController();
-        const tm = setTimeout(() => ctrl.abort(), 5000);
-
-        let result;
-        try {
-          result = await sb.from('settings').select('key').limit(1).abortSignal(ctrl.signal);
-        } finally {
-          clearTimeout(tm);
-        }
-
-        const { error, status } = result;
-
-        if (error) {
-          if (_isAuthError(error.message, status)) {
-            // Re-auth silencieuse — serveur joignable
-            try { await sb.auth.signInAnonymously(); } catch (e) {}
-          } else if (_isServerError(error.message, status)) {
-            // Supabase down mais réseau OK → traiter comme succès réseau partiel
-            this.handleFetchSuccess();
-            return;
-          } else if (_isNetworkError(error.message || String(error))) {
-            throw error; // → sera capturé par le catch ci-dessous
-          } else {
-            throw error;
-          }
-        }
-
-        // ✅ Succès
-        this.handleFetchSuccess();
-        this.lastSuccessTime = Date.now();
-        this._updateHealth();
-
-        // Démarrer pull + sync après reconnexion
-        setTimeout(() => {
-          this.requestPull();
-          this.requestSync();
-        }, 500);
-
-        // Reconnecter les canaux Realtime
-        this._reconnectRealtime();
-
+        const tm = setTimeout(() => ctrl.abort(), 6000);
+        const resp = await fetch(location.origin + location.pathname, {
+          method: 'HEAD',
+          cache: 'no-store',
+          signal: ctrl.signal
+        });
+        clearTimeout(tm);
+        if (!resp.ok && resp.status !== 304) throw new Error('probe failed: ' + resp.status);
       } catch (e) {
+        // Internet pas encore disponible
         const errStr = e?.message || String(e || '');
-        if (_isNetworkError(errStr)) {
-          this._goOfflineFromNetworkError(errStr);
-        } else {
-          this._logOnce('warn', `[NM] Health check échoué: ${errStr.substring(0, 100)}`);
-          if (this.state === NetworkState.CONNECTING) {
-            this.transition(NetworkState.RETRYING);
-          }
-          this._scheduleRetry();
+        if (!this._offlineLogged) {
+          this._offlineLogged = true;
+          const nextDelay = this._backoffDelays[Math.min(this._reconnectAttempts, this._backoffDelays.length - 1)];
+          console.warn(`[NM] ⚡ Internet indisponible. Nouvelle tentative dans ${nextDelay / 1000}s.`);
         }
+        this._clearRetryTimer();
+        this.transition(NetworkState.RETRYING);
+        this._scheduleRetry();
+        return;
       }
+
+      // ── Étape 2 : Internet confirmé — passer ONLINE ──
+      this.handleFetchSuccess();
+      this.lastSuccessTime = Date.now();
+      this._logOnce('log', '[NM] ✅ Connectivité internet confirmée.');
+
+      // Réactiver le client Supabase
+      try {
+        if (window.DB && typeof window.DB.getSupabaseClient === 'function') {
+          const sb = await window.DB.getSupabaseClient();
+          if (sb) {
+            if (sb.auth?.startAutoRefresh) { try { sb.auth.startAutoRefresh(); } catch (e) {} }
+          }
+        }
+      } catch (e) {}
+
+      // Déclencher pull + sync après reconnexion
+      setTimeout(() => {
+        if (!this.isOnline()) return;
+        this.requestPull();
+        this.requestSync();
+      }, 500);
+
+      // Reconnecter les canaux Realtime
+      this._reconnectRealtime();
     }
 
     _reconnectRealtime() {
       setTimeout(async () => {
+        // Double vérification : le NM peut avoir re-basculé offline entre-temps
         if (!this.isOnline()) return;
         try {
           if (window.DB && typeof window.DB.getSupabaseClient === 'function') {
             const sb = await window.DB.getSupabaseClient();
-            if (sb) {
-              if (sb.auth?.startAutoRefresh) { try { sb.auth.startAutoRefresh(); } catch (e) {} }
+            if (sb && this.isOnline()) {
               if (window._setupRealtime) { try { window._setupRealtime(sb); } catch (e) {} }
               if (window._setupBroadcast) { try { window._setupBroadcast(sb); } catch (e) {} }
             }
           }
         } catch (e) {}
-      }, 1500);
+      }, 2000);
     }
 
     // ── Notifications de mutation (dbAdd / dbPut) ────────────────────────────
@@ -433,6 +433,8 @@
         if (!this.isOnline()) return;
 
         this._mutex.run(async () => {
+          // Garde : si le NM a basculé offline pendant l'attente en file, ne rien lancer
+          if (!this.isOnline()) return;
           this.transition(NetworkState.SYNCING);
           try {
             if (window.OperationQueue?.process) await window.OperationQueue.process();
@@ -463,6 +465,8 @@
         if (!isManual && !this.isOnline()) return;
 
         this._mutex.run(async () => {
+          // Garde : si le NM a basculé offline pendant l'attente en file, ne rien lancer
+          if (!isManual && !this.isOnline()) return;
           this.transition(NetworkState.SYNCING);
           try {
             if (window.DB?._internalPullFromSupabase) await window.DB._internalPullFromSupabase(isManual);

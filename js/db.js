@@ -2144,7 +2144,8 @@ function resetSupabaseClient() {
     try { if (_realtimeSubscription) { _supabaseInstance.removeChannel(_realtimeSubscription).catch(() => { }); _realtimeSubscription = null; } } catch (e) { }
     try { if (_broadcastChannel) { _supabaseInstance.removeChannel(_broadcastChannel).catch(() => { }); _broadcastChannel = null; } } catch (e) { }
   }
-  _supabaseInstance = null;
+  // NE PAS mettre _supabaseInstance = null — cela provoque des recréations multiples
+  // (Multiple GoTrueClient) à chaque tentative de reconnexion.
 }
 
 // (Error silencer déplacé en haut du fichier pour intercepter dès le chargement)

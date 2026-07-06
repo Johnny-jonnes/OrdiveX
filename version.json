@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48f",
+  "version": "9.7.48g",
   "date": "2026-07-06",
-  "changelog": "NM v2.3 : Déploiement propre et forcé de la résolution de la régression réseau."
+  "changelog": "NM v2.4 : Correction du gel de l'application et de la reconnexion infinie. Remplacement du probe Supabase par un probe léger, nettoyage du Mutex en offline, préservation de l'instance pour éviter Multiple GoTrueClient."
 }
