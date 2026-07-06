@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48g",
+  "version": "9.7.48h",
   "date": "2026-07-06",
-  "changelog": "NM v2.4 : Correction du gel de l'application et de la reconnexion infinie. Remplacement du probe Supabase par un probe léger, nettoyage du Mutex en offline, préservation de l'instance pour éviter Multiple GoTrueClient."
+  "changelog": "NM v2.5 : Stabilisation finale de la détection réseau. Suppression des transitions prématurées vers CONNECTING, simplification des toasts et classification d'Aborted en erreur réseau."
 }

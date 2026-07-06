@@ -64,6 +64,8 @@
       'ENOTFOUND',
       'network error',
       'offline',
+      'aborted',             // Requêtes annulées lors du passage offline
+      'AbortError',
     ];
     return networkPatterns.some(p => errStr.toLowerCase().includes(p.toLowerCase()));
   }
@@ -134,17 +136,18 @@
         this._offlineLogged = false; // Réarmer pour la prochaine coupure
       }
 
-      // Toasts UI de changement de statut centralisés
-      const wasConnected = old === NetworkState.ONLINE || old === NetworkState.SYNCING || old === NetworkState.CONNECTING;
-      const isNowDisconnected = newState === NetworkState.OFFLINE || newState === NetworkState.RETRYING;
-      const isNowConnected = newState === NetworkState.ONLINE || newState === NetworkState.SYNCING;
-      const wasDisconnected = old === NetworkState.OFFLINE || old === NetworkState.RETRYING || old === NetworkState.CONNECTING;
+      // Toasts UI — UNE SEULE FOIS lors de la perte/retour réel de connexion
+      // On ne considère que ONLINE/SYNCING comme "connecté" (pas CONNECTING)
+      const wasOnline = old === NetworkState.ONLINE || old === NetworkState.SYNCING;
+      const isNowOffline = newState === NetworkState.OFFLINE || newState === NetworkState.RETRYING;
+      const isNowOnline = newState === NetworkState.ONLINE;
+      const wasOffline = old === NetworkState.OFFLINE || old === NetworkState.RETRYING;
 
-      if (isNowDisconnected && wasConnected) {
+      if (isNowOffline && wasOnline) {
         if (window.UI && typeof window.UI.toast === 'function') {
           window.UI.toast('Connexion perdue. L\'application fonctionne en mode hors-ligne.', 'warning', 5000);
         }
-      } else if (isNowConnected && wasDisconnected) {
+      } else if (isNowOnline && wasOffline) {
         if (window.UI && typeof window.UI.toast === 'function') {
           window.UI.toast('Connexion rétablie. Synchronisation active.', 'success', 3000);
         }
@@ -174,7 +177,7 @@
 
     _startup() {
       if (navigator.onLine) {
-        this.transition(NetworkState.CONNECTING);
+        // Ne pas transitionner à CONNECTING — laisser le probe confirmer d'abord
         this._attemptReconnect();
       } else {
         this.transition(NetworkState.OFFLINE);
@@ -184,12 +187,13 @@
     // ── Événements OS ─────────────────────────────────────────────────────────
 
     _onOsOnline() {
-      console.log('[NM] Signal réseau OS détecté → reconnexion immédiate...');
+      console.log('[NM] Signal réseau OS détecté → vérification...');
       this._clearRetryTimer();
       this.consecutiveFailures = 0;
       this._reconnectAttempts = 0;
       this._offlineLogged = false;
-      this.transition(NetworkState.CONNECTING);
+      // Ne PAS transitionner à CONNECTING — rester en l'état actuel
+      // et laisser le probe confirmer la connectivité avant de passer ONLINE
       this._attemptReconnect();
     }
 
@@ -325,12 +329,13 @@
           this.transition(NetworkState.OFFLINE);
           return;
         }
-        this.transition(NetworkState.CONNECTING);
+        // Ne PAS transitionner à CONNECTING — rester en RETRYING
+        // Le probe dans _attemptReconnect transitionnera à ONLINE si succès
         this._attemptReconnect();
       }, delay);
     }
 
-    // ── Probe réseau léger + validation Supabase ─────────────────────────────
+    // ── Probe réseau léger ───────────────────────────────────────────────────
 
     async _attemptReconnect() {
       if (!navigator.onLine) {
@@ -338,10 +343,9 @@
         return;
       }
 
-      this._logOnce('log', '[NM] Vérification de la connectivité...');
-
-      // ── Étape 1 : Probe léger vers notre propre domaine (pas Supabase) ──
-      // Ce probe n'est PAS bloqué par le fetch interceptor car ce n'est pas une URL Supabase.
+      // ── Probe léger vers notre propre domaine (pas Supabase) ──
+      // Pas de transition d'état AVANT le résultat du probe.
+      // On reste en RETRYING/OFFLINE pendant le test.
       try {
         const ctrl = new AbortController();
         const tm = setTimeout(() => ctrl.abort(), 6000);
@@ -353,30 +357,30 @@
         clearTimeout(tm);
         if (!resp.ok && resp.status !== 304) throw new Error('probe failed: ' + resp.status);
       } catch (e) {
-        // Internet pas encore disponible
-        const errStr = e?.message || String(e || '');
+        // Internet pas encore disponible — rester silencieux, planifier le prochain essai
         if (!this._offlineLogged) {
           this._offlineLogged = true;
-          const nextDelay = this._backoffDelays[Math.min(this._reconnectAttempts, this._backoffDelays.length - 1)];
-          console.warn(`[NM] ⚡ Internet indisponible. Nouvelle tentative dans ${nextDelay / 1000}s.`);
+          console.warn('[NM] ⚡ Internet indisponible. Tentatives de reconnexion en arrière-plan...');
         }
-        this._clearRetryTimer();
-        this.transition(NetworkState.RETRYING);
+        // S'assurer qu'on est bien en RETRYING (pas de transition bruyante si déjà dedans)
+        if (this.state !== NetworkState.RETRYING && this.state !== NetworkState.OFFLINE) {
+          this.transition(NetworkState.RETRYING);
+        }
         this._scheduleRetry();
         return;
       }
 
-      // ── Étape 2 : Internet confirmé — passer ONLINE ──
+      // ── Internet confirmé — passer directement ONLINE ──
       this.handleFetchSuccess();
       this.lastSuccessTime = Date.now();
-      this._logOnce('log', '[NM] ✅ Connectivité internet confirmée.');
+      console.log('[NM] ✅ Connectivité internet confirmée.');
 
       // Réactiver le client Supabase
       try {
         if (window.DB && typeof window.DB.getSupabaseClient === 'function') {
           const sb = await window.DB.getSupabaseClient();
-          if (sb) {
-            if (sb.auth?.startAutoRefresh) { try { sb.auth.startAutoRefresh(); } catch (e) {} }
+          if (sb && sb.auth?.startAutoRefresh) {
+            try { sb.auth.startAutoRefresh(); } catch (e) {}
           }
         }
       } catch (e) {}
