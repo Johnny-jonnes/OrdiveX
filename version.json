@@ -1,5 +1,5 @@
 {
-  "version": "9.7.47y",
+  "version": "9.7.48",
   "date": "2026-07-06",
-  "changelog": "Fix ReferenceError _hasMorePending (portée JS let dans try/finally), try/catch sur requête device_status dans paramètres pour absorber les erreurs réseau en cours de requête, vérification isOnline renforcée."
+  "changelog": "Refactoring complet du moteur réseau: introduction du NetworkManager centralisé avec machine d'état, file d'attente IndexedDB persistante (OperationQueue), mutex global, Circuit Breaker et service NetworkHealth."
 }

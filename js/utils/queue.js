@@ -128,7 +128,8 @@ const OperationQueue = (function () {
 
   async function process() {
     if (_processing) return;
-    if (!navigator.onLine) return;
+    const isOnline = window.NM && typeof window.NM.isOnline === 'function' ? window.NM.isOnline() : navigator.onLine;
+    if (!isOnline) return;
 
     _processing = true;
 
@@ -148,7 +149,8 @@ const OperationQueue = (function () {
         }
 
         // Verifier qu on est toujours en ligne avant chaque operation
-        if (!navigator.onLine) break;
+        const stillOnline = window.NM && typeof window.NM.isOnline === 'function' ? window.NM.isOnline() : navigator.onLine;
+        if (!stillOnline) break;
 
         try {
           await updateStatus(op.id, 'processing');
@@ -177,7 +179,9 @@ const OperationQueue = (function () {
       case 'SYNC_STORE':
         // Declenche un syncToSupabase cible sur le store concerne
         if (window.DB && typeof window.DB.syncToSupabase === 'function') {
-          await window.DB.syncToSupabase(op.payload && op.payload.store ? [op.payload.store] : null);
+          // Utilise _internalSyncToSupabase si disponible pour contourner les guards
+          const syncFn = window.DB._internalSyncToSupabase || window.DB.syncToSupabase;
+          await syncFn(op.payload && op.payload.store ? [op.payload.store] : null);
         }
         break;
 
@@ -188,18 +192,17 @@ const OperationQueue = (function () {
   }
 
   // ─────────────────────────────────────────────────
-  // DEMARRAGE AUTO — Lier au retour reseau
+  // DEMARRAGE AUTO
   // ─────────────────────────────────────────────────
   function start() {
-    // P3 — L'événement online est géré par _handleConnectivityChange
+    // Exposer l'ancien trigger pour compatibilité de signature
     window._triggerQueueProcess = function() {
-      setTimeout(process, 2000); // 2s de grâce pour que la connexion soit stable
+      if (window.NM && typeof window.NM.requestSync === 'function') {
+        window.NM.requestSync();
+      } else {
+        setTimeout(process, 2000);
+      }
     };
-
-    // Traiter au demarrage si on est deja en ligne (ops de la session precedente)
-    setTimeout(function () {
-      if (navigator.onLine) process();
-    }, 10000); // 10s apres le demarrage pour laisser initDB finir
 
     // Nettoyage periodique des ops mortes (toutes les heures)
     setInterval(cleanDone, 3600000);
