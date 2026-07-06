@@ -25,9 +25,9 @@
     rel="stylesheet"
     media="print" onload="this.media='all'"
     onerror="this.remove()">
-  <link rel="stylesheet" href="css/main.css?v=9.7.48h">
-  <link rel="stylesheet" href="css/mobile.css?v=9.7.48h">
-  <script>const APP_VERSION = '9.7.48h';</script>
+  <link rel="stylesheet" href="css/main.css?v=9.7.48i">
+  <link rel="stylesheet" href="css/mobile.css?v=9.7.48i">
+  <script>const APP_VERSION = '9.7.48i';</script>
   <meta name="theme-color" content="#1B4F72">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -195,11 +195,11 @@
     </button>
   </nav>
 
-  <script src="js/utils/network-manager.js?v=9.7.48h"></script>
-  <script src="js/db.js?v=9.7.48h"></script>
-  <script src="js/utils/queue.js?v=9.7.48h"></script>
+  <script src="js/utils/network-manager.js?v=9.7.48i"></script>
+  <script src="js/db.js?v=9.7.48i"></script>
+  <script src="js/utils/queue.js?v=9.7.48i"></script>
   <script src="js/auth.js?v=9.7.47"></script>
-  <script src="js/ui.js?v=9.7.48h"></script>
+  <script src="js/ui.js?v=9.7.48i"></script>
   <script src="js/mobile-money.js?v=9.7.47"></script>
   <script src="js/sms.js?v=9.7.47"></script>
   <script src="js/pages/dashboard.js?v=9.7.47"></script>
@@ -227,7 +227,7 @@
   <script src="js/components/supportWidget.js?v=9.7.47"></script>
   <script src="js/pages/shifts.js?v=9.7.47"></script>
   <script src="js/pages/stock-exits.js?v=9.7.47"></script>
-  <script src="js/pages/inventory.js?v=9.7.48h"></script>
+  <script src="js/pages/inventory.js?v=9.7.48i"></script>
   <script src="js/utils/pdf-export.js?v=9.7.47"></script>
   <script src="js/utils/action-guard.js?v=9.7.47"></script>
   <script src="js/utils/stability.js?v=9.7.47"></script>
@@ -653,7 +653,7 @@
           await DB.dbPut('settings', { key: 'onboarding_done', value: true });
           localStorage.setItem('onboarding_done', 'true');
 
-          if (navigator.onLine) {
+          if (window.NM && window.NM.isOnline()) {
             const main = document.getElementById('app-content');
             if (main) main.innerHTML = '<div class="loader-container"><div class="spinner"></div><p>Synchronisation Cloud...</p></div>';
             DB.pullFromSupabase().catch(e => console.warn('[App] Background pull failed:', e));

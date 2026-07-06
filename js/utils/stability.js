@@ -467,7 +467,7 @@
   async function _runHealthReport(silent) {
     var report = {
       ts: new Date().toLocaleTimeString('fr-FR'),
-      online: navigator.onLine,
+      online: window.NM ? window.NM.isOnline() : navigator.onLine,
       errors: _errorCount,
       lastPull: null,
       lastSync: null,

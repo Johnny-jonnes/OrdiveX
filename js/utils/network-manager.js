@@ -105,16 +105,26 @@
       window.addEventListener('online',  () => this._onOsOnline());
       window.addEventListener('offline', () => this._onOsOffline());
 
-      // Démarrage initial : laisser le temps à db.js de s'initialiser
-      setTimeout(() => this._startup(), 1500);
+      // Démarrage initial : laisser le temps à db.js de s'initialiser proprement
+      setTimeout(() => this._startup(), 3000);
 
-      // Auto-pull périodique toutes les 5 minutes s'il est en ligne (restaure le comportement de startAutoPull)
+      // Auto-pull périodique toutes les 5 minutes s'il est en ligne
       setInterval(() => {
         if (this.isOnline()) {
           this.requestPull();
           console.log('[NM] ⬇️ Pull automatique périodique déclenché');
         }
       }, 5 * 60 * 1000);
+
+      // Réveil de veille passive très lent (toutes les 15 minutes)
+      // Si l'application fonctionne sans connexion pendant des semaines/mois, 
+      // cela évite de spammer des requêtes de probe toutes les 30s.
+      setInterval(() => {
+        if (this.state === NetworkState.OFFLINE && navigator.onLine) {
+          console.log('[NM] 💤 Veille passive : vérification lente de la connectivité...');
+          this._attemptReconnect();
+        }
+      }, 15 * 60 * 1000);
 
       console.log('[NM] Central Network Manager initialisé');
     }
@@ -320,6 +330,19 @@
         return;
       }
 
+      // ── Limite pour le mode "Sommeil Profond Hors-Ligne" ──
+      // Si on a tenté plus de 6 fois sans succès (~2 min), on arrête de spammer la console et le réseau.
+      // On passe en sommeil profond OFFLINE. On se réveillera si l'OS repasse Online,
+      // toutes les 15 minutes via la veille passive, ou sur action utilisateur (sync/mutation).
+      if (this._reconnectAttempts >= 6) {
+        if (!this._offlineLogged) {
+          this._offlineLogged = true;
+          console.warn('[NM] 💤 Trop de tentatives échouées. Entrée en mode Sommeil Profond Hors-Ligne pour préserver les ressources.');
+        }
+        this.transition(NetworkState.OFFLINE);
+        return;
+      }
+
       const delay = this._backoffDelays[Math.min(this._reconnectAttempts, this._backoffDelays.length - 1)];
       this._reconnectAttempts++;
 
@@ -329,8 +352,6 @@
           this.transition(NetworkState.OFFLINE);
           return;
         }
-        // Ne PAS transitionner à CONNECTING — rester en RETRYING
-        // Le probe dans _attemptReconnect transitionnera à ONLINE si succès
         this._attemptReconnect();
       }, delay);
     }
@@ -344,8 +365,6 @@
       }
 
       // ── Probe léger vers notre propre domaine (pas Supabase) ──
-      // Pas de transition d'état AVANT le résultat du probe.
-      // On reste en RETRYING/OFFLINE pendant le test.
       try {
         const ctrl = new AbortController();
         const tm = setTimeout(() => ctrl.abort(), 6000);
@@ -357,12 +376,11 @@
         clearTimeout(tm);
         if (!resp.ok && resp.status !== 304) throw new Error('probe failed: ' + resp.status);
       } catch (e) {
-        // Internet pas encore disponible — rester silencieux, planifier le prochain essai
+        // Internet pas encore disponible — planifier le prochain essai
         if (!this._offlineLogged) {
           this._offlineLogged = true;
           console.warn('[NM] ⚡ Internet indisponible. Tentatives de reconnexion en arrière-plan...');
         }
-        // S'assurer qu'on est bien en RETRYING (pas de transition bruyante si déjà dedans)
         if (this.state !== NetworkState.RETRYING && this.state !== NetworkState.OFFLINE) {
           this.transition(NetworkState.RETRYING);
         }
@@ -416,6 +434,18 @@
 
     notifyMutation(storeName) {
       if (storeName === 'syncQueue' || storeName === 'auditLog') return;
+
+      // ── Réveil actif du Sommeil Profond ──
+      // Si une mutation a lieu (ex: validation d'une vente) et qu'on est offline, 
+      // on tente une reconnexion immédiate pour essayer de synchroniser.
+      if (this.state === NetworkState.OFFLINE && navigator.onLine) {
+        console.log('[NM] 🛠️ Mutation détectée -> tentative de réveil du mode hors-ligne...');
+        this.consecutiveFailures = 0;
+        this._reconnectAttempts = 0;
+        this._offlineLogged = false;
+        this._attemptReconnect();
+      }
+
       if (window.OperationQueue && typeof window.OperationQueue.enqueue === 'function') {
         window.OperationQueue.enqueue('SYNC_STORE', { store: storeName })
           .then(() => { this._updateHealth(); this.requestSync(); })
@@ -460,6 +490,15 @@
     // ── PULL (Sync descendante) ──────────────────────────────────────────────
 
     requestPull(isManual = false) {
+      // ── Réveil actif du Sommeil Profond sur action manuelle ──
+      if (isManual && this.state === NetworkState.OFFLINE && navigator.onLine) {
+        console.log('[NM] 🔄 Pull manuel demandé -> tentative de réveil du mode hors-ligne...');
+        this.consecutiveFailures = 0;
+        this._reconnectAttempts = 0;
+        this._offlineLogged = false;
+        this._attemptReconnect();
+      }
+
       if (!isManual && (this.state === NetworkState.OFFLINE || this.state === NetworkState.RETRYING)) return;
       if (this._pullCoalescePending && !isManual) return;
       this._pullCoalescePending = true;
