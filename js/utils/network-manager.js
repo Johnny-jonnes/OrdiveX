@@ -61,6 +61,16 @@
       window.addEventListener('online', () => this.handleOnline());
       window.addEventListener('offline', () => this.handleOffline());
 
+      // Lancement initial de la connectivité (laisser le temps à db.js de s'enregistrer sur window.DB)
+      setTimeout(() => {
+        if (navigator.onLine) {
+          this.transition(NetworkState.CONNECTING);
+          this._attemptReconnect();
+        } else {
+          this.transition(NetworkState.OFFLINE);
+        }
+      }, 1500);
+
       console.log('[NM] Central Network Manager initialisé');
     }
 

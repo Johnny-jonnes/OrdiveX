@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48",
+  "version": "9.7.48a",
   "date": "2026-07-06",
-  "changelog": "Refactoring complet du moteur réseau: introduction du NetworkManager centralisé avec machine d'état, file d'attente IndexedDB persistante (OperationQueue), mutex global, Circuit Breaker et service NetworkHealth."
+  "changelog": "Fix startup connect: lancement du health check réseau automatique au démarrage si navigator.onLine est déjà vrai."
 }
