@@ -68,10 +68,17 @@
     }
 
     return _origFetch.apply(this, arguments).then(function (res) {
-      if (isSupabase && window.NM && typeof window.NM.handleFetchSuccess === 'function') {
-        // Ne signaler succès que si c'est un vrai succès (pas un mock offline)
+      if (isSupabase && window.NM) {
         if (res.ok || (res.status >= 400 && res.status < 500)) {
-          window.NM.handleFetchSuccess();
+          if (typeof window.NM.handleFetchSuccess === 'function') {
+            window.NM.handleFetchSuccess();
+          }
+        } else {
+          // Si res.ok est false et que ce n'est pas une erreur client (donc 5xx ou autre),
+          // c'est une déconnexion serveur/réseau logique. On le signale au NetworkManager.
+          if (typeof window.NM.handleFetchFailure === 'function') {
+            window.NM.handleFetchFailure(new Error('Erreur HTTP ' + res.status), res.status);
+          }
         }
       }
       return res;

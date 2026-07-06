@@ -450,16 +450,7 @@
   // ═══════════════════════════════════════════════════════════════════
 
   function _setupNetworkIndicator() {
-    window.addEventListener('offline', function() {
-      if (window.UI && UI.toast) {
-        UI.toast('Connexion perdue. L\'app fonctionne hors-ligne.', 'warning', 5000);
-      }
-    });
-    window.addEventListener('online', function() {
-      if (window.UI && UI.toast) {
-        UI.toast('Connexion retablie.', 'success', 3000);
-      }
-    });
+    // Laissé vide pour laisser NetworkManager gérer les notifications de connexion de manière centralisée
   }
 
   // ═══════════════════════════════════════════════════════════════════

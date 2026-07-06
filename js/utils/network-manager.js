@@ -98,6 +98,14 @@
       // Démarrage initial : laisser le temps à db.js de s'initialiser
       setTimeout(() => this._startup(), 1500);
 
+      // Auto-pull périodique toutes les 5 minutes s'il est en ligne (restaure le comportement de startAutoPull)
+      setInterval(() => {
+        if (this.isOnline()) {
+          this.requestPull();
+          console.log('[NM] ⬇️ Pull automatique périodique déclenché');
+        }
+      }, 5 * 60 * 1000);
+
       console.log('[NM] Central Network Manager initialisé');
     }
 
@@ -113,9 +121,27 @@
       const old = this.state;
       this.state = newState;
       this._logOnce('log', `[NM] État: ${old} ➔ ${newState}`);
+      
       if (newState === NetworkState.ONLINE || newState === NetworkState.SYNCING) {
         this._offlineLogged = false; // Réarmer pour la prochaine coupure
       }
+
+      // Toasts UI de changement de statut centralisés
+      const wasConnected = old === NetworkState.ONLINE || old === NetworkState.SYNCING || old === NetworkState.CONNECTING;
+      const isNowDisconnected = newState === NetworkState.OFFLINE || newState === NetworkState.RETRYING;
+      const isNowConnected = newState === NetworkState.ONLINE || newState === NetworkState.SYNCING;
+      const wasDisconnected = old === NetworkState.OFFLINE || old === NetworkState.RETRYING || old === NetworkState.CONNECTING;
+
+      if (isNowDisconnected && wasConnected) {
+        if (window.UI && typeof window.UI.toast === 'function') {
+          window.UI.toast('Connexion perdue. L\'application fonctionne en mode hors-ligne.', 'warning', 5000);
+        }
+      } else if (isNowConnected && wasDisconnected) {
+        if (window.UI && typeof window.UI.toast === 'function') {
+          window.UI.toast('Connexion rétablie. Synchronisation active.', 'success', 3000);
+        }
+      }
+
       this._updateHealth();
       this._syncAppState();
     }

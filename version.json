@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48d",
+  "version": "9.7.48e",
   "date": "2026-07-06",
-  "changelog": "NM v2.1 : blocage strict des requêtes résiduelles pendant le basculement offline, arrêt immédiat du processeur de queue, reconnexion WebSocket silencieuse."
+  "changelog": "NM v2.2 : Résolution régression de détection réseau. Centralisation des toasts de transition offline/online, redirection de l'évaluation UI sur NM, correction de la détection des erreurs serveur 5xx, restauration de l'auto-pull périodique de 5 min."
 }
