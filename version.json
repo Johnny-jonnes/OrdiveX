@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48m",
+  "version": "9.7.48n",
   "date": "2026-07-06",
-  "changelog": "NM v3.0 : Passage ultra-rapide en sommeil profond dès le 2ème échec de probe (~7s) au lieu de 6. Espacement de la veille passive lente à 30 minutes. Zéro spam réseau et console hors-ligne."
+  "changelog": "NM v3.1 : Interception des WebSockets Supabase en hors-ligne pour supprimer les logs d'erreurs WebSocket rouges. Masquage des avertissements de pull network_offline. Ajout du réveil immédiat lors du focus de l'application."
 }

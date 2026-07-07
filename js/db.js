@@ -92,6 +92,32 @@
   };
 })();
 
+// ═══════════════════════════════════════════════════════════════════
+// WEBSOCKET INTERCEPTOR — Bloque les tentatives de reconnexion realtime
+// de Supabase en cas de hors-ligne pour éviter les erreurs rouges dans la console.
+// ═══════════════════════════════════════════════════════════════════
+(function () {
+  var _origWebSocket = window.WebSocket;
+  window.WebSocket = function (url, protocols) {
+    var nmOffline = window.NM && typeof window.NM.isOnline === 'function' ? !window.NM.isOnline() : false;
+    var osOffline = !navigator.onLine;
+    var isOffline = osOffline || nmOffline;
+    var urlStr = typeof url === 'string' ? url : '';
+    
+    if (isOffline && (urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('gohfpvvmxsoujpnbmtcl') !== -1)) {
+      throw new Error('WebSocket blocked: network offline');
+    }
+    
+    // Si protocols est passé, l'appliquer correctement (le constructeur natif est strict)
+    if (protocols) {
+      return new _origWebSocket(url, protocols);
+    }
+    return new _origWebSocket(url);
+  };
+  window.WebSocket.prototype = _origWebSocket.prototype;
+})();
+
+
 const DB_NAME = 'OrdiveXDB';
 const DB_VERSION = 5;
 
@@ -1208,9 +1234,9 @@ function _showSyncIndicator(active) {
   }
 }
 
-async function syncToSupabase() {
+async function syncToSupabase(isManual = false) {
   if (window.NM && typeof window.NM.requestSync === 'function') {
-    window.NM.requestSync();
+    window.NM.requestSync(isManual);
     return;
   }
   return _internalSyncToSupabase();
@@ -1862,7 +1888,8 @@ async function _internalPullFromSupabase(isManual = false) {
 
   } catch (e) {
     const msg = e?.message || '';
-    const isNetErr = msg.includes('probe_offline') || msg.includes('Failed to fetch') ||
+    const isNetErr = msg.includes('probe_offline') || msg.includes('network_offline') ||
+      msg.includes('network offline') || msg.includes('Failed to fetch') ||
       msg.includes('NetworkError') || msg.includes('network error') ||
       msg.includes('ERR_') || msg.includes('timeout');
     // Erreurs réseau : silencieuses — comportement normal en mode offline

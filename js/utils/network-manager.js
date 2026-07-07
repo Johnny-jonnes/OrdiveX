@@ -106,6 +106,18 @@
       window.addEventListener('online',  () => this._onOsOnline());
       window.addEventListener('offline', () => this._onOsOffline());
 
+      // Réveil immédiat et automatique de la veille hors-ligne lorsque l'utilisateur
+      // revient sur l'application (changement d'onglet ou retour de veille du PC)
+      window.addEventListener('focus', () => {
+        if (this.state === NetworkState.OFFLINE && navigator.onLine) {
+          console.log('[NM] Focus de l\'application détecté → vérification passive de connectivité...');
+          this.consecutiveFailures = 0;
+          this._reconnectAttempts = 0;
+          this._offlineLogged = false;
+          this._attemptReconnect();
+        }
+      });
+
       // Démarrage initial : laisser le temps à db.js de s'initialiser proprement
       setTimeout(() => this._startup(), 3000);
 
@@ -478,18 +490,27 @@
 
     // ── PUSH (Sync montante) ─────────────────────────────────────────────────
 
-    requestSync() {
-      if (this.state === NetworkState.OFFLINE || this.state === NetworkState.RETRYING) return;
-      if (this._syncCoalescePending) return;
+    requestSync(isManual = false) {
+      // ── Réveil actif du Sommeil Profond sur action manuelle ──
+      if (isManual && this.state === NetworkState.OFFLINE && navigator.onLine) {
+        console.log('[NM] 🔄 Sync manuelle demandée -> tentative de réveil du mode hors-ligne...');
+        this.consecutiveFailures = 0;
+        this._reconnectAttempts = 0;
+        this._offlineLogged = false;
+        this._attemptReconnect();
+      }
+
+      if (!isManual && (this.state === NetworkState.OFFLINE || this.state === NetworkState.RETRYING)) return;
+      if (this._syncCoalescePending && !isManual) return;
       this._syncCoalescePending = true;
 
       setTimeout(() => {
         this._syncCoalescePending = false;
-        if (!this.isOnline()) return;
+        if (!isManual && !this.isOnline()) return;
 
         this._mutex.run(async () => {
           // Garde : si le NM a basculé offline pendant l'attente en file, ne rien lancer
-          if (!this.isOnline()) return;
+          if (!isManual && !this.isOnline()) return;
           this.transition(NetworkState.SYNCING);
           try {
             if (window.OperationQueue?.process) await window.OperationQueue.process();
