@@ -467,17 +467,6 @@
     notifyMutation(storeName) {
       if (storeName === 'syncQueue' || storeName === 'auditLog') return;
 
-      // ── Réveil actif du Sommeil Profond ──
-      // Si une mutation a lieu (ex: validation d'une vente) et qu'on est offline, 
-      // on tente une reconnexion immédiate pour essayer de synchroniser.
-      if (this.state === NetworkState.OFFLINE && navigator.onLine) {
-        console.log('[NM] 🛠️ Mutation détectée -> tentative de réveil du mode hors-ligne...');
-        this.consecutiveFailures = 0;
-        this._reconnectAttempts = 0;
-        this._offlineLogged = false;
-        this._attemptReconnect();
-      }
-
       if (window.OperationQueue && typeof window.OperationQueue.enqueue === 'function') {
         window.OperationQueue.enqueue('SYNC_STORE', { store: storeName })
           .then(() => { this._updateHealth(); this.requestSync(); })
