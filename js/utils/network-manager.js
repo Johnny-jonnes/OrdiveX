@@ -117,7 +117,7 @@
         }
       }, 5 * 60 * 1000);
 
-      // Réveil de veille passive très lent (toutes les 15 minutes)
+      // Réveil de veille passive très lent (toutes les 30 minutes)
       // Si l'application fonctionne sans connexion pendant des semaines/mois, 
       // cela évite de spammer des requêtes de probe toutes les 30s.
       setInterval(() => {
@@ -125,7 +125,7 @@
           console.log('[NM] 💤 Veille passive : vérification lente de la connectivité...');
           this._attemptReconnect();
         }
-      }, 15 * 60 * 1000);
+      }, 30 * 60 * 1000);
 
       console.log('[NM] Central Network Manager initialisé');
     }
@@ -339,10 +339,10 @@
       }
 
       // ── Limite pour le mode "Sommeil Profond Hors-Ligne" ──
-      // Si on a tenté plus de 6 fois sans succès (~2 min), on arrête de spammer la console et le réseau.
+      // Si on a tenté plus de 2 fois sans succès (~7s), on arrête de spammer la console et le réseau.
       // On passe en sommeil profond OFFLINE. On se réveillera si l'OS repasse Online,
-      // toutes les 15 minutes via la veille passive, ou sur action utilisateur (sync/mutation).
-      if (this._reconnectAttempts >= 6) {
+      // toutes les 30 minutes via la veille passive, ou sur action utilisateur (sync/mutation).
+      if (this._reconnectAttempts >= 2) {
         if (!this._offlineLogged) {
           this._offlineLogged = true;
           console.warn('[NM] 💤 Trop de tentatives échouées. Entrée en mode Sommeil Profond Hors-Ligne pour préserver les ressources.');

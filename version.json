@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48l",
+  "version": "9.7.48m",
   "date": "2026-07-06",
-  "changelog": "NM v2.9 : Suppression définitive du réveil réseau lors des mutations de base de données hors-ligne. Cela élimine les piles d'erreurs lors de la validation d'une vente locale sans connexion."
+  "changelog": "NM v3.0 : Passage ultra-rapide en sommeil profond dès le 2ème échec de probe (~7s) au lieu de 6. Espacement de la veille passive lente à 30 minutes. Zéro spam réseau et console hors-ligne."
 }
