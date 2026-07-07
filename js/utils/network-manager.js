@@ -364,18 +364,28 @@
       }, delay);
     }
 
-    // ── Probe réseau SILENCIEUX (Image) ───────────────────────────────────────
-    // Contrairement à fetch/HEAD, les échecs de chargement d'Image ne génèrent
-    // JAMAIS d'erreur rouge (net::ERR_*) dans la console Chrome.
-
+    // ── Probe réseau léger (fetch/HEAD) ──
+    // On utilise location.pathname + '?_probe=' pour contourner le cache du Service Worker
+    // et interroger le réseau réel de manière ultra-rapide (méthode HEAD, 0 octets transférés).
     _silentProbe() {
       return new Promise(resolve => {
-        const img = new Image();
-        const timeout = setTimeout(() => { img.src = ''; resolve(false); }, 8000);
-        img.onload = () => { clearTimeout(timeout); resolve(true); };
-        img.onerror = () => { clearTimeout(timeout); resolve(false); };
-        // Charger le favicon de notre propre domaine avec cache-buster
-        img.src = location.origin + '/favicon.ico?_probe=' + Date.now();
+        const ctrl = new AbortController();
+        const timeout = setTimeout(() => { ctrl.abort(); resolve(false); }, 6000);
+        
+        fetch(location.origin + location.pathname + '?_probe=' + Date.now(), {
+          method: 'HEAD',
+          cache: 'no-store',
+          signal: ctrl.signal
+        })
+        .then(resp => {
+          clearTimeout(timeout);
+          // 200 OK ou 304 Not Modified indiquent que le serveur a répondu -> internet OK
+          resolve(resp.ok || resp.status === 304);
+        })
+        .catch(() => {
+          clearTimeout(timeout);
+          resolve(false);
+        });
       });
     }
 
@@ -390,7 +400,7 @@
           return;
         }
 
-        // Probe Image silencieux (zéro erreur rouge en console)
+        // Probe léger et fiable
         const internetOk = await this._silentProbe();
 
         if (!internetOk) {

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48j",
+  "version": "9.7.48k",
   "date": "2026-07-06",
-  "changelog": "NM v2.7 : Remplacement du probe HTTP par un probe d'image silencieux sans erreur console. Nettoyage de tous les guards navigator.onLine par NM.isOnline() pour un fonctionnement solide hors connexion."
+  "changelog": "NM v2.8 : Contournement du Service Worker pour les requêtes de probe réseau avec _probe=, et rétablissement du probe HEAD ultra-léger et fiable sans falsification d'état hors-ligne."
 }

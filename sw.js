@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.7.48j';
+const CACHE_NAME = 'pharma-cache-v9.7.48k';
 const ASSETS = [
   './',
   './index.html',
@@ -106,6 +106,9 @@ self.addEventListener('message', event => {
 // Fetch: cache-first strategy
 self.addEventListener('fetch', event => {
   const url = event.request.url;
+
+  // Ignorer les requêtes de test de connectivité réseau (probes)
+  if (url.includes('_probe=')) return;
 
   // ── REQUÊTES SUPABASE (API + Realtime + Auth) ──
   // Si offline confirmé : retourner une réponse 503 propre, SANS erreur console
