@@ -61,7 +61,15 @@
     var isSupabase = urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('gohfpvvmxsoujpnbmtcl') !== -1;
 
     // Bloquer immédiatement si offline et requête Supabase non-critique
-    if (isOffline && isSupabase && !(opts && opts._bypassOfflineGuard)) {
+    // Double vérification : NM.isOnline() OU navigator.onLine === false
+    // Cela attrape aussi le cas où le réseau tombe PENDANT un état SYNCING
+    // (ex: Supabase auth refresh_token qui échoue avec ERR_NETWORK_IO_SUSPENDED)
+    var hardOffline = !navigator.onLine;
+    if ((isOffline || hardOffline) && isSupabase && !(opts && opts._bypassOfflineGuard)) {
+      // Si le NM ne sait pas encore qu'on est offline, le notifier
+      if (hardOffline && !isOffline && window.NM && typeof window.NM.handleFetchFailure === 'function') {
+        window.NM.handleFetchFailure(new Error('navigator.onLine is false'));
+      }
       return Promise.resolve(new Response(JSON.stringify({ data: null, error: { message: 'offline' } }), {
         status: 200, headers: { 'Content-Type': 'application/json' }
       }));

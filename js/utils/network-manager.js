@@ -108,14 +108,32 @@
 
       // Réveil immédiat et automatique de la veille hors-ligne lorsque l'utilisateur
       // revient sur l'application (changement d'onglet ou retour de veille du PC)
+      // ⚠️ Probe UNIQUE avec cooldown de 30s — PAS de chaîne de retry
+      this._lastFocusProbe = 0;
       window.addEventListener('focus', () => {
-        if (this.state === NetworkState.OFFLINE && navigator.onLine) {
-          console.log('[NM] Focus de l\'application détecté → vérification passive de connectivité...');
-          this.consecutiveFailures = 0;
-          this._reconnectAttempts = 0;
-          this._offlineLogged = false;
-          this._attemptReconnect();
-        }
+        if (this.state !== NetworkState.OFFLINE || !navigator.onLine) return;
+        var now = Date.now();
+        if ((now - this._lastFocusProbe) < 30000) return; // Cooldown 30s
+        this._lastFocusProbe = now;
+        console.log('[NM] Focus de l\'application détecté → vérification passive de connectivité...');
+        // Probe unique sans chaîne de retry
+        this._silentProbe().then(ok => {
+          if (ok) {
+            this.consecutiveFailures = 0;
+            this._reconnectAttempts = 0;
+            this._offlineLogged = false;
+            this.handleFetchSuccess();
+            this.lastSuccessTime = Date.now();
+            console.log('[NM] ✅ Connectivité internet confirmée.');
+            setTimeout(() => {
+              if (!this.isOnline()) return;
+              this.requestPull();
+              this.requestSync();
+            }, 500);
+            this._reconnectRealtime();
+          }
+          // Si échec → rester en OFFLINE silencieusement, pas de retry
+        });
       });
 
       // Démarrage initial : laisser le temps à db.js de s'initialiser proprement
@@ -380,6 +398,13 @@
     // On utilise location.pathname + '?_probe=' pour contourner le cache du Service Worker
     // et interroger le réseau réel de manière ultra-rapide (méthode HEAD, 0 octets transférés).
     _silentProbe() {
+      // PRÉ-VÉRIFICATION : Si l'OS confirme qu'il n'y a pas de réseau,
+      // retourner false immédiatement SANS faire de fetch.
+      // Cela élimine 100% des erreurs rouges Chrome quand le réseau est coupé.
+      if (!navigator.onLine) {
+        return Promise.resolve(false);
+      }
+
       return new Promise(resolve => {
         const ctrl = new AbortController();
         const timeout = setTimeout(() => { ctrl.abort(); resolve(false); }, 6000);

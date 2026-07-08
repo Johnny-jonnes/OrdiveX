@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48n",
-  "date": "2026-07-06",
-  "changelog": "NM v3.1 : Interception des WebSockets Supabase en hors-ligne pour supprimer les logs d'erreurs WebSocket rouges. Masquage des avertissements de pull network_offline. Ajout du réveil immédiat lors du focus de l'application."
+  "version": "9.7.48o",
+  "date": "2026-07-08",
+  "changelog": "NM v3.2 : Focus probe unique avec cooldown 30s. Pré-vérification navigator.onLine dans _silentProbe. Fetch interceptor renforcé contre les drops mid-sync."
 }
