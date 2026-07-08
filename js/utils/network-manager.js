@@ -106,34 +106,26 @@
       window.addEventListener('online',  () => this._onOsOnline());
       window.addEventListener('offline', () => this._onOsOffline());
 
-      // Réveil immédiat et automatique de la veille hors-ligne lorsque l'utilisateur
-      // revient sur l'application (changement d'onglet ou retour de veille du PC)
-      // ⚠️ Probe UNIQUE avec cooldown de 30s — PAS de chaîne de retry
-      this._lastFocusProbe = 0;
-      window.addEventListener('focus', () => {
-        if (this.state !== NetworkState.OFFLINE || !navigator.onLine) return;
-        var now = Date.now();
-        if ((now - this._lastFocusProbe) < 30000) return; // Cooldown 30s
-        this._lastFocusProbe = now;
-        console.log('[NM] Focus de l\'application détecté → vérification passive de connectivité...');
-        // Probe unique sans chaîne de retry
-        this._silentProbe().then(ok => {
-          if (ok) {
+      // Réveil immédiat et automatique de la veille hors-ligne uniquement lorsque l'OS
+      // signale un changement matériel de connexion via navigator.connection
+      if (navigator.connection) {
+        navigator.connection.addEventListener('change', () => {
+          if (navigator.onLine) {
+            console.log('[NM] Signal matériel de connexion détecté (connection.change) → tentative de réactivation...');
             this.consecutiveFailures = 0;
             this._reconnectAttempts = 0;
             this._offlineLogged = false;
-            this.handleFetchSuccess();
-            this.lastSuccessTime = Date.now();
-            console.log('[NM] ✅ Connectivité internet confirmée.');
-            setTimeout(() => {
-              if (!this.isOnline()) return;
-              this.requestPull();
-              this.requestSync();
-            }, 500);
-            this._reconnectRealtime();
+            this._attemptReconnect();
           }
-          // Si échec → rester en OFFLINE silencieusement, pas de retry
         });
+      }
+
+      // Au focus de l'application, simplement rafraîchir visuellement le statut réseau dans l'UI
+      // sans lancer de probe réseau physique pour éviter d'inonder la console en cas de hors-ligne long.
+      window.addEventListener('focus', () => {
+        if (typeof window.updateNetworkStatus === 'function') {
+          window.updateNetworkStatus();
+        }
       });
 
       // Démarrage initial : laisser le temps à db.js de s'initialiser proprement
@@ -228,14 +220,22 @@
     // ── Événements OS ─────────────────────────────────────────────────────────
 
     _onOsOnline() {
-      console.log('[NM] Signal réseau OS détecté → vérification...');
+      console.log('[NM] Signal réseau OS détecté → vérification immédiate...');
       this._clearRetryTimer();
       this.consecutiveFailures = 0;
       this._reconnectAttempts = 0;
       this._offlineLogged = false;
-      // Ne PAS transitionner à CONNECTING — rester en l'état actuel
-      // et laisser le probe confirmer la connectivité avant de passer ONLINE
+      
+      // Probe immédiat
       this._attemptReconnect();
+      
+      // Probe de secours après 1.5 seconde au cas où la carte réseau met du temps à acquérir son IP / DNS
+      setTimeout(() => {
+        if (this.state === NetworkState.OFFLINE || this.state === NetworkState.RETRYING) {
+          console.log('[NM] Signal réseau OS (secours 1.5s) → nouvelle tentative de vérification...');
+          this._attemptReconnect();
+        }
+      }, 1500);
     }
 
     _onOsOffline() {

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48o",
+  "version": "9.7.48p",
   "date": "2026-07-08",
-  "changelog": "NM v3.2 : Focus probe unique avec cooldown 30s. Pré-vérification navigator.onLine dans _silentProbe. Fetch interceptor renforcé contre les drops mid-sync."
+  "changelog": "NM v3.3 : Retrait des probes sur focus. Ajout du listener navigator.connection.onchange pour reconnexion immédiate. Raccourcissement du délai de reconnexion OS. Pastille réseau cliquable."
 }
