@@ -139,15 +139,7 @@
         }
       }, 5 * 60 * 1000);
 
-      // Réveil de veille passive très lent (toutes les 30 minutes)
-      // Si l'application fonctionne sans connexion pendant des semaines/mois, 
-      // cela évite de spammer des requêtes de probe toutes les 30s.
-      setInterval(() => {
-        if (this.state === NetworkState.OFFLINE && navigator.onLine) {
-          console.log('[NM] 💤 Veille passive : vérification lente de la connectivité...');
-          this._attemptReconnect();
-        }
-      }, 30 * 60 * 1000);
+
 
       console.log('[NM] Central Network Manager initialisé');
     }

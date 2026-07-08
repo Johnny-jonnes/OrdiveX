@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48p",
+  "version": "9.7.48q",
   "date": "2026-07-08",
-  "changelog": "NM v3.3 : Retrait des probes sur focus. Ajout du listener navigator.connection.onchange pour reconnexion immédiate. Raccourcissement du délai de reconnexion OS. Pastille réseau cliquable."
+  "changelog": "NM v3.4 : Suppression finale de la veille passive lente pour éliminer le dernier probe de console. Intercepteur WebSocket optimisé contre les micro-coupures de transition."
 }

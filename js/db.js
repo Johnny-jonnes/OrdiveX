@@ -66,6 +66,7 @@
     // (ex: Supabase auth refresh_token qui échoue avec ERR_NETWORK_IO_SUSPENDED)
     var hardOffline = !navigator.onLine;
     if ((isOffline || hardOffline) && isSupabase && !(opts && opts._bypassOfflineGuard)) {
+      window._lastSupabaseFetchFailedTime = Date.now();
       // Si le NM ne sait pas encore qu'on est offline, le notifier
       if (hardOffline && !isOffline && window.NM && typeof window.NM.handleFetchFailure === 'function') {
         window.NM.handleFetchFailure(new Error('navigator.onLine is false'));
@@ -82,6 +83,7 @@
             window.NM.handleFetchSuccess();
           }
         } else {
+          window._lastSupabaseFetchFailedTime = Date.now();
           // Si res.ok est false et que ce n'est pas une erreur client (donc 5xx ou autre),
           // c'est une déconnexion serveur/réseau logique. On le signale au NetworkManager.
           if (typeof window.NM.handleFetchFailure === 'function') {
@@ -91,6 +93,9 @@
       }
       return res;
     }).catch(function (err) {
+      if (isSupabase) {
+        window._lastSupabaseFetchFailedTime = Date.now();
+      }
       if (isSupabase && window.NM && typeof window.NM.handleFetchFailure === 'function') {
         // Laisser le NM classifier l'erreur (réseau vs. serveur vs. auth)
         window.NM.handleFetchFailure(err, null);
@@ -109,7 +114,8 @@
   window.WebSocket = function (url, protocols) {
     var nmOffline = window.NM && typeof window.NM.isOnline === 'function' ? !window.NM.isOnline() : false;
     var osOffline = !navigator.onLine;
-    var isOffline = osOffline || nmOffline;
+    var fetchFailedRecently = (Date.now() - (window._lastSupabaseFetchFailedTime || 0)) < 10000;
+    var isOffline = osOffline || nmOffline || fetchFailedRecently;
     var urlStr = typeof url === 'string' ? url : '';
     
     if (isOffline && (urlStr.indexOf('supabase') !== -1 || urlStr.indexOf('gohfpvvmxsoujpnbmtcl') !== -1)) {

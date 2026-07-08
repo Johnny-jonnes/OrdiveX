@@ -3,7 +3,7 @@
  * Cache-first PWA strategy pour fonctionnement 100% offline
  */
 
-const CACHE_NAME = 'pharma-cache-v9.7.48p';
+const CACHE_NAME = 'pharma-cache-v9.7.48q';
 const ASSETS = [
   './',
   './index.html',
@@ -107,23 +107,35 @@ self.addEventListener('message', event => {
 self.addEventListener('fetch', event => {
   const url = event.request.url;
 
-  // Ignorer les requêtes de test de connectivité réseau (probes)
-  if (url.includes('_probe=')) return;
+  // ── REQUÊTES DE PROBE RÉSEAU ──
+  // Intercepter les probes et capturer l'erreur réseau physique
+  // pour éviter tout message d'erreur rouge dans la console de la page principale.
+  if (url.includes('_probe=')) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => response)
+        .catch(err => {
+          // Capturer l'échec réseau physique de façon silencieuse pour la page
+          return new Response('offline', { status: 503 });
+        })
+    );
+    return;
+  }
 
   // ── REQUÊTES SUPABASE (API + Realtime + Auth) ──
-  // Si offline confirmé : retourner une réponse 503 propre, SANS erreur console
-  // C'est le seul moyen de supprimer les "net::ERR_NAME_NOT_RESOLVED" rouges dans la console
+  // Intercepter et capturer toutes les erreurs réseau physiques de Supabase
+  // pour renvoyer une réponse propre de statut 503, masquant le rouge en console.
   if (url.includes('supabase.co') || url.includes('supabase.io')) {
-    if (_swConfirmedOffline) {
-      event.respondWith(
-        Promise.resolve(new Response(
-          JSON.stringify({ error: 'offline', message: 'Hors ligne' }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
-        ))
-      );
-      return;
-    }
-    // En ligne : laisser passer sans interception
+    event.respondWith(
+      fetch(event.request)
+        .then(response => response)
+        .catch(err => {
+          return new Response(
+            JSON.stringify({ error: 'network_offline', message: 'Réseau hors ligne' }),
+            { status: 503, headers: { 'Content-Type': 'application/json' } }
+          );
+        })
+    );
     return;
   }
 
