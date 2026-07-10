@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48r",
+  "version": "9.7.48s",
   "date": "2026-07-10",
-  "changelog": "NM v3.5 : Optimisation de l'impression des tickets thermiques 80mm et des factures A4. Correction de la visibilité et compatibilité de la sidebar sur mobile."
+  "changelog": "NM v3.6 : Intégration de la synchronisation bidirectionnelle automatique des dates de péremption entre le catalogue et le stock (lots). Ajout de l'impression de Bon de Commande fournisseur en PDF professionnel et préremplissage automatique des formulaires."
 }

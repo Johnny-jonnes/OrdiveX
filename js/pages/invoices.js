@@ -322,6 +322,8 @@ async function selectInvoiceProduct(idx, productId) {
       const recentLot = activeLots[0];
       if (lotInput && !lotInput.value) lotInput.value = recentLot.lotNumber;
       if (expInput && !expInput.value) expInput.value = recentLot.expiryDate;
+    } else {
+      if (expInput && !expInput.value && prod.expiryDate) expInput.value = prod.expiryDate;
     }
   } catch(e) {}
 

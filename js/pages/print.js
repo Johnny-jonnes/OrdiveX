@@ -57,7 +57,7 @@ const PrintEngine = {
           </div>
         </div>
         <div class="print-footer-center">
-          <p class="print-legal">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48r</p>
+          <p class="print-legal">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48s</p>
           <p class="print-legal">ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')}</p>
         </div>
         <div class="print-footer-right">
@@ -139,7 +139,7 @@ const PrintEngine = {
         <p class="ticket-thanks">Merci pour votre confiance</p>
         <p class="ticket-advice">Respectez les prescriptions medicales</p>
         <p class="ticket-legal">${pResp} - Pharmacien responsable</p>
-        <p class="ticket-legal">OrdiveX v9.7.48r - ${saleDate.toLocaleDateString('fr-FR')}</p>
+        <p class="ticket-legal">OrdiveX v9.7.48s - ${saleDate.toLocaleDateString('fr-FR')}</p>
       </div>
     `);
     win.document.close();
@@ -310,7 +310,7 @@ const PrintEngine = {
           <div style="text-align:center"><div style="font-size:10px;color:#888">Ce document tient lieu de facture officielle.</div><div style="font-size:10px;color:#888">Conservez-le comme preuve d'achat.</div></div>
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Cachet</div><div class="inv-sr">& Signature</div></div>
         </div>
-        <div class="inv-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48r Â· ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')} Â· ${pName}</div>
+        <div class="inv-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48s Â· ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')} Â· ${pName}</div>
       </div>
     `);
     win.document.close();
@@ -746,6 +746,168 @@ const PrintEngine = {
         }
       </style>`;
     }
+  },
+
+  async printPurchaseOrder(orderId) {
+    await this.loadSettings();
+    const [order, suppliers, allSettings] = await Promise.all([
+      DB.dbGet('purchaseOrders', orderId),
+      DB.dbGetAll('suppliers'),
+      DB.dbGetAll('settings'),
+    ]);
+    if (!order) return;
+
+    const supplier = suppliers.find(s => s.id === order.supplierId);
+    const get = (key) => allSettings.find(s => s.key === key)?.value || '';
+    const pharmacyLogo = get('pharmacy_logo');
+    const pName = get('pharmacy_name') || this.pharmacyInfo.name;
+    const pAddr = get('pharmacy_address') || this.pharmacyInfo.address;
+    const pPhone = get('pharmacy_phone') || this.pharmacyInfo.phone;
+    const pEmail = get('pharmacy_email') || this.pharmacyInfo.email;
+    const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
+    const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
+
+    const orderDate = order.date ? new Date(order.date) : new Date();
+    const orderRef = order.orderNumber || 'BC-' + String(orderId).padStart(5, '0');
+
+    const win = this._openPrintWindow('Bon de Commande ' + orderRef);
+    win.document.write(`
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #000; background: white; }
+        .inv { max-width:210mm; margin:0 auto; padding:24px 28px; }
+        .inv-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
+        .inv-brand { display:flex; align-items:center; gap:14px; }
+        .inv-logo { width:56px; height:56px; border-radius:12px; object-fit:contain; }
+        .inv-lp { width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,#1B4F72,#2E86C1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:26px; font-weight:800; }
+        .inv-pn { font-size:20px; font-weight:800; color:#1B4F72; margin-bottom:2px; }
+        .inv-pi { font-size:10px; color:#333; line-height:1.5; }
+        .inv-rb { text-align:right; }
+        .inv-rt { font-size:22px; font-weight:800; color:#1B4F72; letter-spacing:2px; }
+        .inv-rn { font-size:13px; font-weight:700; color:#2E86C1; margin-top:4px; }
+        .inv-rd { font-size:11px; color:#444; margin-top:2px; }
+        .inv-sep { height:3px; background:linear-gradient(to right,#1B4F72,#2E86C1,transparent); margin:16px 0; border-radius:2px; }
+        .inv-parties { display:flex; gap:20px; margin-bottom:20px; }
+        .inv-pbox { flex:1; background:#f8f9fa; border:1px solid #cbd5e1; border-radius:8px; padding:14px 16px; }
+        .inv-plbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#1B4F72; font-weight:700; margin-bottom:8px; }
+        .inv-pnm { font-size:14px; font-weight:700; color:#000; }
+        .inv-pd { font-size:11px; color:#000; margin-top:2px; }
+        .inv-tbl { width:100%; border-collapse:collapse; margin-bottom:16px; }
+        .inv-tbl thead th { background:#1B4F72; color:#fff; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+        .inv-tbl thead th:first-child { border-radius:6px 0 0 0; }
+        .inv-tbl thead th:last-child { border-radius:0 6px 0 0; text-align:right; }
+        .inv-tbl tbody tr { page-break-inside: avoid; }
+        .inv-tbl tbody td { padding:10px 12px; border-bottom:1px solid #ddd; font-size:11px; color:#000; vertical-align:top; }
+        .inv-tbl tbody tr:nth-child(even) { background:#f9f9f9; }
+        .inv-im { font-weight:700; color:#000; }
+        .inv-is { font-size:10px; color:#333; margin-top:1px; }
+        .inv-ar { text-align:right; }
+        .inv-ac { text-align:center; }
+        .inv-tots { display:flex; justify-content:flex-end; margin-bottom:20px; page-break-inside: avoid; }
+        .inv-tb { width:260px; }
+        .inv-tr { display:flex; justify-content:space-between; padding:6px 12px; font-size:12px; color:#000; }
+        .inv-tr.disc { color:#c0392b; font-weight:bold; }
+        .inv-tr.gt { background:#1B4F72; color:#fff; font-size:15px; font-weight:800; border-radius:6px; padding:10px 14px; margin-top:4px; }
+        .inv-pb { display:inline-block; background:#e8f4fd; color:#1B4F72; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:16px; page-break-inside: avoid; }
+        .inv-ft { display:flex; justify-content:space-between; align-items:flex-end; margin-top:40px; padding-top:16px; border-top:1px solid #ddd; page-break-inside: avoid; }
+        .inv-sig { text-align:center; }
+        .inv-sl { width:150px; border-bottom:1px solid #333; margin:30px auto 6px; }
+        .inv-sn { font-size:11px; font-weight:700; color:#000; }
+        .inv-sr { font-size:10px; color:#333; }
+        .inv-lg { text-align:center; font-size:9px; color:#444; margin-top:16px; padding-top:8px; border-top:1px dashed #ddd; page-break-inside: avoid; }
+        @media print {
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          body {
+            color: #000 !important;
+            background: #fff !important;
+          }
+          .inv {
+            padding: 0;
+            max-width: 100%;
+          }
+          .inv-pi, .inv-rd, .inv-pd, .inv-is, .inv-sr, .inv-lg {
+            color: #000 !important;
+          }
+          .inv-pbox {
+            border-color: #000 !important;
+            background: #fff !important;
+          }
+          .inv-tbl tbody tr:nth-child(even) {
+            background: #fdfdfd !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .inv-tbl thead th {
+            background: #1B4F72 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .inv-tr.gt {
+            background: #1B4F72 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
+      </style>
+      <div class="inv">
+        <div class="inv-hdr">
+          <div class="inv-brand">
+            ${pharmacyLogo
+              ? '<img src="' + pharmacyLogo + '" class="inv-logo" alt="Logo"/>'
+              : '<div class="inv-lp">' + pName.charAt(0) + '</div>'}
+            <div>
+              <div class="inv-pn">${pName}</div>
+              <div class="inv-pi">${pAddr}<br>Tél: ${pPhone}${pEmail ? ' · ' + pEmail : ''}<br>${pDnpm ? 'Licence DNPM: ' + pDnpm : ''}</div>
+            </div>
+          </div>
+          <div class="inv-rb">
+            <div class="inv-rt" style="letter-spacing:1px;font-size:18px;">BON DE COMMANDE</div>
+            <div class="inv-rn">${orderRef}</div>
+            <div class="inv-rd">Date BC : ${orderDate.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}</div>
+            ${order.expectedDate ? `<div class="inv-rd" style="color:#c0392b;font-weight:700;">Livraison attendue : ${new Date(order.expectedDate).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}</div>` : ''}
+          </div>
+        </div>
+        <div class="inv-sep"></div>
+        <div class="inv-parties">
+          <div class="inv-pbox">
+            <div class="inv-plbl">Destinataire / Fournisseur</div>
+            <div class="inv-pnm">${supplier ? supplier.name : '—'}</div>
+            ${supplier?.phone ? '<div class="inv-pd">Tél: ' + supplier.phone + '</div>' : ''}
+            ${supplier?.email ? '<div class="inv-pd">Email: ' + supplier.email + '</div>' : ''}
+            ${supplier?.address ? '<div class="inv-pd">Adresse: ' + supplier.address : ''}</div>
+          </div>
+          <div class="inv-pbox">
+            <div class="inv-plbl">Émetteur / Pharmacie</div>
+            <div class="inv-pnm">${pName}</div>
+            <div class="inv-pd">Pharmacien resp. : ${pResp}</div>
+            <div class="inv-pd">Licence : ${pDnpm}</div>
+          </div>
+        </div>
+        <table class="inv-tbl">
+          <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="inv-ac">Quantité</th><th class="inv-ar">Prix Unit. (Est.)</th><th class="inv-ar">Total</th></tr></thead>
+          <tbody>
+            ${(order.items || []).map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><div class="inv-im">' + (it.productName || '—') + '</div>' + '</td><td class="inv-ac"><strong>' + it.quantity + '</strong></td><td class="inv-ar">' + UI.formatCurrency(it.unitPrice || 0) + '</td><td class="inv-ar"><strong>' + UI.formatCurrency((it.unitPrice || 0) * it.quantity) + '</strong></td></tr>').join('')}
+          </tbody>
+        </table>
+        <div class="inv-tots"><div class="inv-tb">
+          <div class="inv-tr gt"><span>MONTANT TOTAL EST.</span><span>${UI.formatCurrency(order.totalAmount || 0)}</span></div>
+        </div></div>
+        ${order.note ? `<div class="inv-pb" style="background:#fff3cd;color:#856404;border:1px solid #ffeeba;width:100%;border-radius:6px;padding:8px 12px;margin-bottom:20px;font-size:11px;"><strong>Note / Instructions :</strong> ${order.note}</div>` : ''}
+        <div class="inv-ft">
+          <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">${pResp}</div><div class="inv-sr">Pharmacien responsable</div></div>
+          <div style="text-align:center"><div style="font-size:10px;color:#888">Ce bon de commande engage la pharmacie émettrice.</div><div style="font-size:10px;color:#888">Veuillez nous confirmer la réception et le délai.</div></div>
+          <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Pour le Fournisseur</div><div class="inv-sr">Bon pour Accord & Signature</div></div>
+        </div>
+        <div class="inv-lg">Document généré par OrdiveX v9.7.48s · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
+      </div>
+    `);
+    win.document.close();
+    win.onload = () => win.print();
   }
 };
 
@@ -755,6 +917,7 @@ window.PrintEngine = PrintEngine;
 // Quick-access print functions
 window.printReceipt = (id) => PrintEngine.printSaleReceipt(id);
 window.printInvoice = (id) => PrintEngine.printInvoice(id);
+window.printPurchaseOrder = (id) => PrintEngine.printPurchaseOrder(id);
 window.printStockReport = (mode) => PrintEngine.printStockReport(mode);
 window.printCaisseReport = (date) => PrintEngine.printCaisseReport(date);
 window.printDestructionPV = (id) => PrintEngine.printDestructionPV(id);
@@ -935,7 +1098,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">${pResp}</div><div class="bc-sr">Pharmacien responsable</div></div>
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">Fournisseur</div><div class="bc-sr">Signature & Cachet</div></div>
       </div>
-      <div class="bc-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48r Â· ${new Date().toLocaleDateString('fr-FR')} Â· ${pName}</div>
+      <div class="bc-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48s Â· ${new Date().toLocaleDateString('fr-FR')} Â· ${pName}</div>
     </div>
   `);
   win.document.close();

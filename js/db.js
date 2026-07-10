@@ -867,6 +867,62 @@ const _isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 const _cacheMaxItems = _isMobile ? 50000 : 500000; // Mobile: 50k (petits stores), PC: 500k
 const _cacheTTL = _isMobile ? 120000 : 600000; // Mobile: 2 min, PC: 10 min
 
+// Synchronisation automatique et bidirectionnelle des dates de péremption
+async function _syncProductExpiryToLots(productId, expiryDate) {
+  if (!productId || !expiryDate) return;
+  try {
+    if (window._isSyncingExpiry) return;
+    window._isSyncingExpiry = true;
+    const tx = db.transaction('lots', 'readwrite');
+    const store = tx.objectStore('lots');
+    const req = store.openCursor();
+    req.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        const lot = cursor.value;
+        if (lot.productId === productId && lot.status === 'active' && lot.expiryDate !== expiryDate) {
+          lot.expiryDate = expiryDate;
+          lot._updatedAt = Date.now();
+          lot._synced = false;
+          cursor.update(lot);
+        }
+        cursor.continue();
+      } else {
+        window._isSyncingExpiry = false;
+      }
+    };
+    req.onerror = () => { window._isSyncingExpiry = false; };
+  } catch (e) {
+    window._isSyncingExpiry = false;
+    console.warn('[DB] _syncProductExpiryToLots error:', e);
+  }
+}
+
+async function _syncLotExpiryToProduct(productId, expiryDate) {
+  if (!productId || !expiryDate) return;
+  try {
+    if (window._isSyncingExpiry) return;
+    window._isSyncingExpiry = true;
+    const tx = db.transaction('products', 'readwrite');
+    const store = tx.objectStore('products');
+    const req = store.get(productId);
+    req.onsuccess = () => {
+      const prod = req.result;
+      if (prod && prod.expiryDate !== expiryDate) {
+        prod.expiryDate = expiryDate;
+        prod._updatedAt = Date.now();
+        prod._synced = false;
+        store.put(prod);
+      }
+      window._isSyncingExpiry = false;
+    };
+    req.onerror = () => { window._isSyncingExpiry = false; };
+  } catch (e) {
+    window._isSyncingExpiry = false;
+    console.warn('[DB] _syncLotExpiryToProduct error:', e);
+  }
+}
+
 async function dbAdd(storeName, data) {
   _invalidateCache(storeName);
   return new Promise((resolve, reject) => {
@@ -874,7 +930,16 @@ async function dbAdd(storeName, data) {
     const store = tx.objectStore(storeName);
     const req = store.add({ ...data, _createdAt: Date.now(), _updatedAt: Date.now(), _synced: false });
     req.onsuccess = () => {
-      resolve(req.result);
+      const resultId = req.result;
+      resolve(resultId);
+      
+      // Auto-sync des dates de péremption
+      if (storeName === 'products' && data.expiryDate) {
+        _syncProductExpiryToLots(resultId || data.id, data.expiryDate);
+      } else if (storeName === 'lots' && data.expiryDate && data.productId) {
+        _syncLotExpiryToProduct(data.productId, data.expiryDate);
+      }
+
       if (window.NM && typeof window.NM.notifyMutation === 'function') {
         window.NM.notifyMutation(storeName);
       } else if (navigator.onLine) {
@@ -893,6 +958,14 @@ async function dbPut(storeName, data) {
     const req = store.put({ ...data, _updatedAt: Date.now(), _synced: false });
     req.onsuccess = () => {
       resolve(req.result);
+      
+      // Auto-sync des dates de péremption
+      if (storeName === 'products' && data.expiryDate) {
+        _syncProductExpiryToLots(data.id, data.expiryDate);
+      } else if (storeName === 'lots' && data.expiryDate && data.productId) {
+        _syncLotExpiryToProduct(data.productId, data.expiryDate);
+      }
+
       if (window.NM && typeof window.NM.notifyMutation === 'function') {
         window.NM.notifyMutation(storeName);
       } else if (navigator.onLine) {

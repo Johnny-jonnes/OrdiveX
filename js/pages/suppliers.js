@@ -1183,9 +1183,10 @@ async function receiveOrder(orderId) {
 
   window._currentReceiveOrder = JSON.parse(JSON.stringify(order));
   (window._currentReceiveOrder.items || []).forEach((item, idx) => {
+    const prod = products.find(p => p.id === item.productId);
     item._recvQty = item.quantity;
     item._recvLot = `LOT-AUTO-${Date.now()}-${idx}`;
-    item._recvExpiry = '';
+    item._recvExpiry = prod && prod.expiryDate ? prod.expiryDate : '';
     item._recvConform = '1';
   });
   window._recvOrderPage = 1;
@@ -1371,7 +1372,8 @@ async function viewOrder(orderId) {
     <h4 style="margin:16px 0 8px">Articles (Total: <strong>${UI.formatCurrency(order.totalAmount || 0)}</strong>)</h4>
     <div id="view-order-items-table"></div>
     ${order.receiveNote ? `<p class="text-muted" style="margin-top:12px">Note réception : ${order.receiveNote}</p>` : ''}
-    <div style="margin-top:16px;text-align:right">
+    <div style="margin-top:16px;text-align:right;display:flex;justify-content:flex-end;gap:8px;">
+      <button class="btn btn-sm btn-primary" onclick="window.printPurchaseOrder(${orderId})"><i data-lucide="printer"></i> Imprimer en PDF</button>
       <button class="btn btn-sm btn-secondary" onclick="exportSingleOrder(${orderId})"><i data-lucide="download"></i> Exporter cette commande</button>
     </div>
   `, { size: 'large' });

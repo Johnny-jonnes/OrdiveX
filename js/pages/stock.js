@@ -1031,6 +1031,10 @@ window.selectStockEntryProduct = async function(id, label) {
       const recentLot = activeLots[0];
       if (getF('lotNumber') && !getF('lotNumber').value) getF('lotNumber').value = recentLot.lotNumber;
       if (getF('expiryDate') && !getF('expiryDate').value) getF('expiryDate').value = recentLot.expiryDate;
+    } else {
+      if (getF('expiryDate') && !getF('expiryDate').value && prod && prod.expiryDate) {
+        getF('expiryDate').value = prod.expiryDate;
+      }
     }
   } catch(e) {}
 };
