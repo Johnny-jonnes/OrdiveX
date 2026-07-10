@@ -60,20 +60,8 @@ async function renderInvoices(container) {
     </div>
 
     <div id="inv-table-container"></div>
-    <div id="inv-pagination" style="text-align: center; margin-top: 15px; display: none;">
-      <button class="btn btn-secondary" onclick="loadMoreInvoices()"><i data-lucide="chevrons-down"></i> Afficher plus de factures</button>
-    </div>
   `;
 
-  filterInvoices();
-}
-
-function resetInvoicePagination() {
-  window._invoicesCurrentPage = 1;
-}
-
-function loadMoreInvoices() {
-  window._invoicesCurrentPage++;
   filterInvoices();
 }
 
@@ -102,22 +90,6 @@ function filterInvoices() {
     validated: { label: 'Validée', cls: 'badge-success' },
   };
 
-  // Pagination logic
-  const totalCount = data.length;
-  const page = window._invoicesCurrentPage || 1;
-  const paginatedData = data.slice(0, page * INVOICE_PAGE_SIZE);
-
-  const paginationContainer = document.getElementById('inv-pagination');
-  if (paginationContainer) {
-    if (totalCount > paginatedData.length) {
-      paginationContainer.style.display = 'block';
-      const btn = paginationContainer.querySelector('button');
-      if (btn) btn.innerHTML = `<i data-lucide="chevrons-down"></i> Afficher plus (${totalCount - paginatedData.length} restantes)`;
-    } else {
-      paginationContainer.style.display = 'none';
-    }
-  }
-
   UI.table(container, [
     { label: 'N° Facture', render: r => `<code class="code-tag">${r.invoiceNumber || 'F-' + String(r.id).padStart(5, '0')}</code>` },
     { label: 'Date', render: r => UI.formatDate(r.date) },
@@ -142,7 +114,7 @@ function filterInvoices() {
         ${r.status === 'draft' ? `<button class="btn btn-xs btn-success" onclick="validateInvoice(${r.id})"><i data-lucide="check-circle"></i> Valider & Stock</button>` : ''}
         <button class="btn btn-xs btn-secondary" onclick="printInvoicePDF(${r.id})"><i data-lucide="printer"></i> PDF</button>
       </div>` },
-  ], paginatedData, { emptyMessage: 'Aucune facture trouvée', emptyIcon: 'file-search', pageSize: INVOICE_PAGE_SIZE });
+  ], data, { emptyMessage: 'Aucune facture trouvée', emptyIcon: 'file-search', pageSize: INVOICE_PAGE_SIZE });
   if (window.lucide) lucide.createIcons();
 }
 

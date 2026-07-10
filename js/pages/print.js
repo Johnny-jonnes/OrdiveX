@@ -57,7 +57,7 @@ const PrintEngine = {
           </div>
         </div>
         <div class="print-footer-center">
-          <p class="print-legal">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48u</p>
+          <p class="print-legal">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48v</p>
           <p class="print-legal">ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')}</p>
         </div>
         <div class="print-footer-right">
@@ -139,7 +139,7 @@ const PrintEngine = {
         <p class="ticket-thanks">Merci pour votre confiance</p>
         <p class="ticket-advice">Respectez les prescriptions medicales</p>
         <p class="ticket-legal">${pResp} - Pharmacien responsable</p>
-        <p class="ticket-legal">OrdiveX v9.7.48u - ${saleDate.toLocaleDateString('fr-FR')}</p>
+        <p class="ticket-legal">OrdiveX v9.7.48v - ${saleDate.toLocaleDateString('fr-FR')}</p>
       </div>
     `);
     win.document.close();
@@ -310,7 +310,7 @@ const PrintEngine = {
           <div style="text-align:center"><div style="font-size:10px;color:#888">Ce document tient lieu de facture officielle.</div><div style="font-size:10px;color:#888">Conservez-le comme preuve d'achat.</div></div>
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Cachet</div><div class="inv-sr">& Signature</div></div>
         </div>
-        <div class="inv-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48u Â· ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')} Â· ${pName}</div>
+        <div class="inv-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48v Â· ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')} Â· ${pName}</div>
       </div>
     `);
     win.document.close();
@@ -903,7 +903,7 @@ const PrintEngine = {
           <div style="text-align:center"><div style="font-size:10px;color:#888">Ce bon de commande engage la pharmacie émettrice.</div><div style="font-size:10px;color:#888">Veuillez nous confirmer la réception et le délai.</div></div>
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Pour le Fournisseur</div><div class="inv-sr">Bon pour Accord & Signature</div></div>
         </div>
-        <div class="inv-lg">Document généré par OrdiveX v9.7.48u · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
+        <div class="inv-lg">Document généré par OrdiveX v9.7.48v · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
       </div>
     `);
     win.document.close();
@@ -1098,7 +1098,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">${pResp}</div><div class="bc-sr">Pharmacien responsable</div></div>
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">Fournisseur</div><div class="bc-sr">Signature & Cachet</div></div>
       </div>
-      <div class="bc-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48u Â· ${new Date().toLocaleDateString('fr-FR')} Â· ${pName}</div>
+      <div class="bc-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48v Â· ${new Date().toLocaleDateString('fr-FR')} Â· ${pName}</div>
     </div>
   `);
   win.document.close();

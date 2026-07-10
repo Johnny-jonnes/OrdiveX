@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48u",
+  "version": "9.7.48v",
   "date": "2026-07-10",
-  "changelog": "NM v3.8 : Alignement complet de la facture de réception de BC sur le comportement des factures fournisseurs (mêmes modes de paiement, saisie de nouveaux prix d'achat/vente lors de la réception, et répercussion automatique des mises à jour de prix sur le catalogue de médicaments)."
+  "changelog": "NM v3.9 : Optimisation des performances sur grand volume dans le module Factures Fournisseurs avec implémentation d'une pagination par table autonome (50 éléments par page), éliminant tout risque de surcharge ou de crash DOM."
 }
