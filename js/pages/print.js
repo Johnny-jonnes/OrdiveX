@@ -1,4 +1,4 @@
-﻿/**
+/**
  * OrdiveX â€” Module Impressions & Documents
  * Tickets, factures, PV destruction, rapports officiels DNPM
  */
@@ -747,7 +747,6 @@ const PrintEngine = {
       </style>`;
     }
   }
-  },
 };
 
 // Register print commands globally
