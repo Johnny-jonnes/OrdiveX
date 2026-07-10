@@ -3282,7 +3282,7 @@ async function printProformaReceipt() {
   <title>Devis Proforma — ${proformaId}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Arial', sans-serif; color: #333; background: #fff; padding: 20px; }
+    body { font-family: 'Arial', sans-serif; color: #000; background: #fff; padding: 20px; }
     .proforma-wrap { max-width: 700px; margin: 0 auto; position: relative; }
 
     /* ══ FILIGRANE ANTI-FRAUDE ══ */
@@ -3299,48 +3299,57 @@ async function printProformaReceipt() {
       border: 2px solid #f59e0b; border-radius: 10px;
       padding: 12px 20px; margin-bottom: 20px;
       display: flex; align-items: center; gap: 12px;
+      page-break-inside: avoid;
     }
     .alert-icon { font-size: 24px; }
     .alert-text { font-size: 13px; font-weight: 600; color: #78350f; line-height: 1.4; }
     .alert-ref { font-size: 11px; color: #92400e; margin-top: 2px; }
 
     /* ══ EN-TÊTE ══ */
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; page-break-inside: avoid; }
     .pharmacy-info h1 { font-size: 22px; font-weight: 800; color: #1a2332; }
-    .pharmacy-info p { font-size: 12px; color: #666; margin-top: 2px; }
+    .pharmacy-info p { font-size: 12px; color: #333; margin-top: 2px; }
     .doc-label {
       background: #1a2332; color: #fff; padding: 10px 20px;
       border-radius: 8px; text-align: center;
     }
     .doc-label .doc-type { font-size: 14px; font-weight: 800; letter-spacing: 2px; }
-    .doc-label .doc-id { font-size: 11px; color: #94a3b8; margin-top: 4px; }
-    .doc-label .doc-date { font-size: 11px; color: #94a3b8; }
+    .doc-label .doc-id { font-size: 11px; color: #cbd5e1; margin-top: 4px; }
+    .doc-label .doc-date { font-size: 11px; color: #cbd5e1; }
 
     /* ══ BLOC BÉNÉFICIAIRE ══ */
-    .meta-row { display: flex; gap: 16px; margin-bottom: 20px; }
-    .meta-box { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; }
-    .meta-box label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: 700; }
-    .meta-box p { font-size: 13px; font-weight: 600; color: #1e293b; margin-top: 4px; }
+    .meta-row { display: flex; gap: 16px; margin-bottom: 20px; page-break-inside: avoid; }
+    .meta-box { flex: 1; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; }
+    .meta-box label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #1a2332; font-weight: 700; }
+    .meta-box p { font-size: 13px; font-weight: 600; color: #000; margin-top: 4px; }
 
     /* ══ TABLEAU ARTICLES ══ */
     table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
     thead th { background: #1a2332; color: #fff; padding: 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
     thead th:last-child, thead th:nth-child(3), thead th:nth-child(2) { text-align: right; }
     thead th:nth-child(2) { text-align: center; }
+    tbody tr { page-break-inside: avoid; }
 
     /* ══ TOTAUX ══ */
-    .totals { margin-left: auto; width: 280px; }
-    .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #f1f5f9; }
-    .total-final { font-weight: 800; font-size: 16px; color: #1a2332; border-bottom: 2px solid #1a2332; padding-bottom: 8px; margin-bottom: 8px; }
+    .totals { margin-left: auto; width: 280px; page-break-inside: avoid; }
+    .total-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; border-bottom: 1px solid #cbd5e1; color: #000; }
+    .total-final { font-weight: 800; font-size: 16px; color: #000; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 8px; }
 
     /* ══ PIED DE PAGE ══ */
-    .footer { margin-top: 30px; border-top: 1px dashed #cbd5e1; padding-top: 16px; text-align: center; }
-    .footer p { font-size: 11px; color: #94a3b8; line-height: 1.6; }
-    .footer .validity { font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 8px; }
+    .footer { margin-top: 30px; border-top: 1px dashed #000; padding-top: 16px; text-align: center; page-break-inside: avoid; }
+    .footer p { font-size: 11px; color: #333; line-height: 1.6; }
+    .footer .validity { font-weight: 700; color: #000; font-size: 12px; margin-bottom: 8px; }
 
     @media print {
-      body { padding: 0; }
-      @page { margin: 1cm; }
+      body { padding: 0; color: #000 !important; background: #fff !important; }
+      @page {
+        size: A4;
+        margin: 15mm;
+      }
+      .proforma-wrap { max-width: 100%; }
+      .meta-box { border-color: #000 !important; background: #fff !important; }
+      .total-row { border-bottom-color: #000 !important; }
+      .footer p, .pharmacy-info p, .meta-box p { color: #000 !important; }
     }
   </style></head><body>
   <div class="proforma-wrap">

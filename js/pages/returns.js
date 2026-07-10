@@ -631,15 +631,42 @@ window.printReturnReceipt = async function (returnId) {
       <title>Reçu de Retour RET-${String(returnId).padStart(5, '0')}</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Courier New', monospace; font-size: 12px; width: 80mm; margin: 0 auto; }
+        html, body {
+          font-family: 'Courier New', monospace;
+          font-size: 11px;
+          line-height: 1.2;
+          width: 76mm;
+          height: auto !important;
+          min-height: 0 !important;
+          color: #000;
+          background: #fff;
+        }
+        @page {
+          size: 76mm auto;
+          margin: 0 !important;
+        }
+        body {
+          padding: 4px 6px 0 6px !important;
+        }
         .center { text-align: center; }
         .bold { font-weight: bold; }
-        .line { border-top: 1px dashed #000; margin: 6px 0; }
-        .row { display: flex; justify-content: space-between; margin: 2px 0; }
-        .title { font-size: 14px; font-weight: bold; text-align: center; margin: 8px 0; }
-        .total { font-size: 13px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; }
-        .warning-box { border: 2px dashed #000; padding: 6px; text-align: center; margin: 8px 0; font-size: 11px; }
-        @media print { body { margin: 0; } }
+        .line { border-top: 1px dashed #000; margin: 4px 0; }
+        .row { display: flex; justify-content: space-between; margin: 1.5px 0; }
+        .title { font-size: 13px; font-weight: bold; text-align: center; margin: 6px 0; }
+        .total { font-size: 12px; font-weight: bold; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 0; margin-top: 3px; }
+        .warning-box { border: 1px dashed #000; padding: 6px; text-align: center; margin: 6px 0; font-size: 10px; }
+        @media print {
+          html, body {
+            width: 76mm;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          body {
+            padding: 4px 6px 0 6px !important;
+          }
+        }
       </style>
     </head>
     <body>

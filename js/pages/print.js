@@ -1,16 +1,16 @@
 ﻿/**
- * OrdiveX — Module Impressions & Documents
+ * OrdiveX â€” Module Impressions & Documents
  * Tickets, factures, PV destruction, rapports officiels DNPM
  */
 
 const PrintEngine = {
   pharmacyInfo: {
     name: 'Pharmacie Centrale de Conakry',
-    address: 'Avenue de la République, Conakry, Guinée',
+    address: 'Avenue de la RÃ©publique, Conakry, GuinÃ©e',
     phone: '+224 620 000 000',
     email: 'contact@pharmacie.gn',
     dnpm: 'LIC-DNPM-2024-001',
-    responsable: 'Dr. Kouyaté Ahmed',
+    responsable: 'Dr. KouyatÃ© Ahmed',
   },
 
   async loadSettings() {
@@ -30,11 +30,11 @@ const PrintEngine = {
     const info = this.pharmacyInfo;
     return `
       <div class="print-header">
-        <div class="print-logo">💊</div>
+        <div class="print-logo">ðŸ’Š</div>
         <div class="print-org">
           <h1>${info.name}</h1>
           <p>${info.address}</p>
-          <p>Tél: ${info.phone} ${info.email ? '· ' + info.email : ''}</p>
+          <p>TÃ©l: ${info.phone} ${info.email ? 'Â· ' + info.email : ''}</p>
           <p>Licence DNPM: ${info.dnpm}</p>
         </div>
         <div class="print-doc-ref">
@@ -57,8 +57,8 @@ const PrintEngine = {
           </div>
         </div>
         <div class="print-footer-center">
-          <p class="print-legal">Document généré par OrdiveX v9.4.3</p>
-          <p class="print-legal">Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+          <p class="print-legal">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48r</p>
+          <p class="print-legal">ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')}</p>
         </div>
         <div class="print-footer-right">
           <div class="print-sig-block">
@@ -93,7 +93,7 @@ const PrintEngine = {
 
     const win = this._openPrintWindow('Ticket de Caisse');
     win.document.write(`
-      ${this._printStyles()}
+      ${this._printStyles(true)}
       <div class="ticket-container">
         <h2 class="ticket-name">${pName}</h2>
         <p class="ticket-addr">${pAddr}</p>
@@ -139,7 +139,7 @@ const PrintEngine = {
         <p class="ticket-thanks">Merci pour votre confiance</p>
         <p class="ticket-advice">Respectez les prescriptions medicales</p>
         <p class="ticket-legal">${pResp} - Pharmacien responsable</p>
-        <p class="ticket-legal">OrdiveX v9.4.3 - ${saleDate.toLocaleDateString('fr-FR')}</p>
+        <p class="ticket-legal">OrdiveX v9.7.48r - ${saleDate.toLocaleDateString('fr-FR')}</p>
       </div>
     `);
     win.document.close();
@@ -164,7 +164,7 @@ const PrintEngine = {
     const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
     const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
 
-    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement', assurance: 'Assurance', combined: 'Paiement Mixte' };
+    const payLabels = { cash: 'EspÃ¨ces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'CrÃ©dit', transfer: 'Virement', assurance: 'Assurance', combined: 'Paiement Mixte' };
     const subtotal = items.reduce((a, i) => a + (i.total || 0), 0);
     const discount = sale.discount || 0;
     const total = sale.total || subtotal - discount;
@@ -175,47 +175,85 @@ const PrintEngine = {
     win.document.write(`
       <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #222; background: white; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #000; background: white; }
         .inv { max-width:210mm; margin:0 auto; padding:24px 28px; }
         .inv-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
         .inv-brand { display:flex; align-items:center; gap:14px; }
         .inv-logo { width:56px; height:56px; border-radius:12px; object-fit:contain; }
         .inv-lp { width:56px; height:56px; border-radius:12px; background:linear-gradient(135deg,#1B4F72,#2E86C1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:26px; font-weight:800; }
         .inv-pn { font-size:20px; font-weight:800; color:#1B4F72; margin-bottom:2px; }
-        .inv-pi { font-size:10px; color:#666; line-height:1.5; }
+        .inv-pi { font-size:10px; color:#333; line-height:1.5; }
         .inv-rb { text-align:right; }
         .inv-rt { font-size:22px; font-weight:800; color:#1B4F72; letter-spacing:2px; }
         .inv-rn { font-size:13px; font-weight:700; color:#2E86C1; margin-top:4px; }
-        .inv-rd { font-size:11px; color:#888; margin-top:2px; }
+        .inv-rd { font-size:11px; color:#444; margin-top:2px; }
         .inv-sep { height:3px; background:linear-gradient(to right,#1B4F72,#2E86C1,transparent); margin:16px 0; border-radius:2px; }
         .inv-parties { display:flex; gap:20px; margin-bottom:20px; }
-        .inv-pbox { flex:1; background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:14px 16px; }
-        .inv-plbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#2E86C1; font-weight:700; margin-bottom:8px; }
-        .inv-pnm { font-size:14px; font-weight:700; color:#1B4F72; }
-        .inv-pd { font-size:11px; color:#555; margin-top:2px; }
+        .inv-pbox { flex:1; background:#f8f9fa; border:1px solid #cbd5e1; border-radius:8px; padding:14px 16px; }
+        .inv-plbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#1B4F72; font-weight:700; margin-bottom:8px; }
+        .inv-pnm { font-size:14px; font-weight:700; color:#000; }
+        .inv-pd { font-size:11px; color:#000; margin-top:2px; }
         .inv-tbl { width:100%; border-collapse:collapse; margin-bottom:16px; }
         .inv-tbl thead th { background:#1B4F72; color:#fff; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
         .inv-tbl thead th:first-child { border-radius:6px 0 0 0; }
         .inv-tbl thead th:last-child { border-radius:0 6px 0 0; text-align:right; }
-        .inv-tbl tbody td { padding:10px 12px; border-bottom:1px solid #eee; font-size:11px; vertical-align:top; }
-        .inv-tbl tbody tr:nth-child(even) { background:#f8f9fa; }
-        .inv-im { font-weight:700; color:#222; }
-        .inv-is { font-size:10px; color:#777; margin-top:1px; }
+        .inv-tbl tbody tr { page-break-inside: avoid; }
+        .inv-tbl tbody td { padding:10px 12px; border-bottom:1px solid #ddd; font-size:11px; color:#000; vertical-align:top; }
+        .inv-tbl tbody tr:nth-child(even) { background:#f9f9f9; }
+        .inv-im { font-weight:700; color:#000; }
+        .inv-is { font-size:10px; color:#333; margin-top:1px; }
         .inv-ar { text-align:right; }
         .inv-ac { text-align:center; }
-        .inv-tots { display:flex; justify-content:flex-end; margin-bottom:20px; }
+        .inv-tots { display:flex; justify-content:flex-end; margin-bottom:20px; page-break-inside: avoid; }
         .inv-tb { width:260px; }
-        .inv-tr { display:flex; justify-content:space-between; padding:6px 12px; font-size:12px; }
-        .inv-tr.disc { color:#e74c3c; }
+        .inv-tr { display:flex; justify-content:space-between; padding:6px 12px; font-size:12px; color:#000; }
+        .inv-tr.disc { color:#c0392b; font-weight:bold; }
         .inv-tr.gt { background:#1B4F72; color:#fff; font-size:15px; font-weight:800; border-radius:6px; padding:10px 14px; margin-top:4px; }
-        .inv-pb { display:inline-block; background:#e8f4fd; color:#1B4F72; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:16px; }
-        .inv-ft { display:flex; justify-content:space-between; align-items:flex-end; margin-top:40px; padding-top:16px; border-top:1px solid #ddd; }
+        .inv-pb { display:inline-block; background:#e8f4fd; color:#1B4F72; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:16px; page-break-inside: avoid; }
+        .inv-ft { display:flex; justify-content:space-between; align-items:flex-end; margin-top:40px; padding-top:16px; border-top:1px solid #ddd; page-break-inside: avoid; }
         .inv-sig { text-align:center; }
         .inv-sl { width:150px; border-bottom:1px solid #333; margin:30px auto 6px; }
-        .inv-sn { font-size:11px; font-weight:700; }
-        .inv-sr { font-size:10px; color:#888; }
-        .inv-lg { text-align:center; font-size:9px; color:#aaa; margin-top:16px; padding-top:8px; border-top:1px dashed #ddd; }
-        @media print { .inv { padding:0; } }
+        .inv-sn { font-size:11px; font-weight:700; color:#000; }
+        .inv-sr { font-size:10px; color:#333; }
+        .inv-lg { text-align:center; font-size:9px; color:#444; margin-top:16px; padding-top:8px; border-top:1px dashed #ddd; page-break-inside: avoid; }
+        @media print {
+          @page {
+            size: A4;
+            margin: 15mm;
+          }
+          body {
+            color: #000 !important;
+            background: #fff !important;
+          }
+          .inv {
+            padding: 0;
+            max-width: 100%;
+          }
+          .inv-pi, .inv-rd, .inv-pd, .inv-is, .inv-sr, .inv-lg {
+            color: #000 !important;
+          }
+          .inv-pbox {
+            border-color: #000 !important;
+            background: #fff !important;
+          }
+          .inv-tbl tbody tr:nth-child(even) {
+            background: #fdfdfd !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .inv-tbl thead th {
+            background: #1B4F72 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .inv-tr.gt {
+            background: #1B4F72 !important;
+            color: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+        }
       </style>
       <div class="inv">
         <div class="inv-hdr">
@@ -225,7 +263,7 @@ const PrintEngine = {
               : '<div class="inv-lp">' + pName.charAt(0) + '</div>'}
             <div>
               <div class="inv-pn">${pName}</div>
-              <div class="inv-pi">${pAddr}<br>Tél: ${pPhone}${pEmail ? ' · ' + pEmail : ''}<br>${pDnpm ? 'Licence DNPM: ' + pDnpm : ''}</div>
+              <div class="inv-pi">${pAddr}<br>TÃ©l: ${pPhone}${pEmail ? ' Â· ' + pEmail : ''}<br>${pDnpm ? 'Licence DNPM: ' + pDnpm : ''}</div>
             </div>
           </div>
           <div class="inv-rb">
@@ -240,39 +278,39 @@ const PrintEngine = {
           <div class="inv-pbox">
             <div class="inv-plbl">Patient / Client</div>
             <div class="inv-pnm">${sale.patientName || 'Client comptoir'}</div>
-            ${sale.patientPhone ? '<div class="inv-pd">Tél: ' + sale.patientPhone + '</div>' : ''}
+            ${sale.patientPhone ? '<div class="inv-pd">TÃ©l: ' + sale.patientPhone + '</div>' : ''}
             ${sale.patientId ? '<div class="inv-pd">ID: P-' + String(sale.patientId).padStart(4, '0') + '</div>' : ''}
           </div>
           <div class="inv-pbox">
             <div class="inv-plbl">Vendeur / Dispensation</div>
-            <div class="inv-pnm">${sale.sellerName || DB.AppState.currentUser?.name || '—'}</div>
-            ${sale.preparerName ? '<div class="inv-pd">Préparateur: ' + sale.preparerName + '</div>' : ''}
+            <div class="inv-pnm">${sale.sellerName || DB.AppState.currentUser?.name || 'â€”'}</div>
+            ${sale.preparerName ? '<div class="inv-pd">PrÃ©parateur: ' + sale.preparerName + '</div>' : ''}
             ${sale.prescriptionRef ? '<div class="inv-pd">Ordonnance: ' + sale.prescriptionRef + '</div>' : ''}
-            ${sale.doctorName ? '<div class="inv-pd">Médecin: Dr. ' + sale.doctorName + '</div>' : ''}
+            ${sale.doctorName ? '<div class="inv-pd">MÃ©decin: Dr. ' + sale.doctorName + '</div>' : ''}
           </div>
         </div>
         <table class="inv-tbl">
-          <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="inv-ac">Qté</th><th class="inv-ar">Prix unit.</th><th class="inv-ar">Total</th></tr></thead>
+          <thead><tr><th style="width:30px">#</th><th>DÃ©signation</th><th class="inv-ac">QtÃ©</th><th class="inv-ar">Prix unit.</th><th class="inv-ar">Total</th></tr></thead>
           <tbody>
-            ${items.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><div class="inv-im">' + (it.productName || '—') + '</div>' + (it.dci || it.dosage ? '<div class="inv-is">' + [it.dci, it.dosage].filter(Boolean).join(' · ') + '</div>' : '') + '</td><td class="inv-ac">' + it.quantity + '</td><td class="inv-ar">' + UI.formatCurrency(it.unitPrice) + '</td><td class="inv-ar"><strong>' + UI.formatCurrency(it.total) + '</strong></td></tr>').join('')}
+            ${items.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><div class="inv-im">' + (it.productName || 'â€”') + '</div>' + (it.dci || it.dosage ? '<div class="inv-is">' + [it.dci, it.dosage].filter(Boolean).join(' Â· ') + '</div>' : '') + '</td><td class="inv-ac">' + it.quantity + '</td><td class="inv-ar">' + UI.formatCurrency(it.unitPrice) + '</td><td class="inv-ar"><strong>' + UI.formatCurrency(it.total) + '</strong></td></tr>').join('')}
           </tbody>
         </table>
         <div class="inv-tots"><div class="inv-tb">
           <div class="inv-tr"><span>Sous-total (${items.length} article${items.length > 1 ? 's' : ''})</span><span>${UI.formatCurrency(subtotal)}</span></div>
-          ${discount > 0 ? '<div class="inv-tr disc"><span>Remise accordée</span><span>-' + UI.formatCurrency(discount) + '</span></div>' : ''}
+          ${discount > 0 ? '<div class="inv-tr disc"><span>Remise accordÃ©e</span><span>-' + UI.formatCurrency(discount) + '</span></div>' : ''}
           <div class="inv-tr gt"><span>TOTAL TTC</span><span>${UI.formatCurrency(total)}</span></div>
         </div></div>
-        <div class="inv-pb">Mode de paiement : ${payLabels[sale.paymentMethod] || sale.paymentMethod || '—'}</div>
-        ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">Reçu: ' + UI.formatCurrency(sale.cashReceived) + ' · Monnaie: ' + UI.formatCurrency(sale.cashReceived - total) + '</div>' : ''}
-        ${sale.paymentMethod === 'combined' && sale.paymentDetails ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">' + (sale.paymentDetails.method1 || 'Mode 1') + ': ' + UI.formatCurrency(sale.paymentDetails.amount1 || 0) + ' · ' + (sale.paymentDetails.method2 || 'Mode 2') + ': ' + UI.formatCurrency(sale.paymentDetails.amount2 || 0) + '</div>' : ''}
-        ${sale.paymentMethod === 'assurance' && sale.insuranceDetails ? '<div style="font-size:11px;color:#1B4F72;margin-bottom:4px;">Assurance: ' + (sale.insuranceDetails.name || sale.assuranceName || '') + ' · N° ' + (sale.insuranceDetails.ref || sale.assuranceRef || '') + '<br>Part Entreprise: ' + UI.formatCurrency(sale.insuranceDetails.amount || 0) + ' · Part Patient: ' + UI.formatCurrency(total - (sale.insuranceDetails.amount || 0)) + '</div>' : ''}
-        ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div style="font-size:11px;color:#e74c3c;margin-bottom:4px;">Échéance: ' + UI.formatDate(sale.creditDueDate) + '</div>' : ''}
+        <div class="inv-pb">Mode de paiement : ${payLabels[sale.paymentMethod] || sale.paymentMethod || 'â€”'}</div>
+        ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">ReÃ§u: ' + UI.formatCurrency(sale.cashReceived) + ' Â· Monnaie: ' + UI.formatCurrency(sale.cashReceived - total) + '</div>' : ''}
+        ${sale.paymentMethod === 'combined' && sale.paymentDetails ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">' + (sale.paymentDetails.method1 || 'Mode 1') + ': ' + UI.formatCurrency(sale.paymentDetails.amount1 || 0) + ' Â· ' + (sale.paymentDetails.method2 || 'Mode 2') + ': ' + UI.formatCurrency(sale.paymentDetails.amount2 || 0) + '</div>' : ''}
+        ${sale.paymentMethod === 'assurance' && sale.insuranceDetails ? '<div style="font-size:11px;color:#1B4F72;margin-bottom:4px;">Assurance: ' + (sale.insuranceDetails.name || sale.assuranceName || '') + ' Â· NÂ° ' + (sale.insuranceDetails.ref || sale.assuranceRef || '') + '<br>Part Entreprise: ' + UI.formatCurrency(sale.insuranceDetails.amount || 0) + ' Â· Part Patient: ' + UI.formatCurrency(total - (sale.insuranceDetails.amount || 0)) + '</div>' : ''}
+        ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div style="font-size:11px;color:#e74c3c;margin-bottom:4px;">Ã‰chÃ©ance: ' + UI.formatDate(sale.creditDueDate) + '</div>' : ''}
         <div class="inv-ft">
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">${pResp}</div><div class="inv-sr">Pharmacien responsable</div></div>
           <div style="text-align:center"><div style="font-size:10px;color:#888">Ce document tient lieu de facture officielle.</div><div style="font-size:10px;color:#888">Conservez-le comme preuve d'achat.</div></div>
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Cachet</div><div class="inv-sr">& Signature</div></div>
         </div>
-        <div class="inv-lg">Document généré par OrdiveX v9.4.3 · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
+        <div class="inv-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48r Â· ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')} Â· ${pName}</div>
       </div>
     `);
     win.document.close();
@@ -282,7 +320,7 @@ const PrintEngine = {
   async printStockReport(mode) {
     mode = mode || 'full';
     await this.loadSettings();
-    UI.toast('Préparation du rapport...', 'info');
+    UI.toast('PrÃ©paration du rapport...', 'info');
 
     const [products, stockAll, lots] = await Promise.all([
       DB.dbGetAll('products'),
@@ -293,7 +331,7 @@ const PrintEngine = {
     const stockMap = {};
     stockAll.forEach(s => { stockMap[s.productId] = s.quantity; });
 
-    // Pré-calculer la date d'expiration la plus proche par produit
+    // PrÃ©-calculer la date d'expiration la plus proche par produit
     const expiryMap = {};
     const now = new Date();
     const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -325,12 +363,12 @@ const PrintEngine = {
       filtered = products.filter(p => { const e = expiryMap[p.id]; return e && new Date(e) <= in90Days; })
         .sort((a, b) => new Date(expiryMap[a.id]) - new Date(expiryMap[b.id]));
       reportTitle = 'RAPPORT DES EXPIRATIONS PROCHES (90 JOURS)';
-      reportSubtitle = filtered.length + ' produit(s) expirant bientôt';
+      reportSubtitle = filtered.length + ' produit(s) expirant bientÃ´t';
     } else {
       filtered = products;
       reportTitle = 'RAPPORT D\'INVENTAIRE COMPLET';
       if (filtered.length > LIMIT) {
-        reportSubtitle = 'Limité aux ' + LIMIT.toLocaleString() + ' premiers produits sur ' + filtered.length.toLocaleString() + '. Utilisez les rapports ciblés.';
+        reportSubtitle = 'LimitÃ© aux ' + LIMIT.toLocaleString() + ' premiers produits sur ' + filtered.length.toLocaleString() + '. Utilisez les rapports ciblÃ©s.';
         filtered = filtered.slice(0, LIMIT);
       } else {
         reportSubtitle = filtered.length.toLocaleString() + ' produit(s)';
@@ -338,7 +376,7 @@ const PrintEngine = {
     }
 
     if (filtered.length === 0) {
-      UI.toast('Aucun produit ne correspond à ce filtre.', 'info');
+      UI.toast('Aucun produit ne correspond Ã  ce filtre.', 'info');
       return;
     }
 
@@ -352,7 +390,7 @@ const PrintEngine = {
     win.document.write(this._printStyles());
     win.document.write('<style>.row-expiring{background:#fff3e0;}</style>');
 
-    // Page de synthèse
+    // Page de synthÃ¨se
     win.document.write(`
       <div class="report-container" style="page-break-after:always;">
         ${this.header(reportTitle)}
@@ -376,7 +414,7 @@ const PrintEngine = {
       </div>
     `);
 
-    // Pages détaillées
+    // Pages dÃ©taillÃ©es
     for (let pg = 0; pg < totalPages; pg++) {
       const s = pg * PAGE_SIZE;
       const e = Math.min(s + PAGE_SIZE, filtered.length);
@@ -405,14 +443,14 @@ const PrintEngine = {
         + '<div style="display:flex;justify-content:space-between;border-bottom:2px solid #1B4F72;padding-bottom:6px;margin-bottom:8px;">'
         + '<span style="font-size:11px;font-weight:bold;color:#1B4F72;">' + this.pharmacyInfo.name + '</span>'
         + '<span style="font-size:10px;color:#666;">Page ' + (pg + 2) + '/' + (totalPages + 1) + '</span></div>'
-        + '<table class="report-table"><thead><tr><th>#</th><th>Désignation</th><th>Cat.</th><th>Qté</th><th>Achat</th><th>Vente</th><th>Exp.</th></tr></thead>'
+        + '<table class="report-table"><thead><tr><th>#</th><th>DÃ©signation</th><th>Cat.</th><th>QtÃ©</th><th>Achat</th><th>Vente</th><th>Exp.</th></tr></thead>'
         + '<tbody>' + rows + '</tbody></table></div>'
       );
     }
 
     win.document.write('<div class="report-container">' + this.footer() + '</div>');
     win.document.close();
-    win.onload = function() { UI.toast('Rapport prêt', 'success'); win.print(); };
+    win.onload = function() { UI.toast('Rapport prÃªt', 'success'); win.print(); };
   },
 
   async printDestructionPV(lotId) {
@@ -422,33 +460,33 @@ const PrintEngine = {
     const products = await DB.dbGetAll('products');
     const prod = products.find(p => p.id === lot.productId);
 
-    const win = this._openPrintWindow('Procès-Verbal de Destruction');
+    const win = this._openPrintWindow('ProcÃ¨s-Verbal de Destruction');
     win.document.write(`
       ${this._printStyles()}
       <div class="report-container">
-        ${this.header('PROCÈS-VERBAL DE DESTRUCTION')}
-        <h3>Procès-Verbal N° PV-DEST-${String(lotId).padStart(6, '0')}</h3>
+        ${this.header('PROCÃˆS-VERBAL DE DESTRUCTION')}
+        <h3>ProcÃ¨s-Verbal NÂ° PV-DEST-${String(lotId).padStart(6, '0')}</h3>
         <div class="pv-body">
-          <p>Le soussigné, <strong>${lot.destructionBy || this.pharmacyInfo.responsable}</strong>, Pharmacien responsable de l'établissement ${this.pharmacyInfo.name}, certifie avoir procédé à la destruction des médicaments suivants :</p>
+          <p>Le soussignÃ©, <strong>${lot.destructionBy || this.pharmacyInfo.responsable}</strong>, Pharmacien responsable de l'Ã©tablissement ${this.pharmacyInfo.name}, certifie avoir procÃ©dÃ© Ã  la destruction des mÃ©dicaments suivants :</p>
           <table class="report-table" style="margin:16px 0">
-            <thead><tr><th>Désignation</th><th>N° Lot</th><th>Qté détruite</th><th>Date exp.</th><th>Motif</th></tr></thead>
+            <thead><tr><th>DÃ©signation</th><th>NÂ° Lot</th><th>QtÃ© dÃ©truite</th><th>Date exp.</th><th>Motif</th></tr></thead>
             <tbody>
               <tr>
-                <td><strong>${prod?.name || '—'}</strong><br><small>${prod?.dci || ''} ${prod?.dosage || ''}</small></td>
+                <td><strong>${prod?.name || 'â€”'}</strong><br><small>${prod?.dci || ''} ${prod?.dosage || ''}</small></td>
                 <td>${lot.lotNumber}</td>
-                <td><strong>${lot.destroyedQty}</strong> unités</td>
+                <td><strong>${lot.destroyedQty}</strong> unitÃ©s</td>
                 <td>${UI.formatDate(lot.expiryDate)}</td>
                 <td>${lot.destructionReason}</td>
               </tr>
             </tbody>
           </table>
           <div class="pv-details">
-            <p><strong>Méthode de destruction :</strong> ${lot.destructionMethod || '—'}</p>
+            <p><strong>MÃ©thode de destruction :</strong> ${lot.destructionMethod || 'â€”'}</p>
             <p><strong>Date de destruction :</strong> ${UI.formatDate(lot.destructionDate)}</p>
-            <p><strong>Témoins :</strong> ${lot.destructionWitnesses || 'Néant'}</p>
+            <p><strong>TÃ©moins :</strong> ${lot.destructionWitnesses || 'NÃ©ant'}</p>
           </div>
-          <p>Ce procès-verbal a été établi pour servir et valoir ce que de droit.</p>
-          <p>Fait à Conakry, le ${new Date().toLocaleDateString('fr-FR')}</p>
+          <p>Ce procÃ¨s-verbal a Ã©tÃ© Ã©tabli pour servir et valoir ce que de droit.</p>
+          <p>Fait Ã  Conakry, le ${new Date().toLocaleDateString('fr-FR')}</p>
         </div>
         ${this.footer()}
       </div>
@@ -473,7 +511,7 @@ const PrintEngine = {
       if (!breakdown[s.paymentMethod]) breakdown[s.paymentMethod] = 0;
       breakdown[s.paymentMethod] += s.total;
     });
-    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement' };
+    const payLabels = { cash: 'EspÃ¨ces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'CrÃ©dit', transfer: 'Virement' };
     const total = daySales.reduce((a, s) => a + s.total, 0);
     const totalDiscount = daySales.reduce((a, s) => a + (s.discount || 0), 0);
 
@@ -481,8 +519,8 @@ const PrintEngine = {
     win.document.write(`
       ${this._printStyles()}
       <div class="report-container">
-        ${this.header('RAPPORT DE CAISSE JOURNALIÈRE')}
-        <h3>Journée du ${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</h3>
+        ${this.header('RAPPORT DE CAISSE JOURNALIÃˆRE')}
+        <h3>JournÃ©e du ${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</h3>
 
         <table class="report-table" style="margin-bottom:16px">
           <thead><tr><th>Mode de paiement</th><th>Nombre de ventes</th><th>Montant total</th></tr></thead>
@@ -492,20 +530,20 @@ const PrintEngine = {
             `).join('')}
           </tbody>
           <tfoot>
-            <tr><td><strong>Remises accordées</strong></td><td></td><td>-${UI.formatCurrency(totalDiscount)}</td></tr>
-            <tr class="invoice-total-row"><td colspan="2"><strong>TOTAL ENCAISSÉ</strong></td><td><strong>${UI.formatCurrency(total)}</strong></td></tr>
+            <tr><td><strong>Remises accordÃ©es</strong></td><td></td><td>-${UI.formatCurrency(totalDiscount)}</td></tr>
+            <tr class="invoice-total-row"><td colspan="2"><strong>TOTAL ENCAISSÃ‰</strong></td><td><strong>${UI.formatCurrency(total)}</strong></td></tr>
           </tfoot>
         </table>
 
         ${dayClosure ? `
           <div class="pv-details">
             <p><strong>Fond d'ouverture :</strong> ${UI.formatCurrency(dayClosure.openingFund || 0)}</p>
-            <p><strong>Espèces attendues :</strong> ${UI.formatCurrency(dayClosure.expectedCash || 0)}</p>
-            <p><strong>Espèces comptées :</strong> ${UI.formatCurrency(dayClosure.physicalCash || 0)}</p>
-            <p><strong>Écart de caisse :</strong> ${UI.formatCurrency((dayClosure.physicalCash || 0) - (dayClosure.expectedCash || 0))}</p>
-            <p><strong>Clôturé par :</strong> ${dayClosure.closedBy || '—'}</p>
+            <p><strong>EspÃ¨ces attendues :</strong> ${UI.formatCurrency(dayClosure.expectedCash || 0)}</p>
+            <p><strong>EspÃ¨ces comptÃ©es :</strong> ${UI.formatCurrency(dayClosure.physicalCash || 0)}</p>
+            <p><strong>Ã‰cart de caisse :</strong> ${UI.formatCurrency((dayClosure.physicalCash || 0) - (dayClosure.expectedCash || 0))}</p>
+            <p><strong>ClÃ´turÃ© par :</strong> ${dayClosure.closedBy || 'â€”'}</p>
             ${dayClosure.note ? `<p><strong>Observations :</strong> ${dayClosure.note}</p>` : ''}
-          </div>` : '<p class="text-warning"><strong>⚠️ Caisse non clôturée pour cette journée</strong></p>'}
+          </div>` : '<p class="text-warning"><strong>âš ï¸ Caisse non clÃ´turÃ©e pour cette journÃ©e</strong></p>'}
 
         ${this.footer()}
       </div>
@@ -519,11 +557,11 @@ const PrintEngine = {
     const rx = await DB.dbGet('prescriptions', rxId);
     if (!rx) return;
 
-    const win = this._openPrintWindow(`Ordonnance — Rx-${String(rxId).padStart(5, '0')}`);
+    const win = this._openPrintWindow(`Ordonnance â€” Rx-${String(rxId).padStart(5, '0')}`);
     win.document.write(`
       ${this._printStyles()}
       <div class="report-container">
-        ${this.header('ORDONNANCE MÉDICALE')}
+        ${this.header('ORDONNANCE MÃ‰DICALE')}
         
         <div class="rx-header-info" style="display:flex; justify-content:space-between; margin-bottom:24px;">
           <div class="rx-patient-side">
@@ -532,20 +570,20 @@ const PrintEngine = {
             ${rx.patientId ? `<p>ID: P-${String(rx.patientId).padStart(4, '0')}</p>` : ''}
           </div>
           <div class="rx-doc-side" style="text-align:right;">
-            <p><strong>MÉDECIN / PRESCRIPTEUR :</strong></p>
-            <p style="font-size:14px; font-weight:bold;">Dr. ${rx.doctorName || '—'}</p>
+            <p><strong>MÃ‰DECIN / PRESCRIPTEUR :</strong></p>
+            <p style="font-size:14px; font-weight:bold;">Dr. ${rx.doctorName || 'â€”'}</p>
             <p>${rx.specialty || ''}</p>
           </div>
         </div>
 
         <div class="rx-body" style="min-height:300px; border:1px solid #1B4F72; padding:20px; border-radius:4px;">
-          <h4 style="border-bottom:2px solid #1B4F72; padding-bottom:8px; margin-bottom:16px; color:#1B4F72;">MÉDICAMENTS PRESCRITS</h4>
+          <h4 style="border-bottom:2px solid #1B4F72; padding-bottom:8px; margin-bottom:16px; color:#1B4F72;">MÃ‰DICAMENTS PRESCRITS</h4>
           <table style="width:100%; border-collapse:collapse;">
             <thead>
               <tr style="text-align:left; border-bottom:1px solid #ddd;">
-                <th style="padding:10px 0;">Désignation</th>
-                <th style="padding:10px 0;">Posologie & Durée</th>
-                <th style="padding:10px 0; text-align:right;">Qté</th>
+                <th style="padding:10px 0;">DÃ©signation</th>
+                <th style="padding:10px 0;">Posologie & DurÃ©e</th>
+                <th style="padding:10px 0; text-align:right;">QtÃ©</th>
               </tr>
             </thead>
             <tbody>
@@ -563,13 +601,13 @@ const PrintEngine = {
           
           ${rx.notes ? `
             <div style="margin-top:24px; padding-top:16px; border-top:1px dashed #ccc;">
-              <strong>Notes complémentaires :</strong>
+              <strong>Notes complÃ©mentaires :</strong>
               <p style="margin-top:4px;">${rx.notes}</p>
             </div>` : ''}
         </div>
 
         <div style="margin-top:20px; font-size:11px; color:#666; font-style:italic;">
-          * Cette ordonnance a été numérisée pour archivage et dispensation contrôlée.
+          * Cette ordonnance a Ã©tÃ© numÃ©risÃ©e pour archivage et dispensation contrÃ´lÃ©e.
         </div>
 
         ${this.footer()}
@@ -581,75 +619,134 @@ const PrintEngine = {
 
   _openPrintWindow(title) {
     const win = window.open('', '_blank', 'width=900,height=700');
-    win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title} — ${this.pharmacyInfo.name}</title></head><body>`);
+    win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${title} â€” ${this.pharmacyInfo.name}</title></head><body>`);
     return win;
   },
 
-  _printStyles() {
-    return `<style>
-      * { margin:0; padding:0; box-sizing:border-box; }
-      body { font-family: 'Arial', sans-serif; font-size: 12px; color: #000; background: white; }
+  _printStyles(isTicket = false) {
+    if (isTicket) {
+      return `<style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 76mm;
+          height: auto !important;
+          min-height: 0 !important;
+          color: #000;
+          background: #fff;
+          font-family: monospace;
+          font-size: 11px;
+          line-height: 1.2;
+        }
+        @page {
+          size: 76mm auto;
+          margin: 0 !important;
+        }
+        .ticket-container {
+          width: 76mm;
+          margin: 0 !important;
+          padding: 4px 6px 0px 6px !important;
+          height: auto !important;
+          min-height: 0 !important;
+          display: block;
+          overflow: hidden;
+        }
+        .ticket-logo { font-size: 20px; text-align: center; margin-bottom: 2px; }
+        .ticket-name { font-size: 13px; font-weight: bold; text-align: center; color: #000 !important; text-transform: uppercase; }
+        .ticket-addr, .ticket-phone { font-size: 9.5px; text-align: center; color: #000 !important; }
+        .ticket-divider { text-align: center; font-size: 10px; margin: 3px 0; color: #000 !important; font-weight: bold; letter-spacing: -1px; }
+        .ticket-meta { margin: 4px 0; }
+        .ticket-row { display: flex; justify-content: space-between; font-size: 10px; padding: 1.5px 0; color: #000 !important; }
+        .ticket-row span { color: #000 !important; }
+        .ticket-items { width: 100%; font-size: 10px; border-collapse: collapse; color: #000 !important; margin: 2px 0; }
+        .ticket-items td { padding: 2px 1px; color: #000 !important; border-bottom: 1px dotted #000; vertical-align: top; }
+        .ticket-items tr:last-child td { border-bottom: none; }
+        .item-name { text-align: left; }
+        .item-qty { text-align: center; width: 25px; font-weight: bold; }
+        .item-price { text-align: right; width: 60px; }
+        .item-total { text-align: right; font-weight: bold; width: 65px; }
+        .ticket-total { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; padding: 4px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; margin-top: 3px; color: #000 !important; }
+        .ticket-total span { color: #000 !important; }
+        .ticket-thanks, .ticket-advice, .ticket-legal { text-align: center; font-size: 9.5px; margin-top: 3px; color: #000 !important; font-weight: bold; }
+        .ticket-thanks { margin-top: 6px; }
 
-      /* Ticket */
-      .ticket-container { width: 80mm; margin: 0 auto; padding: 8px; font-family: monospace; }
-      .ticket-logo { font-size: 28px; text-align: center; margin-bottom: 4px; }
-      .ticket-name { font-size: 14px; font-weight: bold; text-align: center; }
-      .ticket-addr, .ticket-phone { font-size: 10px; text-align: center; color: #666; }
-      .ticket-divider { text-align: center; font-size: 11px; margin: 6px 0; color: #999; }
-      .ticket-meta { margin: 6px 0; }
-      .ticket-row { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
-      .ticket-items { width: 100%; font-size: 11px; }
-      .ticket-items td { padding: 2px 2px; }
-      .item-name { flex: 1; }
-      .item-qty { text-align: center; width: 25px; }
-      .item-price { text-align: right; width: 60px; }
-      .item-total { text-align: right; font-weight: bold; width: 65px; }
-      .ticket-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; padding: 6px 0; border-top: 2px solid #000; margin-top: 4px; }
-      .ticket-thanks, .ticket-advice, .ticket-legal { text-align: center; font-size: 10px; margin-top: 4px; color: #666; }
+        @media print {
+          html, body {
+            width: 76mm;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .ticket-container {
+            width: 76mm;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 4px 6px 0px 6px !important;
+          }
+        }
+      </style>`;
+    } else {
+      return `<style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #000; background: white; }
 
-      /* Report & Invoice */
-      .report-container, .invoice-container { max-width: 210mm; margin: 0 auto; padding: 20px; }
-      .print-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 16px; }
-      .print-logo { font-size: 48px; }
-      .print-org { flex: 1; }
-      .print-org h1 { font-size: 18px; font-weight: bold; margin-bottom: 4px; }
-      .print-org p { font-size: 11px; color: #666; line-height: 1.4; }
-      .print-doc-ref { text-align: right; }
-      .print-doc-type { font-size: 16px; font-weight: bold; color: #1B4F72; }
-      .print-date { font-size: 11px; color: #666; margin-top: 4px; }
-      .print-divider { border-top: 2px solid #1B4F72; margin: 12px 0; }
-      .invoice-ref { font-size: 13px; font-weight: bold; margin-bottom: 12px; color: #1B4F72; }
+        @page {
+          size: A4;
+          margin: 15mm 20mm;
+        }
 
-      .report-table, .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; }
-      .report-table th, .invoice-table th { background: #1B4F72; color: white; padding: 6px 8px; text-align: left; }
-      .report-table td, .invoice-table td { padding: 5px 8px; border-bottom: 1px solid #eee; }
-      .report-table tfoot td, .invoice-table tfoot td { font-weight: bold; border-top: 2px solid #1B4F72; background: #f5f5f5; padding: 6px 8px; }
-      .invoice-total-row td { font-size: 14px; background: #1B4F72 !important; color: white !important; }
-      .row-low { background: #fff8e1; }
-      .row-zero { background: #ffebee; }
-      .text-danger { color: #c0392b; font-weight: bold; }
-      .text-warning { color: #e67e22; }
+        .report-container, .invoice-container { max-width: 100%; margin: 0 auto; padding: 0; }
+        .print-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 20px; }
+        .print-logo { font-size: 40px; }
+        .print-org { flex: 1; }
+        .print-org h1 { font-size: 18px; font-weight: bold; margin-bottom: 4px; color: #000; }
+        .print-org p { font-size: 11px; color: #000; line-height: 1.4; }
+        .print-doc-ref { text-align: right; }
+        .print-doc-type { font-size: 16px; font-weight: bold; color: #1B4F72; }
+        .print-date { font-size: 11px; color: #000; margin-top: 4px; }
+        .print-divider { border-top: 2px solid #1B4F72; margin: 12px 0; }
+        .invoice-ref { font-size: 13px; font-weight: bold; margin-bottom: 12px; color: #1B4F72; }
 
-      .pv-body p { margin-bottom: 8px; line-height: 1.6; font-size: 12px; }
-      .pv-details { background: #f9f9f9; border: 1px solid #ddd; padding: 12px; border-radius: 4px; margin: 12px 0; }
-      .pv-details p { margin-bottom: 4px; }
+        .report-table, .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 11px; }
+        .report-table th, .invoice-table th { background: #1B4F72; color: white; padding: 8px 10px; text-align: left; }
+        .report-table td, .invoice-table td { padding: 6px 10px; border-bottom: 1px solid #ddd; color: #000; }
+        .report-table tr { page-break-inside: avoid; }
+        .report-table tfoot td, .invoice-table tfoot td { font-weight: bold; border-top: 2px solid #1B4F72; background: #f9f9f9; padding: 8px 10px; color: #000; }
+        .invoice-total-row td { font-size: 14px; background: #1B4F72 !important; color: white !important; }
+        .row-low { background: #fff8e1; }
+        .row-zero { background: #ffebee; }
+        .text-danger { color: #c0392b; font-weight: bold; }
+        .text-warning { color: #d35400; }
 
-      .print-footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; }
-      .print-sig-block { text-align: center; font-size: 11px; }
-      .sig-line { width: 140px; border-bottom: 1px solid #000; margin: 30px auto 4px; }
-      .print-footer-center { text-align: center; }
-      .print-legal { font-size: 10px; color: #999; }
-      .report-legend { display: flex; gap: 20px; margin-top: 8px; font-size: 11px; }
-      .legend-item { display: flex; align-items: center; gap: 6px; }
-      .legend-box { width: 14px; height: 14px; display: inline-block; border: 1px solid #ddd; }
-      .legend-box.row-low { background: #fff8e1; }
-      .legend-box.row-zero { background: #ffebee; }
+        .pv-body p { margin-bottom: 10px; line-height: 1.6; font-size: 12px; color: #000; }
+        .pv-details { background: #f9f9f9; border: 1px solid #ccc; padding: 12px; border-radius: 4px; margin: 16px 0; }
+        .pv-details p { margin-bottom: 6px; color: #000; }
 
-      @media print {
-        body { margin: 0; }
-        .report-container, .invoice-container { padding: 0; }
-      }
-    </style>`;
+        .print-footer { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; page-break-inside: avoid; }
+        .print-sig-block { text-align: center; font-size: 11px; }
+        .sig-line { width: 140px; border-bottom: 1px solid #000; margin: 30px auto 4px; }
+        .print-footer-center { text-align: center; }
+        .print-legal { font-size: 10px; color: #000; }
+        .report-legend { display: flex; gap: 20px; margin-top: 12px; font-size: 11px; page-break-inside: avoid; }
+        .legend-item { display: flex; align-items: center; gap: 6px; color: #000; }
+        .legend-box { width: 14px; height: 14px; display: inline-block; border: 1px solid #bbb; }
+        .legend-box.row-low { background: #fff8e1; }
+        .legend-box.row-zero { background: #ffebee; }
+
+        @media print {
+          body { margin: 0; color: #000 !important; background: #fff !important; }
+          .report-container, .invoice-container { padding: 0; }
+          .report-table th, .invoice-table th { background: #1B4F72 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .row-low { background: #fff8e1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .row-zero { background: #ffebee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-legal, .print-date, .print-org p { color: #000 !important; }
+        }
+      </style>`;
+    }
+  }
   },
 };
 
@@ -675,13 +772,13 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="printStockReport('ruptures')">
         <div class="print-card-icon" style="color:#e74c3c;"><i data-lucide="alert-circle"></i></div>
         <h3>Ruptures de Stock</h3>
-        <p>Produits avec 0 unité en stock</p>
+        <p>Produits avec 0 unitÃ© en stock</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
       <div class="print-card" onclick="printStockReport('low')">
         <div class="print-card-icon" style="color:#f39c12;"><i data-lucide="alert-triangle"></i></div>
         <h3>Stocks Bas</h3>
-        <p>Produits sous le seuil minimum configuré</p>
+        <p>Produits sous le seuil minimum configurÃ©</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
       <div class="print-card" onclick="printStockReport('expiring')">
@@ -693,7 +790,7 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="printStockReport('full')">
         <div class="print-card-icon"><i data-lucide="package"></i></div>
         <h3>Inventaire Complet</h3>
-        <p>Rapport global (limité à 2 000 produits)</p>
+        <p>Rapport global (limitÃ© Ã  2 000 produits)</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
     </div>
@@ -703,7 +800,7 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="printCaisseReport()">
         <div class="print-card-icon"><i data-lucide="banknote"></i></div>
         <h3>Rapport de Caisse du Jour</h3>
-        <p>Récapitulatif des encaissements journaliers</p>
+        <p>RÃ©capitulatif des encaissements journaliers</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
       <div class="print-card" onclick="Router.navigate('sales')">
@@ -715,8 +812,8 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="Router.navigate('traceability')">
         <div class="print-card-icon"><i data-lucide="trash-2"></i></div>
         <h3>PV de Destruction</h3>
-        <p>Procès-verbal réglementaire de destruction</p>
-        <button class="btn btn-secondary">Aller à la traçabilité <i data-lucide="arrow-right"></i></button>
+        <p>ProcÃ¨s-verbal rÃ©glementaire de destruction</p>
+        <button class="btn btn-secondary">Aller Ã  la traÃ§abilitÃ© <i data-lucide="arrow-right"></i></button>
       </div>
       <div class="print-card" onclick="Router.navigate('suppliers')">
         <div class="print-card-icon"><i data-lucide="clipboard-list"></i></div>
@@ -728,9 +825,9 @@ Router.register('print', (container) => {
   if (window.lucide) lucide.createIcons();
 });
 
-// ═══════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // IMPRESSION BON DE COMMANDE FOURNISSEUR
-// ═══════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 PrintEngine.printPurchaseOrder = async function(orderId) {
   await this.loadSettings();
   const [order, allSettings, suppliers] = await Promise.all([
@@ -753,7 +850,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
   const orderItems = order.items || [];
   const totalHT = orderItems.reduce((a, i) => a + ((i.unitPrice || 0) * (i.quantity || 0)), 0);
 
-  const statusLabels = { draft: 'Brouillon', sent: 'Envoyée', partial: 'Partielle', received: 'Réceptionnée', cancelled: 'Annulée' };
+  const statusLabels = { draft: 'Brouillon', sent: 'EnvoyÃ©e', partial: 'Partielle', received: 'RÃ©ceptionnÃ©e', cancelled: 'AnnulÃ©e' };
 
   const win = this._openPrintWindow('Bon de Commande ' + orderRef);
   win.document.write(`
@@ -797,7 +894,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
       <div class="bc-hdr">
         <div>
           <div class="bc-pn">${pName}</div>
-          <div class="bc-pi">${pAddr}<br>Tél: ${pPhone}${pDnpm ? '<br>DNPM: ' + pDnpm : ''}</div>
+          <div class="bc-pi">${pAddr}<br>TÃ©l: ${pPhone}${pDnpm ? '<br>DNPM: ' + pDnpm : ''}</div>
         </div>
         <div style="text-align:right">
           <div class="bc-rt">BON DE COMMANDE</div>
@@ -811,12 +908,12 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
           <div class="bc-plbl">Pharmacie (Commanditaire)</div>
           <div class="bc-pnm">${pName}</div>
           <div class="bc-pd">${pAddr}</div>
-          <div class="bc-pd">Tél: ${pPhone}</div>
+          <div class="bc-pd">TÃ©l: ${pPhone}</div>
         </div>
         <div class="bc-pbox">
           <div class="bc-plbl">Fournisseur</div>
           <div class="bc-pnm">${supplier.name || order.supplierName || '---'}</div>
-          ${supplier.phone ? '<div class="bc-pd">Tél: ' + supplier.phone + '</div>' : ''}
+          ${supplier.phone ? '<div class="bc-pd">TÃ©l: ' + supplier.phone + '</div>' : ''}
           ${supplier.email ? '<div class="bc-pd">Email: ' + supplier.email + '</div>' : ''}
           ${supplier.address ? '<div class="bc-pd">' + supplier.address + '</div>' : ''}
         </div>
@@ -825,9 +922,9 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
         Statut : ${statusLabels[order.status] || order.status || 'Brouillon'}
       </div>
       <table class="bc-tbl">
-        <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="bc-ac">Qté</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total</th></tr></thead>
+        <thead><tr><th style="width:30px">#</th><th>DÃ©signation</th><th class="bc-ac">QtÃ©</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total</th></tr></thead>
         <tbody>
-          ${orderItems.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><strong>' + (it.productName || it.name || '—') + '</strong></td><td class="bc-ac">' + (it.quantity || 0) + '</td><td class="bc-ar">' + UI.formatCurrency(it.unitPrice || 0) + '</td><td class="bc-ar"><strong>' + UI.formatCurrency((it.unitPrice || 0) * (it.quantity || 0)) + '</strong></td></tr>').join('')}
+          ${orderItems.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><strong>' + (it.productName || it.name || 'â€”') + '</strong></td><td class="bc-ac">' + (it.quantity || 0) + '</td><td class="bc-ar">' + UI.formatCurrency(it.unitPrice || 0) + '</td><td class="bc-ar"><strong>' + UI.formatCurrency((it.unitPrice || 0) * (it.quantity || 0)) + '</strong></td></tr>').join('')}
         </tbody>
       </table>
       <div class="bc-tot"><div class="bc-tb">
@@ -839,7 +936,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">${pResp}</div><div class="bc-sr">Pharmacien responsable</div></div>
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">Fournisseur</div><div class="bc-sr">Signature & Cachet</div></div>
       </div>
-      <div class="bc-lg">Document généré par OrdiveX v9.4.3 · ${new Date().toLocaleDateString('fr-FR')} · ${pName}</div>
+      <div class="bc-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48r Â· ${new Date().toLocaleDateString('fr-FR')} Â· ${pName}</div>
     </div>
   `);
   win.document.close();
@@ -847,3 +944,4 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
 };
 
 window.printPurchaseOrder = function(id) { PrintEngine.printPurchaseOrder(id); };
+

@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48q",
-  "date": "2026-07-08",
-  "changelog": "NM v3.4 : Suppression finale de la veille passive lente pour éliminer le dernier probe de console. Intercepteur WebSocket optimisé contre les micro-coupures de transition."
+  "version": "9.7.48r",
+  "date": "2026-07-10",
+  "changelog": "NM v3.5 : Optimisation de l'impression des tickets thermiques 80mm et des factures A4. Correction de la visibilité et compatibilité de la sidebar sur mobile."
 }
