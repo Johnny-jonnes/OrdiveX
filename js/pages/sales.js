@@ -191,7 +191,7 @@ function renderSalesTable(data) {
     },
   ];
 
-  UI.table(container, columns, pageData, { emptyMessage: 'Aucune vente pour cette période', emptyIcon: 'shopping-cart' });
+  UI.table(container, columns, pageData, { emptyMessage: 'Aucune vente pour cette période', emptyIcon: 'shopping-cart', paginate: false });
 
   // Pagination controls
   const pagDiv = document.createElement('div');

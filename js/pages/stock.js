@@ -218,6 +218,7 @@ function renderStockTable(data) {
   UI.table(container, columns, pageData, {
     emptyMessage: 'Aucun produit trouvé',
     emptyIcon: 'package',
+    paginate: false
   });
 
   // Pagination controls

@@ -155,7 +155,7 @@ function renderReturnsTable(data) {
         },
     ];
 
-    UI.table(container, columns, pageData, { emptyMessage: 'Aucun retour enregistré', emptyIcon: 'undo-2', pageSize: PAGE_SIZE });
+    UI.table(container, columns, pageData, { emptyMessage: 'Aucun retour enregistré', emptyIcon: 'undo-2', pageSize: PAGE_SIZE, paginate: false });
 
     // ── Contrôles de pagination ──
     if (data.length > PAGE_SIZE) {

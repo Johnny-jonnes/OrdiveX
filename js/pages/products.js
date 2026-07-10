@@ -158,7 +158,7 @@ function renderProductsTable(data) {
   ];
 
   // Render table with only the current page
-  UI.table(container, columns, pageData, { emptyMessage: 'Aucun produit trouvé', emptyIcon: 'pill' });
+  UI.table(container, columns, pageData, { emptyMessage: 'Aucun produit trouvé', emptyIcon: 'pill', paginate: false });
 
   // Pagination controls
   const pagDiv = document.createElement('div');

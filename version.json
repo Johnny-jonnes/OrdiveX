@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48v",
+  "version": "9.7.48w",
   "date": "2026-07-10",
-  "changelog": "NM v3.9 : Optimisation des performances sur grand volume dans le module Factures Fournisseurs avec implémentation d'une pagination par table autonome (50 éléments par page), éliminant tout risque de surcharge ou de crash DOM."
+  "changelog": "NM v3.10 : Suppression définitive des doubles boutons de pagination 'Précédent / Suivant' redondants dans les modules de Stock, Catalogue de médicaments, Historique des ventes et Retours."
 }
