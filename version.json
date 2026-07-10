@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48s",
+  "version": "9.7.48t",
   "date": "2026-07-10",
-  "changelog": "NM v3.6 : Intégration de la synchronisation bidirectionnelle automatique des dates de péremption entre le catalogue et le stock (lots). Ajout de l'impression de Bon de Commande fournisseur en PDF professionnel et préremplissage automatique des formulaires."
+  "changelog": "NM v3.7 : Bon de commande sans obligation de prix (possibilité de vider les prix). Option interactive de génération automatique de facture lors de la réception d'un Bon de Commande. Amélioration des filtres d'expiration de stock avec intégration des dates globales de la fiche catalogue et ajout du filtre 'Déjà expiré'."
 }

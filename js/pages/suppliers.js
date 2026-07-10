@@ -1123,7 +1123,7 @@ async function submitOrder(status) {
     const idx = row.id.replace('order-item-', '');
     const hidden = document.getElementById(`order-prod-${idx}`);
     const qty = parseInt(document.getElementById(`order-qty-${idx}`)?.value || 0);
-    const price = parseFloat(document.getElementById(`order-price-${idx}`)?.value || hidden?.dataset?.price || 0);
+    const price = parseFloat(document.getElementById(`order-price-${idx}`)?.value || 0);
     if (hidden?.value && qty > 0) {
       items.push({ productId: parseInt(hidden.value), productName: hidden.dataset?.name || '', quantity: qty, unitPrice: price, receivedQty: 0 });
     }
@@ -1202,6 +1202,36 @@ async function receiveOrder(orderId) {
         <label>Observations</label>
         <textarea id="recv-note" class="form-control" rows="2" placeholder="Dommages, manquants, non-conformités..."></textarea>
       </div>
+      
+      <div style="margin-top: 20px; border-top: 1px dashed var(--border); padding-top: 16px;">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:700; color:var(--primary);">
+          <input type="checkbox" id="recv-create-invoice" onchange="document.getElementById('recv-invoice-fields').style.display = this.checked ? 'block' : 'none'">
+          Générer la facture fournisseur correspondante
+        </label>
+        <div id="recv-invoice-fields" style="display:none; margin-top:12px; background:var(--bg-card); padding:16px; border-radius:8px; border:1px solid var(--border);">
+          <div class="form-row" style="margin-bottom: 12px;">
+            <div class="form-group">
+              <label>Numéro de facture *</label>
+              <input type="text" id="recv-invoice-num" class="form-control" placeholder="FAC-XXXX">
+            </div>
+            <div class="form-group">
+              <label>Date de facture</label>
+              <input type="date" id="recv-invoice-date" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Mode de paiement</label>
+            <select id="recv-invoice-payment" class="form-control">
+              <option value="">Sélectionner...</option>
+              <option value="cash">Espèces</option>
+              <option value="orange_money">Orange Money</option>
+              <option value="mtn_momo">MTN MoMo</option>
+              <option value="credit">Crédit</option>
+              <option value="transfer">Virement</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
   `, {
     size: 'large',
@@ -1277,9 +1307,69 @@ async function confirmReceiveOrder(orderId) {
   const order = window._currentReceiveOrder;
   if (!order) return;
 
+  const createInvoice = document.getElementById('recv-create-invoice')?.checked;
+  const invoiceNum = document.getElementById('recv-invoice-num')?.value?.trim();
+  const invoiceDate = document.getElementById('recv-invoice-date')?.value;
+  const invoicePayment = document.getElementById('recv-invoice-payment')?.value || '';
+
+  if (createInvoice && !invoiceNum) {
+    UI.toast('Le numéro de facture est obligatoire pour générer la facture.', 'error');
+    return;
+  }
+
   let hasNonConformity = false;
   const updatedItems = [];
+  const invoiceItems = [];
+  let invoiceTotal = 0;
 
+  // Récupérer le fournisseur pour son nom exact
+  const suppliers = await DB.dbGetAll('suppliers');
+  const sup = suppliers.find(s => s.id === order.supplierId);
+  const supplierName = sup ? sup.name : 'Inconnu';
+
+  // 1. Génération de la facture fournisseur (si coché)
+  let invoiceId = null;
+  if (createInvoice) {
+    for (let idx = 0; idx < (order.items || []).length; idx++) {
+      const item = order.items[idx];
+      const qtyReceived = parseInt(item._recvQty) || 0;
+      const conform = item._recvConform === '1';
+      if (qtyReceived > 0 && conform) {
+        invoiceItems.push({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: qtyReceived,
+          unitPrice: item.unitPrice || 0,
+          total: qtyReceived * (item.unitPrice || 0),
+          lotNumber: item._recvLot || '',
+          expiryDate: item._recvExpiry || '',
+        });
+        invoiceTotal += qtyReceived * (item.unitPrice || 0);
+      }
+    }
+
+    if (invoiceItems.length === 0) {
+      UI.toast('Aucun article conforme reçu. Impossible de générer une facture vide.', 'warning');
+      return;
+    }
+
+    invoiceId = await DB.dbAdd('invoices', {
+      invoiceNumber: invoiceNum,
+      supplierId: order.supplierId,
+      supplierName: supplierName,
+      date: invoiceDate || new Date().toISOString().split('T')[0],
+      totalAmount: invoiceTotal,
+      items: invoiceItems,
+      status: 'validated',
+      paymentMethod: invoicePayment,
+      note: `Facture générée automatiquement à la réception du Bon de Commande N° ${order.orderNumber}.`,
+      createdBy: DB.AppState.currentUser?.id,
+    });
+    
+    await DB.writeAudit('VALIDATE_INVOICE', 'invoices', invoiceId, { invoiceNumber: invoiceNum, totalAmount: invoiceTotal });
+  }
+
+  // 2. Traitement des lots et du stock
   for (let idx = 0; idx < (order.items || []).length; idx++) {
     const item = order.items[idx];
     const qtyReceived = parseInt(item._recvQty) || 0;
@@ -1311,6 +1401,8 @@ async function confirmReceiveOrder(orderId) {
         receiptDate: new Date().toISOString().split('T')[0],
         supplierId: order.supplierId,
         status: 'active',
+        invoiceId: invoiceId,
+        invoiceRef: createInvoice ? invoiceNum : null,
       });
 
       const stockAll = await DB.dbGetAll('stock');
@@ -1325,6 +1417,7 @@ async function confirmReceiveOrder(orderId) {
         productId: item.productId, type: 'ENTRY', subType: 'PURCHASE',
         quantity: qtyReceived, lotNumber, date: new Date().toISOString(),
         userId: DB.AppState.currentUser?.id, reference: order.orderNumber,
+        invoiceRef: createInvoice ? invoiceNum : null,
       });
     }
   }
@@ -1339,9 +1432,11 @@ async function confirmReceiveOrder(orderId) {
     receivedAt: Date.now(),
     receiveNote: note,
     hasNonConformity,
+    invoiceId: invoiceId,
+    invoiceRef: createInvoice ? invoiceNum : null,
   });
 
-  await DB.writeAudit('RECEIVE_ORDER', 'purchaseOrders', orderId, { hasNonConformity });
+  await DB.writeAudit('RECEIVE_ORDER', 'purchaseOrders', orderId, { hasNonConformity, invoiceCreated: createInvoice });
 
   if (hasNonConformity) {
     await DB.dbAdd('alerts', {
@@ -1352,7 +1447,9 @@ async function confirmReceiveOrder(orderId) {
   }
 
   UI.closeModal();
-  UI.toast(hasNonConformity ? 'Réception avec non-conformités enregistrée' : 'Réception confirmée — Stock mis à jour', hasNonConformity ? 'warning' : 'success', 4000);
+  let statusText = hasNonConformity ? 'Réception avec non-conformités enregistrée' : 'Réception confirmée — Stock mis à jour';
+  if (createInvoice) statusText += ' & Facture fournisseur validée';
+  UI.toast(statusText, hasNonConformity ? 'warning' : 'success', 4000);
   Router.navigate('purchase-orders');
 }
 

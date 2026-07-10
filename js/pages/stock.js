@@ -84,6 +84,7 @@ async function renderStock(container) {
         <option value="low">Stock bas</option>
         <option value="rupture">Rupture</option>
         <option value="expiry">Expiration proche</option>
+        <option value="expired">Déjà expiré</option>
       </select>
       <select id="stock-filter-location" class="filter-select" onchange="filterStock()">
         <option value="">Tous les emplacements</option>
@@ -136,9 +137,19 @@ function filterStock() {
   if (status === 'rupture') data = data.filter(p => p.currentStock === 0);
   else if (status === 'low') data = data.filter(p => p.currentStock > 0 && p.currentStock <= p.minStock);
   else if (status === 'ok') data = data.filter(p => p.currentStock > p.minStock);
-  else if (status === 'expiry') data = data.filter(p =>
-    p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d <= 90; })
-  );
+  else if (status === 'expiry') {
+    data = data.filter(p => {
+      const lotExpiry = p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d > 0 && d <= 90; });
+      const prodExpiry = p.expiryDate ? (UI.daysUntilExpiry(p.expiryDate) !== null && UI.daysUntilExpiry(p.expiryDate) > 0 && UI.daysUntilExpiry(p.expiryDate) <= 90) : false;
+      return lotExpiry || prodExpiry;
+    });
+  } else if (status === 'expired') {
+    data = data.filter(p => {
+      const lotExpired = p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d <= 0; });
+      const prodExpired = p.expiryDate ? (UI.daysUntilExpiry(p.expiryDate) !== null && UI.daysUntilExpiry(p.expiryDate) <= 0) : false;
+      return lotExpired || prodExpired;
+    });
+  }
 
   if (location === 'rayon') data = data.filter(p => p.qtyRayon > 0);
   else if (location === 'reserve') data = data.filter(p => p.qtyReserve > 0);
@@ -184,9 +195,12 @@ function renderStockTable(data) {
     { label: 'Lots actifs', render: r => `<span class="text-center">${r.lots.length}</span>` },
     {
       label: 'Prochaine Exp.', render: r => {
-        if (!r.lots.length) return '—';
-        const nearestLot = r.lots.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))[0];
-        return UI.expiryBadge(nearestLot.expiryDate);
+        const activeLots = r.lots.filter(l => l.expiryDate && l.status === 'active');
+        if (activeLots.length > 0) {
+          activeLots.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
+          return UI.expiryBadge(activeLots[0].expiryDate);
+        }
+        return r.expiryDate ? UI.expiryBadge(r.expiryDate) : '—';
       }
     },
     { label: 'Prix Vente', render: r => UI.formatCurrency(r.salePrice) },
