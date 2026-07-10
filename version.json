@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48w",
+  "version": "9.7.49",
   "date": "2026-07-10",
-  "changelog": "NM v3.10 : Suppression définitive des doubles boutons de pagination 'Précédent / Suivant' redondants dans les modules de Stock, Catalogue de médicaments, Historique des ventes et Retours."
+  "changelog": "v9.7.49 : Correction de l'encodage UTF-8 dans tous les PDF (plus de caractères corrompus). Impression du Bon de Commande : affichage de la conformité par article, quantités commandées vs reçues, totaux calculés uniquement sur les articles conformes, alerte visuelle sur les non-conformités. Correction du ReferenceError resetInvoicePagination dans les factures fournisseurs."
 }
