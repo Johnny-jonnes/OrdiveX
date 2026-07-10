@@ -6,11 +6,11 @@
 const PrintEngine = {
   pharmacyInfo: {
     name: 'Pharmacie Centrale de Conakry',
-    address: 'Avenue de la RÃ©publique, Conakry, GuinÃ©e',
+    address: 'Avenue de la République, Conakry, Guinée',
     phone: '+224 620 000 000',
     email: 'contact@pharmacie.gn',
     dnpm: 'LIC-DNPM-2024-001',
-    responsable: 'Dr. KouyatÃ© Ahmed',
+    responsable: 'Dr. Kouyaté Ahmed',
   },
 
   async loadSettings() {
@@ -34,7 +34,7 @@ const PrintEngine = {
         <div class="print-org">
           <h1>${info.name}</h1>
           <p>${info.address}</p>
-          <p>TÃ©l: ${info.phone} ${info.email ? 'Â· ' + info.email : ''}</p>
+          <p>Tél: ${info.phone} ${info.email ? '· ' + info.email : ''}</p>
           <p>Licence DNPM: ${info.dnpm}</p>
         </div>
         <div class="print-doc-ref">
@@ -57,8 +57,8 @@ const PrintEngine = {
           </div>
         </div>
         <div class="print-footer-center">
-          <p class="print-legal">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48w</p>
-          <p class="print-legal">ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')}</p>
+          <p class="print-legal">Document généré par OrdiveX v9.7.48w</p>
+          <p class="print-legal">Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
         </div>
         <div class="print-footer-right">
           <div class="print-sig-block">
@@ -164,7 +164,7 @@ const PrintEngine = {
     const pDnpm = get('pharmacy_dnpm') || this.pharmacyInfo.dnpm;
     const pResp = get('pharmacy_resp') || this.pharmacyInfo.responsable;
 
-    const payLabels = { cash: 'EspÃ¨ces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'CrÃ©dit', transfer: 'Virement', assurance: 'Assurance', combined: 'Paiement Mixte' };
+    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement', assurance: 'Assurance', combined: 'Paiement Mixte' };
     const subtotal = items.reduce((a, i) => a + (i.total || 0), 0);
     const discount = sale.discount || 0;
     const total = sale.total || subtotal - discount;
@@ -263,7 +263,7 @@ const PrintEngine = {
               : '<div class="inv-lp">' + pName.charAt(0) + '</div>'}
             <div>
               <div class="inv-pn">${pName}</div>
-              <div class="inv-pi">${pAddr}<br>TÃ©l: ${pPhone}${pEmail ? ' Â· ' + pEmail : ''}<br>${pDnpm ? 'Licence DNPM: ' + pDnpm : ''}</div>
+              <div class="inv-pi">${pAddr}<br>Tél: ${pPhone}${pEmail ? ' · ' + pEmail : ''}<br>${pDnpm ? 'Licence DNPM: ' + pDnpm : ''}</div>
             </div>
           </div>
           <div class="inv-rb">
@@ -278,39 +278,39 @@ const PrintEngine = {
           <div class="inv-pbox">
             <div class="inv-plbl">Patient / Client</div>
             <div class="inv-pnm">${sale.patientName || 'Client comptoir'}</div>
-            ${sale.patientPhone ? '<div class="inv-pd">TÃ©l: ' + sale.patientPhone + '</div>' : ''}
+            ${sale.patientPhone ? '<div class="inv-pd">Tél: ' + sale.patientPhone + '</div>' : ''}
             ${sale.patientId ? '<div class="inv-pd">ID: P-' + String(sale.patientId).padStart(4, '0') + '</div>' : ''}
           </div>
           <div class="inv-pbox">
             <div class="inv-plbl">Vendeur / Dispensation</div>
             <div class="inv-pnm">${sale.sellerName || DB.AppState.currentUser?.name || 'â€”'}</div>
-            ${sale.preparerName ? '<div class="inv-pd">PrÃ©parateur: ' + sale.preparerName + '</div>' : ''}
+            ${sale.preparerName ? '<div class="inv-pd">Préparateur: ' + sale.preparerName + '</div>' : ''}
             ${sale.prescriptionRef ? '<div class="inv-pd">Ordonnance: ' + sale.prescriptionRef + '</div>' : ''}
-            ${sale.doctorName ? '<div class="inv-pd">MÃ©decin: Dr. ' + sale.doctorName + '</div>' : ''}
+            ${sale.doctorName ? '<div class="inv-pd">Médecin: Dr. ' + sale.doctorName + '</div>' : ''}
           </div>
         </div>
         <table class="inv-tbl">
-          <thead><tr><th style="width:30px">#</th><th>DÃ©signation</th><th class="inv-ac">QtÃ©</th><th class="inv-ar">Prix unit.</th><th class="inv-ar">Total</th></tr></thead>
+          <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="inv-ac">Qté</th><th class="inv-ar">Prix unit.</th><th class="inv-ar">Total</th></tr></thead>
           <tbody>
-            ${items.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><div class="inv-im">' + (it.productName || 'â€”') + '</div>' + (it.dci || it.dosage ? '<div class="inv-is">' + [it.dci, it.dosage].filter(Boolean).join(' Â· ') + '</div>' : '') + '</td><td class="inv-ac">' + it.quantity + '</td><td class="inv-ar">' + UI.formatCurrency(it.unitPrice) + '</td><td class="inv-ar"><strong>' + UI.formatCurrency(it.total) + '</strong></td></tr>').join('')}
+            ${items.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><div class="inv-im">' + (it.productName || 'â€”') + '</div>' + (it.dci || it.dosage ? '<div class="inv-is">' + [it.dci, it.dosage].filter(Boolean).join(' · ') + '</div>' : '') + '</td><td class="inv-ac">' + it.quantity + '</td><td class="inv-ar">' + UI.formatCurrency(it.unitPrice) + '</td><td class="inv-ar"><strong>' + UI.formatCurrency(it.total) + '</strong></td></tr>').join('')}
           </tbody>
         </table>
         <div class="inv-tots"><div class="inv-tb">
           <div class="inv-tr"><span>Sous-total (${items.length} article${items.length > 1 ? 's' : ''})</span><span>${UI.formatCurrency(subtotal)}</span></div>
-          ${discount > 0 ? '<div class="inv-tr disc"><span>Remise accordÃ©e</span><span>-' + UI.formatCurrency(discount) + '</span></div>' : ''}
+          ${discount > 0 ? '<div class="inv-tr disc"><span>Remise accordée</span><span>-' + UI.formatCurrency(discount) + '</span></div>' : ''}
           <div class="inv-tr gt"><span>TOTAL TTC</span><span>${UI.formatCurrency(total)}</span></div>
         </div></div>
         <div class="inv-pb">Mode de paiement : ${payLabels[sale.paymentMethod] || sale.paymentMethod || 'â€”'}</div>
-        ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">ReÃ§u: ' + UI.formatCurrency(sale.cashReceived) + ' Â· Monnaie: ' + UI.formatCurrency(sale.cashReceived - total) + '</div>' : ''}
-        ${sale.paymentMethod === 'combined' && sale.paymentDetails ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">' + (sale.paymentDetails.method1 || 'Mode 1') + ': ' + UI.formatCurrency(sale.paymentDetails.amount1 || 0) + ' Â· ' + (sale.paymentDetails.method2 || 'Mode 2') + ': ' + UI.formatCurrency(sale.paymentDetails.amount2 || 0) + '</div>' : ''}
-        ${sale.paymentMethod === 'assurance' && sale.insuranceDetails ? '<div style="font-size:11px;color:#1B4F72;margin-bottom:4px;">Assurance: ' + (sale.insuranceDetails.name || sale.assuranceName || '') + ' Â· NÂ° ' + (sale.insuranceDetails.ref || sale.assuranceRef || '') + '<br>Part Entreprise: ' + UI.formatCurrency(sale.insuranceDetails.amount || 0) + ' Â· Part Patient: ' + UI.formatCurrency(total - (sale.insuranceDetails.amount || 0)) + '</div>' : ''}
-        ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div style="font-size:11px;color:#e74c3c;margin-bottom:4px;">Ã‰chÃ©ance: ' + UI.formatDate(sale.creditDueDate) + '</div>' : ''}
+        ${sale.paymentMethod === 'cash' && sale.cashReceived ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">Reçu: ' + UI.formatCurrency(sale.cashReceived) + ' · Monnaie: ' + UI.formatCurrency(sale.cashReceived - total) + '</div>' : ''}
+        ${sale.paymentMethod === 'combined' && sale.paymentDetails ? '<div style="font-size:11px;color:#555;margin-bottom:4px;">' + (sale.paymentDetails.method1 || 'Mode 1') + ': ' + UI.formatCurrency(sale.paymentDetails.amount1 || 0) + ' · ' + (sale.paymentDetails.method2 || 'Mode 2') + ': ' + UI.formatCurrency(sale.paymentDetails.amount2 || 0) + '</div>' : ''}
+        ${sale.paymentMethod === 'assurance' && sale.insuranceDetails ? '<div style="font-size:11px;color:#1B4F72;margin-bottom:4px;">Assurance: ' + (sale.insuranceDetails.name || sale.assuranceName || '') + ' · N° ' + (sale.insuranceDetails.ref || sale.assuranceRef || '') + '<br>Part Entreprise: ' + UI.formatCurrency(sale.insuranceDetails.amount || 0) + ' · Part Patient: ' + UI.formatCurrency(total - (sale.insuranceDetails.amount || 0)) + '</div>' : ''}
+        ${sale.paymentMethod === 'credit' && sale.creditDueDate ? '<div style="font-size:11px;color:#e74c3c;margin-bottom:4px;">Ã‰chéance: ' + UI.formatDate(sale.creditDueDate) + '</div>' : ''}
         <div class="inv-ft">
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">${pResp}</div><div class="inv-sr">Pharmacien responsable</div></div>
           <div style="text-align:center"><div style="font-size:10px;color:#888">Ce document tient lieu de facture officielle.</div><div style="font-size:10px;color:#888">Conservez-le comme preuve d'achat.</div></div>
           <div class="inv-sig"><div class="inv-sl"></div><div class="inv-sn">Cachet</div><div class="inv-sr">& Signature</div></div>
         </div>
-        <div class="inv-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48w Â· ImprimÃ© le ${new Date().toLocaleDateString('fr-FR')} Ã  ${new Date().toLocaleTimeString('fr-FR')} Â· ${pName}</div>
+        <div class="inv-lg">Document généré par OrdiveX v9.7.48w · Imprimé le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')} · ${pName}</div>
       </div>
     `);
     win.document.close();
@@ -320,7 +320,7 @@ const PrintEngine = {
   async printStockReport(mode) {
     mode = mode || 'full';
     await this.loadSettings();
-    UI.toast('PrÃ©paration du rapport...', 'info');
+    UI.toast('Préparation du rapport...', 'info');
 
     const [products, stockAll, lots] = await Promise.all([
       DB.dbGetAll('products'),
@@ -331,7 +331,7 @@ const PrintEngine = {
     const stockMap = {};
     stockAll.forEach(s => { stockMap[s.productId] = s.quantity; });
 
-    // PrÃ©-calculer la date d'expiration la plus proche par produit
+    // Pré-calculer la date d'expiration la plus proche par produit
     const expiryMap = {};
     const now = new Date();
     const in90Days = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
@@ -363,12 +363,12 @@ const PrintEngine = {
       filtered = products.filter(p => { const e = expiryMap[p.id]; return e && new Date(e) <= in90Days; })
         .sort((a, b) => new Date(expiryMap[a.id]) - new Date(expiryMap[b.id]));
       reportTitle = 'RAPPORT DES EXPIRATIONS PROCHES (90 JOURS)';
-      reportSubtitle = filtered.length + ' produit(s) expirant bientÃ´t';
+      reportSubtitle = filtered.length + ' produit(s) expirant bientôt';
     } else {
       filtered = products;
       reportTitle = 'RAPPORT D\'INVENTAIRE COMPLET';
       if (filtered.length > LIMIT) {
-        reportSubtitle = 'LimitÃ© aux ' + LIMIT.toLocaleString() + ' premiers produits sur ' + filtered.length.toLocaleString() + '. Utilisez les rapports ciblÃ©s.';
+        reportSubtitle = 'Limité aux ' + LIMIT.toLocaleString() + ' premiers produits sur ' + filtered.length.toLocaleString() + '. Utilisez les rapports ciblés.';
         filtered = filtered.slice(0, LIMIT);
       } else {
         reportSubtitle = filtered.length.toLocaleString() + ' produit(s)';
@@ -376,7 +376,7 @@ const PrintEngine = {
     }
 
     if (filtered.length === 0) {
-      UI.toast('Aucun produit ne correspond Ã  ce filtre.', 'info');
+      UI.toast('Aucun produit ne correspond à ce filtre.', 'info');
       return;
     }
 
@@ -390,7 +390,7 @@ const PrintEngine = {
     win.document.write(this._printStyles());
     win.document.write('<style>.row-expiring{background:#fff3e0;}</style>');
 
-    // Page de synthÃ¨se
+    // Page de synthèse
     win.document.write(`
       <div class="report-container" style="page-break-after:always;">
         ${this.header(reportTitle)}
@@ -414,7 +414,7 @@ const PrintEngine = {
       </div>
     `);
 
-    // Pages dÃ©taillÃ©es
+    // Pages détaillées
     for (let pg = 0; pg < totalPages; pg++) {
       const s = pg * PAGE_SIZE;
       const e = Math.min(s + PAGE_SIZE, filtered.length);
@@ -443,14 +443,14 @@ const PrintEngine = {
         + '<div style="display:flex;justify-content:space-between;border-bottom:2px solid #1B4F72;padding-bottom:6px;margin-bottom:8px;">'
         + '<span style="font-size:11px;font-weight:bold;color:#1B4F72;">' + this.pharmacyInfo.name + '</span>'
         + '<span style="font-size:10px;color:#666;">Page ' + (pg + 2) + '/' + (totalPages + 1) + '</span></div>'
-        + '<table class="report-table"><thead><tr><th>#</th><th>DÃ©signation</th><th>Cat.</th><th>QtÃ©</th><th>Achat</th><th>Vente</th><th>Exp.</th></tr></thead>'
+        + '<table class="report-table"><thead><tr><th>#</th><th>Désignation</th><th>Cat.</th><th>Qté</th><th>Achat</th><th>Vente</th><th>Exp.</th></tr></thead>'
         + '<tbody>' + rows + '</tbody></table></div>'
       );
     }
 
     win.document.write('<div class="report-container">' + this.footer() + '</div>');
     win.document.close();
-    win.onload = function() { UI.toast('Rapport prÃªt', 'success'); win.print(); };
+    win.onload = function() { UI.toast('Rapport prêt', 'success'); win.print(); };
   },
 
   async printDestructionPV(lotId) {
@@ -460,33 +460,33 @@ const PrintEngine = {
     const products = await DB.dbGetAll('products');
     const prod = products.find(p => p.id === lot.productId);
 
-    const win = this._openPrintWindow('ProcÃ¨s-Verbal de Destruction');
+    const win = this._openPrintWindow('Procès-Verbal de Destruction');
     win.document.write(`
       ${this._printStyles()}
       <div class="report-container">
         ${this.header('PROCÃˆS-VERBAL DE DESTRUCTION')}
-        <h3>ProcÃ¨s-Verbal NÂ° PV-DEST-${String(lotId).padStart(6, '0')}</h3>
+        <h3>Procès-Verbal N° PV-DEST-${String(lotId).padStart(6, '0')}</h3>
         <div class="pv-body">
-          <p>Le soussignÃ©, <strong>${lot.destructionBy || this.pharmacyInfo.responsable}</strong>, Pharmacien responsable de l'Ã©tablissement ${this.pharmacyInfo.name}, certifie avoir procÃ©dÃ© Ã  la destruction des mÃ©dicaments suivants :</p>
+          <p>Le soussigné, <strong>${lot.destructionBy || this.pharmacyInfo.responsable}</strong>, Pharmacien responsable de l'établissement ${this.pharmacyInfo.name}, certifie avoir procédé à la destruction des médicaments suivants :</p>
           <table class="report-table" style="margin:16px 0">
-            <thead><tr><th>DÃ©signation</th><th>NÂ° Lot</th><th>QtÃ© dÃ©truite</th><th>Date exp.</th><th>Motif</th></tr></thead>
+            <thead><tr><th>Désignation</th><th>N° Lot</th><th>Qté détruite</th><th>Date exp.</th><th>Motif</th></tr></thead>
             <tbody>
               <tr>
                 <td><strong>${prod?.name || 'â€”'}</strong><br><small>${prod?.dci || ''} ${prod?.dosage || ''}</small></td>
                 <td>${lot.lotNumber}</td>
-                <td><strong>${lot.destroyedQty}</strong> unitÃ©s</td>
+                <td><strong>${lot.destroyedQty}</strong> unités</td>
                 <td>${UI.formatDate(lot.expiryDate)}</td>
                 <td>${lot.destructionReason}</td>
               </tr>
             </tbody>
           </table>
           <div class="pv-details">
-            <p><strong>MÃ©thode de destruction :</strong> ${lot.destructionMethod || 'â€”'}</p>
+            <p><strong>Méthode de destruction :</strong> ${lot.destructionMethod || 'â€”'}</p>
             <p><strong>Date de destruction :</strong> ${UI.formatDate(lot.destructionDate)}</p>
-            <p><strong>TÃ©moins :</strong> ${lot.destructionWitnesses || 'NÃ©ant'}</p>
+            <p><strong>Témoins :</strong> ${lot.destructionWitnesses || 'Néant'}</p>
           </div>
-          <p>Ce procÃ¨s-verbal a Ã©tÃ© Ã©tabli pour servir et valoir ce que de droit.</p>
-          <p>Fait Ã  Conakry, le ${new Date().toLocaleDateString('fr-FR')}</p>
+          <p>Ce procès-verbal a été établi pour servir et valoir ce que de droit.</p>
+          <p>Fait à Conakry, le ${new Date().toLocaleDateString('fr-FR')}</p>
         </div>
         ${this.footer()}
       </div>
@@ -511,7 +511,7 @@ const PrintEngine = {
       if (!breakdown[s.paymentMethod]) breakdown[s.paymentMethod] = 0;
       breakdown[s.paymentMethod] += s.total;
     });
-    const payLabels = { cash: 'EspÃ¨ces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'CrÃ©dit', transfer: 'Virement' };
+    const payLabels = { cash: 'Espèces', orange_money: 'Orange Money', mtn_momo: 'MTN MoMo', credit: 'Crédit', transfer: 'Virement' };
     const total = daySales.reduce((a, s) => a + s.total, 0);
     const totalDiscount = daySales.reduce((a, s) => a + (s.discount || 0), 0);
 
@@ -520,7 +520,7 @@ const PrintEngine = {
       ${this._printStyles()}
       <div class="report-container">
         ${this.header('RAPPORT DE CAISSE JOURNALIÃˆRE')}
-        <h3>JournÃ©e du ${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</h3>
+        <h3>Journée du ${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</h3>
 
         <table class="report-table" style="margin-bottom:16px">
           <thead><tr><th>Mode de paiement</th><th>Nombre de ventes</th><th>Montant total</th></tr></thead>
@@ -530,7 +530,7 @@ const PrintEngine = {
             `).join('')}
           </tbody>
           <tfoot>
-            <tr><td><strong>Remises accordÃ©es</strong></td><td></td><td>-${UI.formatCurrency(totalDiscount)}</td></tr>
+            <tr><td><strong>Remises accordées</strong></td><td></td><td>-${UI.formatCurrency(totalDiscount)}</td></tr>
             <tr class="invoice-total-row"><td colspan="2"><strong>TOTAL ENCAISSÃ‰</strong></td><td><strong>${UI.formatCurrency(total)}</strong></td></tr>
           </tfoot>
         </table>
@@ -538,12 +538,12 @@ const PrintEngine = {
         ${dayClosure ? `
           <div class="pv-details">
             <p><strong>Fond d'ouverture :</strong> ${UI.formatCurrency(dayClosure.openingFund || 0)}</p>
-            <p><strong>EspÃ¨ces attendues :</strong> ${UI.formatCurrency(dayClosure.expectedCash || 0)}</p>
-            <p><strong>EspÃ¨ces comptÃ©es :</strong> ${UI.formatCurrency(dayClosure.physicalCash || 0)}</p>
+            <p><strong>Espèces attendues :</strong> ${UI.formatCurrency(dayClosure.expectedCash || 0)}</p>
+            <p><strong>Espèces comptées :</strong> ${UI.formatCurrency(dayClosure.physicalCash || 0)}</p>
             <p><strong>Ã‰cart de caisse :</strong> ${UI.formatCurrency((dayClosure.physicalCash || 0) - (dayClosure.expectedCash || 0))}</p>
-            <p><strong>ClÃ´turÃ© par :</strong> ${dayClosure.closedBy || 'â€”'}</p>
+            <p><strong>Clôturé par :</strong> ${dayClosure.closedBy || 'â€”'}</p>
             ${dayClosure.note ? `<p><strong>Observations :</strong> ${dayClosure.note}</p>` : ''}
-          </div>` : '<p class="text-warning"><strong>âš ï¸ Caisse non clÃ´turÃ©e pour cette journÃ©e</strong></p>'}
+          </div>` : '<p class="text-warning"><strong>âš ï¸ Caisse non clôturée pour cette journée</strong></p>'}
 
         ${this.footer()}
       </div>
@@ -581,9 +581,9 @@ const PrintEngine = {
           <table style="width:100%; border-collapse:collapse;">
             <thead>
               <tr style="text-align:left; border-bottom:1px solid #ddd;">
-                <th style="padding:10px 0;">DÃ©signation</th>
-                <th style="padding:10px 0;">Posologie & DurÃ©e</th>
-                <th style="padding:10px 0; text-align:right;">QtÃ©</th>
+                <th style="padding:10px 0;">Désignation</th>
+                <th style="padding:10px 0;">Posologie & Durée</th>
+                <th style="padding:10px 0; text-align:right;">Qté</th>
               </tr>
             </thead>
             <tbody>
@@ -601,13 +601,13 @@ const PrintEngine = {
           
           ${rx.notes ? `
             <div style="margin-top:24px; padding-top:16px; border-top:1px dashed #ccc;">
-              <strong>Notes complÃ©mentaires :</strong>
+              <strong>Notes complémentaires :</strong>
               <p style="margin-top:4px;">${rx.notes}</p>
             </div>` : ''}
         </div>
 
         <div style="margin-top:20px; font-size:11px; color:#666; font-style:italic;">
-          * Cette ordonnance a Ã©tÃ© numÃ©risÃ©e pour archivage et dispensation contrÃ´lÃ©e.
+          * Cette ordonnance a été numérisée pour archivage et dispensation contrôlée.
         </div>
 
         ${this.footer()}
@@ -934,13 +934,13 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="printStockReport('ruptures')">
         <div class="print-card-icon" style="color:#e74c3c;"><i data-lucide="alert-circle"></i></div>
         <h3>Ruptures de Stock</h3>
-        <p>Produits avec 0 unitÃ© en stock</p>
+        <p>Produits avec 0 unité en stock</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
       <div class="print-card" onclick="printStockReport('low')">
         <div class="print-card-icon" style="color:#f39c12;"><i data-lucide="alert-triangle"></i></div>
         <h3>Stocks Bas</h3>
-        <p>Produits sous le seuil minimum configurÃ©</p>
+        <p>Produits sous le seuil minimum configuré</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
       <div class="print-card" onclick="printStockReport('expiring')">
@@ -952,7 +952,7 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="printStockReport('full')">
         <div class="print-card-icon"><i data-lucide="package"></i></div>
         <h3>Inventaire Complet</h3>
-        <p>Rapport global (limitÃ© Ã  2 000 produits)</p>
+        <p>Rapport global (limité à 2 000 produits)</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
     </div>
@@ -962,7 +962,7 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="printCaisseReport()">
         <div class="print-card-icon"><i data-lucide="banknote"></i></div>
         <h3>Rapport de Caisse du Jour</h3>
-        <p>RÃ©capitulatif des encaissements journaliers</p>
+        <p>Récapitulatif des encaissements journaliers</p>
         <button class="btn btn-primary">Imprimer</button>
       </div>
       <div class="print-card" onclick="Router.navigate('sales')">
@@ -974,8 +974,8 @@ Router.register('print', (container) => {
       <div class="print-card" onclick="Router.navigate('traceability')">
         <div class="print-card-icon"><i data-lucide="trash-2"></i></div>
         <h3>PV de Destruction</h3>
-        <p>ProcÃ¨s-verbal rÃ©glementaire de destruction</p>
-        <button class="btn btn-secondary">Aller Ã  la traÃ§abilitÃ© <i data-lucide="arrow-right"></i></button>
+        <p>Procès-verbal réglementaire de destruction</p>
+        <button class="btn btn-secondary">Aller à la traçabilité <i data-lucide="arrow-right"></i></button>
       </div>
       <div class="print-card" onclick="Router.navigate('suppliers')">
         <div class="print-card-icon"><i data-lucide="clipboard-list"></i></div>
@@ -1012,7 +1012,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
   const orderItems = order.items || [];
   const totalHT = orderItems.reduce((a, i) => a + ((i.unitPrice || 0) * (i.quantity || 0)), 0);
 
-  const statusLabels = { draft: 'Brouillon', sent: 'EnvoyÃ©e', partial: 'Partielle', received: 'RÃ©ceptionnÃ©e', cancelled: 'AnnulÃ©e' };
+  const statusLabels = { draft: 'Brouillon', sent: 'Envoyée', partial: 'Partielle', received: 'Réceptionnée', cancelled: 'Annulée' };
 
   const win = this._openPrintWindow('Bon de Commande ' + orderRef);
   win.document.write(`
@@ -1056,7 +1056,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
       <div class="bc-hdr">
         <div>
           <div class="bc-pn">${pName}</div>
-          <div class="bc-pi">${pAddr}<br>TÃ©l: ${pPhone}${pDnpm ? '<br>DNPM: ' + pDnpm : ''}</div>
+          <div class="bc-pi">${pAddr}<br>Tél: ${pPhone}${pDnpm ? '<br>DNPM: ' + pDnpm : ''}</div>
         </div>
         <div style="text-align:right">
           <div class="bc-rt">BON DE COMMANDE</div>
@@ -1070,12 +1070,12 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
           <div class="bc-plbl">Pharmacie (Commanditaire)</div>
           <div class="bc-pnm">${pName}</div>
           <div class="bc-pd">${pAddr}</div>
-          <div class="bc-pd">TÃ©l: ${pPhone}</div>
+          <div class="bc-pd">Tél: ${pPhone}</div>
         </div>
         <div class="bc-pbox">
           <div class="bc-plbl">Fournisseur</div>
           <div class="bc-pnm">${supplier.name || order.supplierName || '---'}</div>
-          ${supplier.phone ? '<div class="bc-pd">TÃ©l: ' + supplier.phone + '</div>' : ''}
+          ${supplier.phone ? '<div class="bc-pd">Tél: ' + supplier.phone + '</div>' : ''}
           ${supplier.email ? '<div class="bc-pd">Email: ' + supplier.email + '</div>' : ''}
           ${supplier.address ? '<div class="bc-pd">' + supplier.address + '</div>' : ''}
         </div>
@@ -1084,7 +1084,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
         Statut : ${statusLabels[order.status] || order.status || 'Brouillon'}
       </div>
       <table class="bc-tbl">
-        <thead><tr><th style="width:30px">#</th><th>DÃ©signation</th><th class="bc-ac">QtÃ©</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total</th></tr></thead>
+        <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="bc-ac">Qté</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total</th></tr></thead>
         <tbody>
           ${orderItems.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><strong>' + (it.productName || it.name || 'â€”') + '</strong></td><td class="bc-ac">' + (it.quantity || 0) + '</td><td class="bc-ar">' + UI.formatCurrency(it.unitPrice || 0) + '</td><td class="bc-ar"><strong>' + UI.formatCurrency((it.unitPrice || 0) * (it.quantity || 0)) + '</strong></td></tr>').join('')}
         </tbody>
@@ -1098,7 +1098,7 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">${pResp}</div><div class="bc-sr">Pharmacien responsable</div></div>
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">Fournisseur</div><div class="bc-sr">Signature & Cachet</div></div>
       </div>
-      <div class="bc-lg">Document gÃ©nÃ©rÃ© par OrdiveX v9.7.48w Â· ${new Date().toLocaleDateString('fr-FR')} Â· ${pName}</div>
+      <div class="bc-lg">Document généré par OrdiveX v9.7.48w · ${new Date().toLocaleDateString('fr-FR')} · ${pName}</div>
     </div>
   `);
   win.document.close();
