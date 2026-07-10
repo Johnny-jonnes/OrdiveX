@@ -1187,6 +1187,8 @@ async function receiveOrder(orderId) {
     item._recvQty = item.quantity;
     item._recvLot = `LOT-AUTO-${Date.now()}-${idx}`;
     item._recvExpiry = prod && prod.expiryDate ? prod.expiryDate : '';
+    item._recvPrice = item.unitPrice || (prod ? prod.purchasePrice : 0);
+    item._recvSalePrice = prod ? prod.salePrice : 0;
     item._recvConform = '1';
   });
   window._recvOrderPage = 1;
@@ -1222,12 +1224,11 @@ async function receiveOrder(orderId) {
           <div class="form-group">
             <label>Mode de paiement</label>
             <select id="recv-invoice-payment" class="form-control">
-              <option value="">Sélectionner...</option>
-              <option value="cash">Espèces</option>
-              <option value="orange_money">Orange Money</option>
-              <option value="mtn_momo">MTN MoMo</option>
+              <option value="especes">Espèces</option>
+              <option value="mobile_money">Mobile Money</option>
               <option value="credit">Crédit</option>
-              <option value="transfer">Virement</option>
+              <option value="virement">Virement</option>
+              <option value="cheque">Chèque</option>
             </select>
           </div>
         </div>
@@ -1262,10 +1263,18 @@ function renderReceivePagination(page) {
         <strong>${item.productName}</strong>
         <span class="text-muted text-sm">Commandé : ${item.quantity}</span>
       </div>
-      <div class="receive-item-fields">
+      <div class="receive-item-fields" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;">
         <div class="form-group">
           <label>Qté reçue</label>
           <input type="number" class="form-control" value="${item._recvQty}" min="0" max="${item.quantity}" onchange="window._currentReceiveOrder.items[${idx}]._recvQty = parseInt(this.value)||0">
+        </div>
+        <div class="form-group">
+          <label>Prix achat (est.)</label>
+          <input type="number" class="form-control" value="${item._recvPrice || 0}" min="0" onchange="window._currentReceiveOrder.items[${idx}]._recvPrice = parseFloat(this.value)||0">
+        </div>
+        <div class="form-group">
+          <label>Prix vente</label>
+          <input type="number" class="form-control" value="${item._recvSalePrice || 0}" min="0" onchange="window._currentReceiveOrder.items[${idx}]._recvSalePrice = parseFloat(this.value)||0">
         </div>
         <div class="form-group">
           <label>N° de Lot</label>
@@ -1334,17 +1343,21 @@ async function confirmReceiveOrder(orderId) {
       const item = order.items[idx];
       const qtyReceived = parseInt(item._recvQty) || 0;
       const conform = item._recvConform === '1';
+      const recvPrice = parseFloat(item._recvPrice || item.unitPrice || 0);
+      const recvSalePrice = parseFloat(item._recvSalePrice || 0);
+      
       if (qtyReceived > 0 && conform) {
         invoiceItems.push({
           productId: item.productId,
           productName: item.productName,
           quantity: qtyReceived,
-          unitPrice: item.unitPrice || 0,
-          total: qtyReceived * (item.unitPrice || 0),
+          unitPrice: recvPrice,
+          salePrice: recvSalePrice,
+          total: qtyReceived * recvPrice,
           lotNumber: item._recvLot || '',
           expiryDate: item._recvExpiry || '',
         });
-        invoiceTotal += qtyReceived * (item.unitPrice || 0);
+        invoiceTotal += qtyReceived * recvPrice;
       }
     }
 
@@ -1369,13 +1382,15 @@ async function confirmReceiveOrder(orderId) {
     await DB.writeAudit('VALIDATE_INVOICE', 'invoices', invoiceId, { invoiceNumber: invoiceNum, totalAmount: invoiceTotal });
   }
 
-  // 2. Traitement des lots et du stock
+  // 2. Traitement des lots, du stock et des prix du catalogue produits
   for (let idx = 0; idx < (order.items || []).length; idx++) {
     const item = order.items[idx];
     const qtyReceived = parseInt(item._recvQty) || 0;
     const lotNumber = item._recvLot || '';
     const expiryDate = item._recvExpiry || '';
     const conform = item._recvConform === '1';
+    const recvPrice = parseFloat(item._recvPrice || item.unitPrice || 0);
+    const recvSalePrice = parseFloat(item._recvSalePrice || 0);
 
     if (!conform) hasNonConformity = true;
 
@@ -1383,7 +1398,8 @@ async function confirmReceiveOrder(orderId) {
       productId: item.productId, 
       productName: item.productName, 
       quantity: item.quantity, 
-      unitPrice: item.unitPrice, 
+      unitPrice: recvPrice, 
+      salePrice: recvSalePrice, 
       receivedQty: qtyReceived, 
       lotNumber, 
       expiryDate, 
@@ -1419,6 +1435,29 @@ async function confirmReceiveOrder(orderId) {
         userId: DB.AppState.currentUser?.id, reference: order.orderNumber,
         invoiceRef: createInvoice ? invoiceNum : null,
       });
+
+      // Mise à jour des prix dans le catalogue (comme pour une facture fournisseur)
+      try {
+        const productsAll = await DB.dbGetAll('products');
+        const existingProd = productsAll.find(p => p.id === item.productId);
+        if (existingProd) {
+          let updatedProd = false;
+          if (recvPrice && existingProd.purchasePrice !== recvPrice) {
+            existingProd.purchasePrice = recvPrice;
+            updatedProd = true;
+          }
+          if (recvSalePrice && existingProd.salePrice !== recvSalePrice) {
+            existingProd.salePrice = recvSalePrice;
+            updatedProd = true;
+          }
+          if (updatedProd) {
+            await DB.dbPut('products', existingProd);
+            window._invoicesProducts = null; // force reload next time
+          }
+        }
+      } catch (prodErr) {
+        console.warn('[Receipt] Erreur mise à jour prix produit:', prodErr);
+      }
     }
   }
 

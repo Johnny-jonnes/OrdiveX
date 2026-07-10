@@ -1,5 +1,5 @@
 {
-  "version": "9.7.48t",
+  "version": "9.7.48u",
   "date": "2026-07-10",
-  "changelog": "NM v3.7 : Bon de commande sans obligation de prix (possibilité de vider les prix). Option interactive de génération automatique de facture lors de la réception d'un Bon de Commande. Amélioration des filtres d'expiration de stock avec intégration des dates globales de la fiche catalogue et ajout du filtre 'Déjà expiré'."
+  "changelog": "NM v3.8 : Alignement complet de la facture de réception de BC sur le comportement des factures fournisseurs (mêmes modes de paiement, saisie de nouveaux prix d'achat/vente lors de la réception, et répercussion automatique des mises à jour de prix sur le catalogue de médicaments)."
 }
