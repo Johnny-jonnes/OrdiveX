@@ -1008,11 +1008,78 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
 
   const supplier = suppliers.find(s => s.id === order.supplierId) || {};
   const orderDate = order.date ? new Date(order.date) : new Date();
-  const orderRef = 'BC-' + String(orderId).padStart(6, '0');
+  const orderRef = order.orderNumber || 'BC-' + String(orderId).padStart(6, '0');
   const orderItems = order.items || [];
-  const totalHT = orderItems.reduce((a, i) => a + ((i.unitPrice || 0) * (i.quantity || 0)), 0);
 
-  const statusLabels = { draft: 'Brouillon', sent: 'Envoyée', partial: 'Partielle', received: 'Réceptionnée', cancelled: 'Annulée' };
+  // Detecter si la commande a ete receptionnee (items ont receivedQty / conform)
+  const isReceived = orderItems.some(it => it.receivedQty !== undefined || it.conform !== undefined);
+
+  // Calcul des totaux selon conformite
+  let totalCommande = 0;
+  let totalConformeRecu = 0;
+  let nbConformes = 0;
+  let nbNonConformes = 0;
+
+  orderItems.forEach(it => {
+    const qteCmd = it.quantity || 0;
+    const pu = it.unitPrice || 0;
+    totalCommande += qteCmd * pu;
+    if (isReceived) {
+      const qteRecue = it.receivedQty || 0;
+      const conforme = it.conform === true || it.conform === '1' || it.conform === 1;
+      if (conforme && qteRecue > 0) {
+        totalConformeRecu += qteRecue * pu;
+        nbConformes++;
+      } else {
+        nbNonConformes++;
+      }
+    }
+  });
+
+  const statusLabels = { draft: 'Brouillon', sent: 'Envoy\u00e9e', partial: 'R\u00e9ception partielle', received: 'R\u00e9ceptionn\u00e9e', cancelled: 'Annul\u00e9e' };
+  const statusColors = { received: 'background:#d4edda;color:#155724', partial: 'background:#fff3cd;color:#856404', sent: 'background:#cce5ff;color:#004085', draft: 'background:#e2e3e5;color:#383d41', cancelled: 'background:#f8d7da;color:#721c24' };
+
+  // Lignes du tableau
+  const rowsHTML = orderItems.map((it, idx) => {
+    const qteCmd = it.quantity || 0;
+    const pu = it.unitPrice || 0;
+
+    if (!isReceived) {
+      return '<tr><td>' + (idx+1) + '</td><td><strong>' + (it.productName || it.name || '\u2014') + '</strong></td><td class="bc-ac">' + qteCmd + '</td><td class="bc-ar">' + UI.formatCurrency(pu) + '</td><td class="bc-ar"><strong>' + UI.formatCurrency(qteCmd * pu) + '</strong></td></tr>';
+    }
+
+    const qteRecue = it.receivedQty !== undefined ? (it.receivedQty || 0) : qteCmd;
+    const conforme = it.conform === true || it.conform === '1' || it.conform === 1;
+    const totalLigne = conforme ? qteRecue * pu : 0;
+    const rowStyle = conforme ? '' : 'background:#fff0f0;';
+    const badge = conforme
+      ? '<span style="background:#d4edda;color:#155724;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">Conforme</span>'
+      : '<span style="background:#f8d7da;color:#721c24;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">&#9888; Non conforme</span>';
+    const qteRecueHtml = conforme
+      ? '<strong>' + qteRecue + '</strong>'
+      : '<span style="color:#c0392b;text-decoration:line-through">' + qteCmd + '</span> <strong style="color:#c0392b">' + qteRecue + '</strong>';
+    const totalHtml = totalLigne > 0 ? UI.formatCurrency(totalLigne) : '<span style="color:#c0392b">\u2014</span>';
+    const lotInfo = it.lotNumber ? '<div style="font-size:10px;color:#555;margin-top:2px">Lot : ' + it.lotNumber + (it.expiryDate ? ' &middot; Exp : ' + it.expiryDate : '') + '</div>' : '';
+
+    return '<tr style="' + rowStyle + '"><td>' + (idx+1) + '</td><td><strong>' + (it.productName || it.name || '\u2014') + '</strong>' + lotInfo + '</td><td class="bc-ac">' + qteCmd + '</td><td class="bc-ac">' + qteRecueHtml + '</td><td class="bc-ac">' + badge + '</td><td class="bc-ar">' + UI.formatCurrency(pu) + '</td><td class="bc-ar"><strong>' + totalHtml + '</strong></td></tr>';
+  }).join('');
+
+  const theadHTML = isReceived
+    ? '<tr><th style="width:28px">#</th><th>D&eacute;signation</th><th class="bc-ac">Qt&eacute; cmd.</th><th class="bc-ac">Qt&eacute; re&ccedil;ue</th><th class="bc-ac">Conformit&eacute;</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total re&ccedil;u</th></tr>'
+    : '<tr><th style="width:28px">#</th><th>D&eacute;signation</th><th class="bc-ac">Qt&eacute;</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total</th></tr>';
+
+  const totalsHTML = isReceived
+    ? '<div class="bc-tr"><span>Articles command&eacute;s</span><span>' + orderItems.length + '</span></div>'
+      + '<div class="bc-tr" style="color:#155724"><span>&#10003; Conformes re&ccedil;us</span><span>' + nbConformes + '</span></div>'
+      + (nbNonConformes > 0 ? '<div class="bc-tr" style="color:#721c24;font-weight:700"><span>&#9888; Non conformes</span><span>' + nbNonConformes + '</span></div>' : '')
+      + (totalCommande !== totalConformeRecu ? '<div class="bc-tr" style="color:#888"><span>Montant command&eacute;</span><span>' + UI.formatCurrency(totalCommande) + '</span></div>' : '')
+      + '<div class="bc-tr gt"><span>TOTAL RE&Ccedil;U CONFORME</span><span>' + UI.formatCurrency(totalConformeRecu) + '</span></div>'
+    : '<div class="bc-tr"><span>Nombre d&apos;articles</span><span>' + orderItems.length + '</span></div>'
+      + '<div class="bc-tr gt"><span>TOTAL HT</span><span>' + UI.formatCurrency(totalCommande) + '</span></div>';
+
+  const alertHTML = (isReceived && nbNonConformes > 0)
+    ? '<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:#721c24"><strong>&#9888; R&eacute;ception avec non-conformit&eacute;s :</strong> ' + nbNonConformes + ' article(s) non conforme(s) d&eacute;tect&eacute;(s). Ces articles ne sont pas comptabilis&eacute;s dans le total re&ccedil;u.</div>'
+    : '';
 
   const win = this._openPrintWindow('Bon de Commande ' + orderRef);
   win.document.write(`
@@ -1022,46 +1089,53 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
       .bc { max-width:210mm; margin:0 auto; padding:24px 28px; }
       .bc-hdr { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; }
       .bc-pn { font-size:20px; font-weight:800; color:#1B4F72; margin-bottom:2px; }
-      .bc-pi { font-size:10px; color:#666; line-height:1.5; }
+      .bc-pi { font-size:10px; color:#555; line-height:1.5; }
       .bc-rt { font-size:22px; font-weight:800; color:#1B4F72; letter-spacing:2px; }
       .bc-rn { font-size:13px; font-weight:700; color:#2E86C1; margin-top:4px; }
-      .bc-rd { font-size:11px; color:#888; margin-top:2px; }
+      .bc-rd { font-size:11px; color:#666; margin-top:2px; }
       .bc-sep { height:3px; background:linear-gradient(to right,#1B4F72,#2E86C1,transparent); margin:16px 0; border-radius:2px; }
-      .bc-parties { display:flex; gap:20px; margin-bottom:20px; }
+      .bc-parties { display:flex; gap:20px; margin-bottom:16px; }
       .bc-pbox { flex:1; background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:14px 16px; }
       .bc-plbl { font-size:9px; text-transform:uppercase; letter-spacing:1.5px; color:#2E86C1; font-weight:700; margin-bottom:8px; }
       .bc-pnm { font-size:14px; font-weight:700; color:#1B4F72; }
-      .bc-pd { font-size:11px; color:#555; margin-top:2px; }
+      .bc-pd { font-size:11px; color:#000; margin-top:2px; }
       .bc-tbl { width:100%; border-collapse:collapse; margin-bottom:16px; }
-      .bc-tbl thead th { background:#1B4F72; color:#fff; padding:10px 12px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+      .bc-tbl thead th { background:#1B4F72; color:#fff; padding:9px 10px; font-size:10px; text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
       .bc-tbl thead th:first-child { border-radius:6px 0 0 0; }
       .bc-tbl thead th:last-child { border-radius:0 6px 0 0; text-align:right; }
-      .bc-tbl tbody td { padding:10px 12px; border-bottom:1px solid #eee; font-size:11px; }
+      .bc-tbl tbody td { padding:9px 10px; border-bottom:1px solid #eee; font-size:11px; color:#000; vertical-align:middle; }
       .bc-tbl tbody tr:nth-child(even) { background:#f8f9fa; }
       .bc-ar { text-align:right; } .bc-ac { text-align:center; }
-      .bc-tot { display:flex; justify-content:flex-end; margin-bottom:20px; }
-      .bc-tb { width:260px; }
-      .bc-tr { display:flex; justify-content:space-between; padding:6px 12px; font-size:12px; }
-      .bc-tr.gt { background:#1B4F72; color:#fff; font-size:15px; font-weight:800; border-radius:6px; padding:10px 14px; margin-top:4px; }
-      .bc-status { display:inline-block; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:16px; }
-      .bc-ft { display:flex; justify-content:space-between; margin-top:40px; padding-top:16px; border-top:1px solid #ddd; }
+      .bc-tot { display:flex; justify-content:flex-end; margin-bottom:16px; }
+      .bc-tb { width:320px; }
+      .bc-tr { display:flex; justify-content:space-between; padding:6px 12px; font-size:12px; color:#000; border-bottom:1px solid #f0f0f0; }
+      .bc-tr.gt { background:#1B4F72; color:#fff; font-size:14px; font-weight:800; border-radius:6px; padding:10px 14px; margin-top:6px; border-bottom:none; }
+      .bc-status { display:inline-block; padding:4px 14px; border-radius:20px; font-size:11px; font-weight:700; margin-bottom:14px; }
+      .bc-ft { display:flex; justify-content:space-between; margin-top:36px; padding-top:16px; border-top:1px solid #ddd; }
       .bc-sig { text-align:center; }
       .bc-sl { width:150px; border-bottom:1px solid #333; margin:30px auto 6px; }
-      .bc-sn { font-size:11px; font-weight:700; }
-      .bc-sr { font-size:10px; color:#888; }
+      .bc-sn { font-size:11px; font-weight:700; color:#000; }
+      .bc-sr { font-size:10px; color:#555; }
       .bc-lg { text-align:center; font-size:9px; color:#aaa; margin-top:16px; padding-top:8px; border-top:1px dashed #ddd; }
-      @media print { .bc { padding:0; } }
+      @media print {
+        .bc { padding:0; }
+        @page { size: A4; margin: 14mm; }
+        body { color:#000 !important; }
+        .bc-tbl thead th { background:#1B4F72 !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        .bc-tr.gt { background:#1B4F72 !important; color:#fff !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      }
     </style>
     <div class="bc">
       <div class="bc-hdr">
         <div>
           <div class="bc-pn">${pName}</div>
-          <div class="bc-pi">${pAddr}<br>Tél: ${pPhone}${pDnpm ? '<br>DNPM: ' + pDnpm : ''}</div>
+          <div class="bc-pi">${pAddr}<br>T&eacute;l: ${pPhone}${pDnpm ? '<br>DNPM: ' + pDnpm : ''}</div>
         </div>
         <div style="text-align:right">
           <div class="bc-rt">BON DE COMMANDE</div>
           <div class="bc-rn">${orderRef}</div>
           <div class="bc-rd">${orderDate.toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}</div>
+          ${order.receivedAt ? '<div class="bc-rd">R&eacute;ceptionn&eacute; le : ' + new Date(order.receivedAt).toLocaleDateString('fr-FR') + '</div>' : ''}
         </div>
       </div>
       <div class="bc-sep"></div>
@@ -1070,35 +1144,34 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
           <div class="bc-plbl">Pharmacie (Commanditaire)</div>
           <div class="bc-pnm">${pName}</div>
           <div class="bc-pd">${pAddr}</div>
-          <div class="bc-pd">Tél: ${pPhone}</div>
+          <div class="bc-pd">T&eacute;l: ${pPhone}</div>
         </div>
         <div class="bc-pbox">
           <div class="bc-plbl">Fournisseur</div>
           <div class="bc-pnm">${supplier.name || order.supplierName || '---'}</div>
-          ${supplier.phone ? '<div class="bc-pd">Tél: ' + supplier.phone + '</div>' : ''}
+          ${supplier.phone ? '<div class="bc-pd">T&eacute;l: ' + supplier.phone + '</div>' : ''}
           ${supplier.email ? '<div class="bc-pd">Email: ' + supplier.email + '</div>' : ''}
           ${supplier.address ? '<div class="bc-pd">' + supplier.address + '</div>' : ''}
         </div>
       </div>
-      <div class="bc-status" style="background:${order.status === 'received' ? '#d4edda;color:#155724' : order.status === 'sent' ? '#cce5ff;color:#004085' : '#fff3cd;color:#856404'}">
+      <div class="bc-status" style="${statusColors[order.status] || statusColors.draft}">
         Statut : ${statusLabels[order.status] || order.status || 'Brouillon'}
       </div>
+      ${alertHTML}
       <table class="bc-tbl">
-        <thead><tr><th style="width:30px">#</th><th>Désignation</th><th class="bc-ac">Qté</th><th class="bc-ar">P.U.</th><th class="bc-ar">Total</th></tr></thead>
-        <tbody>
-          ${orderItems.map((it, idx) => '<tr><td>' + (idx+1) + '</td><td><strong>' + (it.productName || it.name || 'â€”') + '</strong></td><td class="bc-ac">' + (it.quantity || 0) + '</td><td class="bc-ar">' + UI.formatCurrency(it.unitPrice || 0) + '</td><td class="bc-ar"><strong>' + UI.formatCurrency((it.unitPrice || 0) * (it.quantity || 0)) + '</strong></td></tr>').join('')}
-        </tbody>
+        <thead>${theadHTML}</thead>
+        <tbody>${rowsHTML}</tbody>
       </table>
       <div class="bc-tot"><div class="bc-tb">
-        <div class="bc-tr"><span>Nombre d'articles</span><span>${orderItems.length}</span></div>
-        <div class="bc-tr gt"><span>TOTAL HT</span><span>${UI.formatCurrency(totalHT)}</span></div>
+        ${totalsHTML}
       </div></div>
-      ${order.note || order.notes ? '<div style="background:#f8f9fa;padding:12px;border-radius:8px;margin-bottom:16px;font-size:11px;"><strong>Notes :</strong> ' + (order.note || order.notes) + '</div>' : ''}
+      ${order.note || order.notes ? '<div style="background:#f8f9fa;border:1px solid #e9ecef;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:11px;"><strong>Notes :</strong> ' + (order.note || order.notes) + '</div>' : ''}
+      ${order.receiveNote ? '<div style="background:#e8f4fd;border:1px solid #bee3f8;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:11px;"><strong>Note de r&eacute;ception :</strong> ' + order.receiveNote + '</div>' : ''}
       <div class="bc-ft">
         <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">${pResp}</div><div class="bc-sr">Pharmacien responsable</div></div>
-        <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">Fournisseur</div><div class="bc-sr">Signature & Cachet</div></div>
+        <div class="bc-sig"><div class="bc-sl"></div><div class="bc-sn">Fournisseur</div><div class="bc-sr">Signature &amp; Cachet</div></div>
       </div>
-      <div class="bc-lg">Document généré par OrdiveX v9.7.48w · ${new Date().toLocaleDateString('fr-FR')} · ${pName}</div>
+      <div class="bc-lg">Document g&eacute;n&eacute;r&eacute; par OrdiveX v9.7.48w &middot; ${new Date().toLocaleDateString('fr-FR')} &middot; ${pName}</div>
     </div>
   `);
   win.document.close();
