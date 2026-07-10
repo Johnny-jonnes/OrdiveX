@@ -47,13 +47,13 @@ async function renderInvoices(container) {
     </div>
 
     <div class="filter-bar" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
-      <input type="text" id="inv-search" class="filter-input" placeholder="N° de facture..." oninput="resetInvoicePagination(); filterInvoices();" style="flex: 1; min-width: 200px;">
-      <select id="inv-status" class="filter-select" onchange="resetInvoicePagination(); filterInvoices();" style="min-width: 150px;">
+      <input type="text" id="inv-search" class="filter-input" placeholder="N° de facture..." oninput="var c=document.getElementById('inv-table-container'); if(c) c.dataset.page=1; filterInvoices();" style="flex: 1; min-width: 200px;">
+      <select id="inv-status" class="filter-select" onchange="var c=document.getElementById('inv-table-container'); if(c) c.dataset.page=1; filterInvoices();" style="min-width: 150px;">
         <option value="">Tous statuts</option>
         <option value="draft">Brouillon</option>
         <option value="validated">Validée</option>
       </select>
-      <select id="inv-supplier" class="filter-select" onchange="resetInvoicePagination(); filterInvoices();" style="min-width: 200px;">
+      <select id="inv-supplier" class="filter-select" onchange="var c=document.getElementById('inv-table-container'); if(c) c.dataset.page=1; filterInvoices();" style="min-width: 200px;">
         <option value="">Tous fournisseurs</option>
         ${suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
       </select>
@@ -1092,8 +1092,7 @@ window.exportInvoicesPDF = function() {
 
 window.renderInvoices = renderInvoices;
 window.filterInvoices = filterInvoices;
-window.resetInvoicePagination = resetInvoicePagination;
-window.loadMoreInvoices = loadMoreInvoices;
+// resetInvoicePagination et loadMoreInvoices supprimées (pagination déléguée à UI.table)
 window.showNewInvoiceForm = showNewInvoiceForm;
 window.addInvoiceItem = addInvoiceItem;
 window.invoiceProductSearch = invoiceProductSearch;
