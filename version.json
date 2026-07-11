@@ -1,5 +1,5 @@
 {
-  "version": "9.7.49",
+  "version": "9.7.50",
   "date": "2026-07-10",
-  "changelog": "v9.7.49 : Correction de l'encodage UTF-8 dans tous les PDF (plus de caractères corrompus). Impression du Bon de Commande : affichage de la conformité par article, quantités commandées vs reçues, totaux calculés uniquement sur les articles conformes, alerte visuelle sur les non-conformités. Correction du ReferenceError resetInvoicePagination dans les factures fournisseurs."
+  "changelog": "v9.7.50 : Coh\u00e9rence des dates de p\u00e9remption entre Stock et Catalogue. Calcul dynamique bas\u00e9 sur les lots actifs avec stock > 0. Les produits vendus/\u00e9puis\u00e9s ne polluent plus le filtre expiration proche. Recalcul automatique apr\u00e8s chaque vente FEFO."
 }
