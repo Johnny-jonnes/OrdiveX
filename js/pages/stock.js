@@ -139,14 +139,16 @@ function filterStock() {
   else if (status === 'ok') data = data.filter(p => p.currentStock > p.minStock);
   else if (status === 'expiry') {
     data = data.filter(p => {
-      const lotExpiry = p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d > 0 && d <= 90; });
-      const prodExpiry = p.expiryDate ? (UI.daysUntilExpiry(p.expiryDate) !== null && UI.daysUntilExpiry(p.expiryDate) > 0 && UI.daysUntilExpiry(p.expiryDate) <= 90) : false;
+      const lotExpiry = p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d > 0 && d <= 90 && (l.quantity || 0) > 0; });
+      // Fallback sur products.expiryDate seulement si le produit a encore du stock
+      const prodExpiry = p.currentStock > 0 && p.expiryDate ? (UI.daysUntilExpiry(p.expiryDate) !== null && UI.daysUntilExpiry(p.expiryDate) > 0 && UI.daysUntilExpiry(p.expiryDate) <= 90) : false;
       return lotExpiry || prodExpiry;
     });
   } else if (status === 'expired') {
     data = data.filter(p => {
-      const lotExpired = p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d <= 0; });
-      const prodExpired = p.expiryDate ? (UI.daysUntilExpiry(p.expiryDate) !== null && UI.daysUntilExpiry(p.expiryDate) <= 0) : false;
+      const lotExpired = p.lots.some(l => { const d = UI.daysUntilExpiry(l.expiryDate); return d !== null && d <= 0 && (l.quantity || 0) > 0; });
+      // Fallback seulement si le produit a encore du stock
+      const prodExpired = p.currentStock > 0 && p.expiryDate ? (UI.daysUntilExpiry(p.expiryDate) !== null && UI.daysUntilExpiry(p.expiryDate) <= 0) : false;
       return lotExpired || prodExpired;
     });
   }
@@ -195,12 +197,14 @@ function renderStockTable(data) {
     { label: 'Lots actifs', render: r => `<span class="text-center">${r.lots.length}</span>` },
     {
       label: 'Prochaine Exp.', render: r => {
-        const activeLots = r.lots.filter(l => l.expiryDate && l.status === 'active');
+        // Uniquement les lots actifs avec du stock disponible
+        const activeLots = r.lots.filter(l => l.expiryDate && l.status === 'active' && (l.quantity || 0) > 0);
         if (activeLots.length > 0) {
           activeLots.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
           return UI.expiryBadge(activeLots[0].expiryDate);
         }
-        return r.expiryDate ? UI.expiryBadge(r.expiryDate) : '—';
+        // Fallback sur le champ produit seulement si le produit a encore du stock global
+        return (r.currentStock > 0 && r.expiryDate) ? UI.expiryBadge(r.expiryDate) : '—';
       }
     },
     { label: 'Prix Vente', render: r => UI.formatCurrency(r.salePrice) },

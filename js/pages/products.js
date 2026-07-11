@@ -4,10 +4,20 @@
 
 async function renderProducts(container) {
   UI.loading(container, 'Chargement des produits...');
-  const [products, stockData] = await Promise.all([
+  const [products, stockData, lotsAll] = await Promise.all([
     DB.dbGetAll('products'),
     DB.dbGetAll('stock'),
+    DB.dbGetAll('lots'),
   ]);
+
+  // Indexer les lots actifs avec stock > 0 par productId
+  const lotsMapProd = {};
+  lotsAll.forEach(l => {
+    if (l.status === 'active' && (l.quantity || 0) > 0 && l.expiryDate) {
+      if (!lotsMapProd[l.productId]) lotsMapProd[l.productId] = [];
+      lotsMapProd[l.productId].push(l.expiryDate);
+    }
+  });
 
   // KPIs Inventaire — calcul local
   const stockMap = {};
@@ -81,8 +91,17 @@ async function renderProducts(container) {
     <div id="prod-table-container"></div>
   `;
 
-  window._productsData = products;
-  renderProductsTable(products);
+  // Calculer la date la plus proche des lots actifs pour chaque produit
+  const enrichedProducts = products.map(p => {
+    const dates = lotsMapProd[p.id] || [];
+    const closestExpiry = dates.length > 0
+      ? dates.sort((a, b) => new Date(a) - new Date(b))[0]
+      : null;
+    return { ...p, _closestExpiry: closestExpiry };
+  });
+
+  window._productsData = enrichedProducts;
+  renderProductsTable(enrichedProducts);
   if (window.lucide) lucide.createIcons();
   if (window._autoAnimateKPIValues) setTimeout(_autoAnimateKPIValues, 100);
 }
@@ -141,7 +160,12 @@ function renderProductsTable(data) {
       return badges;
     }},
     { label: 'Prix Vente', render: r => `<strong>${UI.formatCurrency(r.salePrice)}</strong>` },
-    { label: 'Péremption', render: r => r.expiryDate ? UI.expiryBadge ? UI.expiryBadge(r.expiryDate) : r.expiryDate : '<span class="text-muted">—</span>' },
+    { label: 'Prochain Lot Exp.', render: r => {
+      if (r._closestExpiry) return UI.expiryBadge ? UI.expiryBadge(r._closestExpiry) : r._closestExpiry;
+      // Si aucun lot actif avec stock, signaler qu'il n'y a pas de stock en cours
+      if (r.expiryDate) return '<span class="text-muted" title="Aucun stock actif — date historique">' + (UI.expiryBadge ? UI.expiryBadge(r.expiryDate) : r.expiryDate) + ' ⊘</span>';
+      return '<span class="text-muted">—</span>';
+    }},
     { label: 'Prix Achat', render: r => UI.formatCurrency(r.purchasePrice) },
     {
       label: 'Marge', render: r => {

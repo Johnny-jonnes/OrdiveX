@@ -898,29 +898,55 @@ async function _syncProductExpiryToLots(productId, expiryDate) {
   }
 }
 
-async function _syncLotExpiryToProduct(productId, expiryDate) {
-  if (!productId || !expiryDate) return;
-  try {
-    if (window._isSyncingExpiry) return;
-    window._isSyncingExpiry = true;
-    const tx = db.transaction('products', 'readwrite');
-    const store = tx.objectStore('products');
-    const req = store.get(productId);
-    req.onsuccess = () => {
-      const prod = req.result;
-      if (prod && prod.expiryDate !== expiryDate) {
-        prod.expiryDate = expiryDate;
-        prod._updatedAt = Date.now();
-        prod._synced = false;
-        store.put(prod);
-      }
-      window._isSyncingExpiry = false;
-    };
-    req.onerror = () => { window._isSyncingExpiry = false; };
-  } catch (e) {
-    window._isSyncingExpiry = false;
-    console.warn('[DB] _syncLotExpiryToProduct error:', e);
-  }
+// Recalcule products.expiryDate = date du lot actif le plus proche avec quantity > 0
+// Appelée apres tout changement de lot (ajout, vente, retour)
+function _syncLotExpiryToProduct(productId) {
+  if (!productId) return;
+  // Eviter les appels recursifs
+  if (!window._syncExpiryQueue) window._syncExpiryQueue = new Set();
+  if (window._syncExpiryQueue.has(productId)) return;
+  window._syncExpiryQueue.add(productId);
+  setTimeout(() => {
+    window._syncExpiryQueue.delete(productId);
+    try {
+      // Lire tous les lots actifs avec stock > 0 pour ce produit
+      const txL = db.transaction('lots', 'readonly');
+      const storeL = txL.objectStore('lots');
+      const allDates = [];
+      const cursor = storeL.openCursor();
+      cursor.onsuccess = (event) => {
+        const cur = event.target.result;
+        if (cur) {
+          const lot = cur.value;
+          if (lot.productId === productId && lot.status === 'active' && (lot.quantity || 0) > 0 && lot.expiryDate) {
+            allDates.push(lot.expiryDate);
+          }
+          cur.continue();
+        } else {
+          // Calculer la date la plus proche parmi les lots actifs
+          const closestDate = allDates.length > 0
+            ? allDates.sort((a, b) => new Date(a) - new Date(b))[0]
+            : null;
+          // Mettre a jour products.expiryDate avec cette valeur
+          const txP = db.transaction('products', 'readwrite');
+          const storeP = txP.objectStore('products');
+          const reqP = storeP.get(productId);
+          reqP.onsuccess = () => {
+            const prod = reqP.result;
+            if (prod && prod.expiryDate !== closestDate) {
+              prod.expiryDate = closestDate;
+              prod._updatedAt = Date.now();
+              prod._synced = false;
+              storeP.put(prod);
+              console.log('[DB] expiryDate produit', productId, '->', closestDate || 'null (aucun stock actif)');
+            }
+          };
+        }
+      };
+    } catch (e) {
+      console.warn('[DB] _syncLotExpiryToProduct error:', e);
+    }
+  }, 200); // Delai court pour regrouper les appels lors d'une vente multi-articles
 }
 
 async function dbAdd(storeName, data) {
@@ -933,11 +959,12 @@ async function dbAdd(storeName, data) {
       const resultId = req.result;
       resolve(resultId);
       
-      // Auto-sync des dates de péremption
+      // Auto-sync des dates de peremption
       if (storeName === 'products' && data.expiryDate) {
         _syncProductExpiryToLots(resultId || data.id, data.expiryDate);
-      } else if (storeName === 'lots' && data.expiryDate && data.productId) {
-        _syncLotExpiryToProduct(data.productId, data.expiryDate);
+      } else if (storeName === 'lots' && data.productId) {
+        // Recalculer le minimum sur tous les lots actifs de ce produit
+        _syncLotExpiryToProduct(data.productId);
       }
 
       if (window.NM && typeof window.NM.notifyMutation === 'function') {
@@ -959,11 +986,12 @@ async function dbPut(storeName, data) {
     req.onsuccess = () => {
       resolve(req.result);
       
-      // Auto-sync des dates de péremption
+      // Auto-sync des dates de peremption
       if (storeName === 'products' && data.expiryDate) {
         _syncProductExpiryToLots(data.id, data.expiryDate);
-      } else if (storeName === 'lots' && data.expiryDate && data.productId) {
-        _syncLotExpiryToProduct(data.productId, data.expiryDate);
+      } else if (storeName === 'lots' && data.productId) {
+        // Declencher le recalcul du minimum meme si seule la quantite a change (vente FEFO)
+        _syncLotExpiryToProduct(data.productId);
       }
 
       if (window.NM && typeof window.NM.notifyMutation === 'function') {
