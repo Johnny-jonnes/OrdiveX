@@ -984,6 +984,26 @@ Router.register('print', (container) => {
         <p>Imprimer un bon de commande depuis les fournisseurs</p>
         <button class="btn btn-secondary">Aller aux fournisseurs <i data-lucide="arrow-right"></i></button>
       </div>
+    </div>
+
+    <h3 style="margin:24px 0 12px;color:var(--text-primary);">Rapport des Ventes Journalières</h3>
+    <div class="print-card" style="max-width:480px">
+      <div class="print-card-icon" style="color:#2980b9"><i data-lucide="bar-chart-2"></i></div>
+      <h3>Médicaments Vendus</h3>
+      <p>Rapport détaillé par journée : médicament, quantité, prix, total, vendeur.</p>
+      <div style="margin:14px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <label style="font-size:13px;font-weight:600;color:var(--text-primary)">Date :</label>
+        <input type="date" id="rapport-ventes-date" class="form-control" style="max-width:180px"
+          value="${new Date().toISOString().slice(0,10)}">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <button class="btn btn-primary" onclick="printRapportVentesJour()">
+          <i data-lucide="printer"></i> Imprimer
+        </button>
+        <button class="btn btn-secondary" onclick="exportRapportVentesJourPDF()">
+          <i data-lucide="file-down"></i> Export PDF
+        </button>
+      </div>
     </div>`;
   if (window.lucide) lucide.createIcons();
 });
@@ -1181,3 +1201,176 @@ PrintEngine.printPurchaseOrder = async function(orderId) {
 
 window.printPurchaseOrder = function(id) { PrintEngine.printPurchaseOrder(id); };
 
+// ══════════════════════════════════════════════════════════════════════════════
+// RAPPORT JOURNALIER DES MÉDICAMENTS VENDUS
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function _getRapportVentesData(dateStr) {
+  const allSales  = await DB.dbGetAll('sales');
+  const allUsers  = await DB.dbGetAll('users');
+  const userMap   = new Map(allUsers.map(u => [u.id, u.name || u.username || '']));
+
+  // Filtrer les ventes du jour
+  const daySales = allSales.filter(s => (s.date || s.createdAt || '').slice(0, 10) === dateStr);
+
+  // Aplatir les lignes de médicaments
+  const rows = [];
+  for (const sale of daySales) {
+    const items = sale.items || sale.cart || [];
+    for (const item of items) {
+      rows.push({
+        medicament : item.name || item.nom || item.productName || '—',
+        qty        : Number(item.qty || item.quantity || 1),
+        prixUnit   : Number(item.price || item.unitPrice || item.prixVente || 0),
+        total      : Number(item.total || ((item.qty || 1) * (item.price || 0)) || 0),
+        vendeur    : userMap.get(sale.userId || sale.cashierId) || sale.cashierName || '—',
+        heure      : sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '—',
+      });
+    }
+  }
+  return rows;
+}
+
+function _buildRapportVentesHTML(dateStr, rows, pharmacyName, pharmacyAddr, pharmacyTel) {
+  const totalGlobal = rows.reduce((s, r) => s + r.total, 0);
+  const dateLabel   = new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  const lignes = rows.map(r => `
+    <tr>
+      <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;font-weight:600">${r.medicament}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;text-align:center">${r.qty}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;text-align:right">${r.prixUnit.toLocaleString('fr-FR')} GNF</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:700">${r.total.toLocaleString('fr-FR')} GNF</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;color:#555">${r.vendeur}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #e5e7eb;color:#888;font-size:11px">${r.heure}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Rapport Ventes – ${dateLabel}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',Arial,sans-serif; font-size:13px; color:#111; background:#fff; padding:20px 28px; }
+    @page { size:A4 portrait; margin:10mm; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1B4F72; padding-bottom:12px; margin-bottom:18px; }
+    .pharma-name { font-size:20px; font-weight:800; color:#1B4F72; }
+    .pharma-sub { font-size:11px; color:#555; margin-top:2px; }
+    .report-title { text-align:right; }
+    .report-title h2 { font-size:16px; font-weight:700; color:#1B4F72; }
+    .report-title p { font-size:11px; color:#666; margin-top:3px; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    thead tr { background:#1B4F72; color:#fff; }
+    thead th { padding:9px 10px; text-align:left; font-size:12px; font-weight:700; }
+    tbody tr:nth-child(even) { background:#f8fafc; }
+    .footer-total { display:flex; justify-content:flex-end; margin-top:12px; }
+    .total-box { background:#1B4F72; color:#fff; padding:10px 18px; border-radius:8px; font-size:15px; font-weight:800; }
+    .print-meta { font-size:10px; color:#aaa; margin-top:18px; text-align:center; }
+    @media print { body { padding:0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="pharma-name">${pharmacyName}</div>
+      <div class="pharma-sub">${pharmacyAddr}${pharmacyTel ? ' — ' + pharmacyTel : ''}</div>
+    </div>
+    <div class="report-title">
+      <h2>Rapport des Médicaments Vendus</h2>
+      <p>${dateLabel}</p>
+      <p style="margin-top:4px">Total lignes : <strong>${rows.length}</strong></p>
+    </div>
+  </div>
+
+  ${rows.length === 0
+    ? '<p style="text-align:center;padding:40px;color:#999;font-size:15px">Aucune vente enregistrée pour cette journée.</p>'
+    : `<table>
+        <thead>
+          <tr>
+            <th>Médicament</th>
+            <th style="text-align:center">Qté</th>
+            <th style="text-align:right">Prix Unitaire</th>
+            <th style="text-align:right">Total</th>
+            <th>Vendeur</th>
+            <th>Heure</th>
+          </tr>
+        </thead>
+        <tbody>${lignes}</tbody>
+      </table>
+      <div class="footer-total">
+        <div class="total-box">Total Journée : ${totalGlobal.toLocaleString('fr-FR')} GNF</div>
+      </div>`}
+
+  <p class="print-meta">Imprimé le ${new Date().toLocaleString('fr-FR')} — OrdiveX ERP</p>
+</body>
+</html>`;
+}
+
+window.printRapportVentesJour = async function() {
+  const dateEl   = document.getElementById('rapport-ventes-date');
+  const dateStr  = dateEl?.value || new Date().toISOString().slice(0, 10);
+  UI.showLoader('Génération du rapport…');
+  try {
+    const rows = await _getRapportVentesData(dateStr);
+    await PrintEngine.loadSettings();
+    const pharmacyName = PrintEngine.settings?.pharmacy_name || 'Pharmacie';
+    const pharmacyAddr = PrintEngine.settings?.pharmacy_address || '';
+    const pharmacyTel  = PrintEngine.settings?.pharmacy_phone  || '';
+    const html = _buildRapportVentesHTML(dateStr, rows, pharmacyName, pharmacyAddr, pharmacyTel);
+    const win  = window.open('', '_blank', 'width=900,height=700');
+    if (!win) { UI.toast('Ouvrez les popups pour imprimer', 'error'); return; }
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => win.print();
+  } catch(e) {
+    UI.toast('Erreur : ' + e.message, 'error');
+  } finally {
+    UI.hideLoader();
+  }
+};
+
+window.exportRapportVentesJourPDF = async function() {
+  const dateEl  = document.getElementById('rapport-ventes-date');
+  const dateStr = dateEl?.value || new Date().toISOString().slice(0, 10);
+  UI.showLoader('Export PDF…');
+  try {
+    const rows = await _getRapportVentesData(dateStr);
+    await PrintEngine.loadSettings();
+    const pharmacyName = PrintEngine.settings?.pharmacy_name || 'Pharmacie';
+    const pharmacyAddr = PrintEngine.settings?.pharmacy_address || '';
+    const pharmacyTel  = PrintEngine.settings?.pharmacy_phone  || '';
+    const dateLabel    = new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR');
+    const totalGlobal  = rows.reduce((s, r) => s + r.total, 0);
+
+    const headers = ['Médicament', 'Quantité', 'Prix Unitaire', 'Total', 'Vendeur', 'Heure'];
+    const data    = rows.map(r => [
+      r.medicament,
+      String(r.qty),
+      r.prixUnit.toLocaleString('fr-FR') + ' GNF',
+      r.total.toLocaleString('fr-FR') + ' GNF',
+      r.vendeur,
+      r.heure,
+    ]);
+    const subHeader = [
+      pharmacyName + (pharmacyAddr ? ' — ' + pharmacyAddr : ''),
+      `Date : ${dateLabel}`,
+      `Total journée : ${totalGlobal.toLocaleString('fr-FR')} GNF`,
+    ];
+    if (window.PDFExport?.generate) {
+      await window.PDFExport.generate(
+        `Rapport Ventes — ${dateLabel}`,
+        headers,
+        data,
+        { subHeader, orientation: 'landscape' }
+      );
+    } else {
+      // Fallback : impression HTML
+      await window.printRapportVentesJour();
+    }
+  } catch(e) {
+    UI.toast('Erreur : ' + e.message, 'error');
+  } finally {
+    UI.hideLoader();
+  }
+};

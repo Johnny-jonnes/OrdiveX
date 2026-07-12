@@ -1208,6 +1208,11 @@ async function saveSettings() {
     data.pharmacy_logo = logoInput.value;
   }
 
+  // Normalisation textuelle automatique
+  if (data.pharmacy_name) data.pharmacy_name = UI.normalizeText(data.pharmacy_name);
+  if (data.pharmacy_address) data.pharmacy_address = UI.normalizeText(data.pharmacy_address);
+  if (data.pharmacy_resp) data.pharmacy_resp = UI.normalizeText(data.pharmacy_resp);
+
   try {
     for (const [key, value] of Object.entries(data)) {
       const existing = (await DB.dbGetAll('settings')).find(s => s.key === key);
@@ -1246,9 +1251,15 @@ function showAddUser() {
         <div class="form-group">
           <label>Rôle *</label>
           <select name="role" class="form-control" required>
-            <option value="caissier">Caissier</option>
-            <option value="pharmacien">Pharmacien</option>
             <option value="admin">Administrateur</option>
+            <option value="responsable">Responsable</option>
+            <option value="rh">RH</option>
+            <option value="pharmacien">Pharmacien</option>
+            <option value="caissier">Caissier</option>
+            <option value="receptionniste">Réceptionniste</option>
+            <option value="gestionnaire_stock">Gestionnaire de stock</option>
+            <option value="comptable">Comptable</option>
+            <option value="assistant">Assistant</option>
           </select>
         </div>
       </div>
@@ -1306,9 +1317,15 @@ async function editUser(id) {
         <div class="form-group">
           <label>Rôle *</label>
           <select name="role" class="form-control" required>
-            <option value="caissier" ${u.role === 'caissier' ? 'selected' : ''}>Caissier</option>
-            <option value="pharmacien" ${u.role === 'pharmacien' ? 'selected' : ''}>Pharmacien</option>
             <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrateur</option>
+            <option value="responsable" ${u.role === 'responsable' ? 'selected' : ''}>Responsable</option>
+            <option value="rh" ${u.role === 'rh' ? 'selected' : ''}>RH</option>
+            <option value="pharmacien" ${u.role === 'pharmacien' ? 'selected' : ''}>Pharmacien</option>
+            <option value="caissier" ${u.role === 'caissier' ? 'selected' : ''}>Caissier</option>
+            <option value="receptionniste" ${u.role === 'receptionniste' ? 'selected' : ''}>Réceptionniste</option>
+            <option value="gestionnaire_stock" ${u.role === 'gestionnaire_stock' ? 'selected' : ''}>Gestionnaire de stock</option>
+            <option value="comptable" ${u.role === 'comptable' ? 'selected' : ''}>Comptable</option>
+            <option value="assistant" ${u.role === 'assistant' ? 'selected' : ''}>Assistant</option>
           </select>
         </div>
       </div>

@@ -96,13 +96,18 @@
   //  ONGLET 1 — TABLEAU DE BORD
   // ═══════════════════════════════════════════════════════════════════════
   async function renderHRDashboard(c) {
-    const [employees, payroll, advances, leaves, attendance] = await Promise.all([
-      DB.dbGetAll('employees'),
+    const [rawEmployees, payroll, advances, leaves, attendance] = await Promise.all([
+      DB.dbGetAll('users'),
       DB.dbGetAll('hr_payroll'),
       DB.dbGetAll('hr_advances'),
       DB.dbGetAll('hr_leaves'),
       DB.dbGetAll('hr_attendance'),
     ]);
+    const employees = rawEmployees.map(e => ({
+      ...e,
+      nom: e.nom || e.name || e.username || '',
+      status: e.status || (e.active !== false ? 'actif' : 'inactif')
+    }));
 
     const actifs = employees.filter(e => e.status === 'actif');
     const periode = ym();
@@ -227,7 +232,12 @@
   //  ONGLET 2 — EMPLOYÉS
   // ═══════════════════════════════════════════════════════════════════════
   async function renderEmployes(c) {
-    const employees = await DB.dbGetAll('employees');
+    const rawEmployees = await DB.dbGetAll('users');
+    const employees = rawEmployees.map(e => ({
+      ...e,
+      nom: e.nom || e.name || e.username || '',
+      status: e.status || (e.active !== false ? 'actif' : 'inactif')
+    }));
     let search = '';
     let filterStatus = '';
 
@@ -300,16 +310,45 @@
 
   // ─── Formulaire Employé ─────────────────────────────────────────────────
   window.hrOpenEmployeForm = async function (id) {
-    const emp = id ? await DB.dbGet('employees', id) : {};
+    let emp = id ? await DB.dbGet('users', id) : {};
+    if (emp) {
+      emp = {
+        ...emp,
+        nom: emp.nom || emp.name || emp.username || '',
+        status: emp.status || (emp.active !== false ? 'actif' : 'inactif')
+      };
+    }
     const e = emp || {};
     UI.openModal({
-      title: id ? 'Modifier Employé' : 'Nouvel Employé',
+      title: id ? 'Modifier Employé / Utilisateur' : 'Nouvel Employé / Utilisateur',
       size: 'large',
       body: `
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group" style="grid-column:1/-1">
             <label>Nom complet <span style="color:var(--danger)">*</span></label>
             <input id="hr-emp-nom" class="form-control" type="text" value="${e.nom||''}" placeholder="Prénom NOM">
+          </div>
+          <div class="form-group">
+            <label>Identifiant ERP (connexion) <span style="color:var(--danger)">*</span></label>
+            <input id="hr-emp-username" class="form-control" type="text" value="${e.username||''}" ${id ? 'disabled' : ''} placeholder="Ex: jean.dupont">
+          </div>
+          <div class="form-group">
+            <label>Rôle ERP <span style="color:var(--danger)">*</span></label>
+            <select id="hr-emp-role" class="form-control" required>
+              <option value="caissier" ${e.role === 'caissier' ? 'selected' : ''}>Caissier</option>
+              <option value="pharmacien" ${e.role === 'pharmacien' ? 'selected' : ''}>Pharmacien</option>
+              <option value="admin" ${e.role === 'admin' ? 'selected' : ''}>Administrateur</option>
+              <option value="responsable" ${e.role === 'responsable' ? 'selected' : ''}>Responsable</option>
+              <option value="rh" ${e.role === 'rh' ? 'selected' : ''}>RH</option>
+              <option value="receptionniste" ${e.role === 'receptionniste' ? 'selected' : ''}>Réceptionniste</option>
+              <option value="gestionnaire_stock" ${e.role === 'gestionnaire_stock' ? 'selected' : ''}>Gestionnaire de stock</option>
+              <option value="comptable" ${e.role === 'comptable' ? 'selected' : ''}>Comptable</option>
+              <option value="assistant" ${e.role === 'assistant' ? 'selected' : ''}>Assistant</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Mot de passe ERP ${id ? '(laisser vide pour ne pas modifier)' : '<span style="color:var(--danger)">*</span>'}</label>
+            <input id="hr-emp-password" class="form-control" type="password" placeholder="${id ? '••••••••' : 'Saisir le mot de passe'}">
           </div>
           <div class="form-group">
             <label>Poste / Fonction</label>
@@ -385,8 +424,20 @@
   window.hrSaveEmploye = async function (id) {
     const nom = document.getElementById('hr-emp-nom')?.value?.trim();
     if (!nom) { UI.toast('Le nom est obligatoire', 'error'); return; }
+
+    let username = '';
+    let role = document.getElementById('hr-emp-role')?.value || 'caissier';
+    let password = document.getElementById('hr-emp-password')?.value;
+
+    if (!id) {
+      username = document.getElementById('hr-emp-username')?.value?.trim();
+      if (!username) { UI.toast('L\'identifiant ERP est obligatoire', 'error'); return; }
+      if (!password) { UI.toast('Le mot de passe ERP est obligatoire', 'error'); return; }
+    }
+
     const data = {
       nom,
+      name: nom,
       poste: document.getElementById('hr-emp-poste')?.value?.trim() || '',
       department: document.getElementById('hr-emp-dept')?.value?.trim() || '',
       dateEmbauche: document.getElementById('hr-emp-embauche')?.value || '',
@@ -399,24 +450,48 @@
       adresse: document.getElementById('hr-emp-adresse')?.value?.trim() || '',
       contactUrgence: document.getElementById('hr-emp-contact')?.value?.trim() || '',
       status: document.getElementById('hr-emp-status')?.value || 'actif',
+      active: (document.getElementById('hr-emp-status')?.value || 'actif') === 'actif',
       notes: document.getElementById('hr-emp-notes')?.value?.trim() || '',
+      role,
       updatedAt: new Date().toISOString(),
     };
+
     if (id) {
+      const existing = await DB.dbGet('users', id);
+      if (!existing) { UI.toast('Utilisateur introuvable', 'error'); return; }
       data.id = id;
-      data.createdAt = (await DB.dbGet('employees', id))?.createdAt || data.updatedAt;
+      data.username = existing.username;
+      data.createdAt = existing.createdAt || data.updatedAt;
+      if (password) {
+        data.password = password;
+      } else {
+        data.password = existing.password;
+      }
     } else {
+      data.username = username;
+      data.password = password;
       data.createdAt = data.updatedAt;
     }
-    await DB.dbPut('employees', data);
-    UI.closeModal();
-    UI.toast(id ? 'Employé mis à jour' : 'Employé créé avec succès', 'success');
-    hrRenderTab('employes');
+
+    try {
+      await DB.dbPut('users', data);
+      await DB.writeAudit(id ? 'EDIT_USER' : 'ADD_USER', 'users', id || null, { name: data.name, username: data.username, role: data.role });
+      UI.closeModal();
+      UI.toast(id ? 'Personnel & Accès mis à jour' : 'Personnel créé avec succès', 'success');
+      hrRenderTab('employes');
+    } catch(err) {
+      UI.toast('Erreur : ' + (err.message.includes('unique') ? 'Cet identifiant existe déjà' : err.message), 'error');
+    }
   };
 
   window.hrOpenEmployeDetail = async function (id) {
-    const e = await DB.dbGet('employees', id);
-    if (!e) return;
+    let rawE = await DB.dbGet('users', id);
+    if (!rawE) return;
+    const e = {
+      ...rawE,
+      nom: rawE.nom || rawE.name || rawE.username || '',
+      status: rawE.status || (rawE.active !== false ? 'actif' : 'inactif')
+    };
     // Afficher les avances et historique de paie
     const advances = (await DB.dbGetAll('hr_advances')).filter(a => a.employeeId === id);
     const payroll = (await DB.dbGetAll('hr_payroll')).filter(p => p.employeeId === id).slice(-6).reverse();
@@ -471,7 +546,12 @@
   //  ONGLET 3 — PAIE
   // ═══════════════════════════════════════════════════════════════════════
   async function renderPaie(c) {
-    const [employees, payroll] = await Promise.all([DB.dbGetAll('employees'), DB.dbGetAll('hr_payroll')]);
+    const [rawEmployees, payroll] = await Promise.all([DB.dbGetAll('users'), DB.dbGetAll('hr_payroll')]);
+    const employees = rawEmployees.map(e => ({
+      ...e,
+      nom: e.nom || e.name || e.username || '',
+      status: e.status || (e.active !== false ? 'actif' : 'inactif')
+    }));
     const actifs = employees.filter(e => e.status === 'actif');
     let selectedPeriod = ym();
 
@@ -565,7 +645,12 @@
 
     window.hrPayPeriod = (v) => { selectedPeriod = v; render(); };
     window.hrGenerateFiches = async (period) => {
-      const empList = (await DB.dbGetAll('employees')).filter(e => e.status === 'actif');
+      const rawEmp = await DB.dbGetAll('users');
+      const empList = rawEmp.map(e => ({
+        ...e,
+        nom: e.nom || e.name || e.username || '',
+        status: e.status || (e.active !== false ? 'actif' : 'inactif')
+      })).filter(e => e.status === 'actif');
       const existing = (await DB.dbGetAll('hr_payroll')).filter(p => p.period === period);
       const existMap = new Map(existing.map(f => [f.employeeId, f]));
       const allAdv = await DB.dbGetAll('hr_advances');
@@ -605,14 +690,16 @@
       const fiches = await DB.dbGetAll('hr_payroll');
       let fiche = fiches.find(f => f.employeeId === empId && f.period === period);
       if (!fiche) {
-        const emp = await DB.dbGet('employees', empId);
+        let rawEmp = await DB.dbGet('users', empId);
+        const emp = rawEmp ? { ...rawEmp, nom: rawEmp.nom || rawEmp.name || rawEmp.username || '' } : null;
         fiche = { employeeId: empId, period, salaire: emp?.salaire||0, primes:0, heuresSup:0, retenues:0, avancesDed:0, netAPayer: net, status:'en_attente', createdAt: new Date().toISOString() };
       }
       await DB.dbPut('hr_payroll', { ...fiche, status: 'paye', payedAt: new Date().toISOString() });
-      const emp = await DB.dbGet('employees', empId);
+      let rawEmp2 = await DB.dbGet('users', empId);
+      const emp2 = rawEmp2 ? { ...rawEmp2, nom: rawEmp2.nom || rawEmp2.name || rawEmp2.username || '' } : null;
       await DB.dbPut('cashRegister', {
         type: 'sortie', category: 'RH', subCategory: 'salaire',
-        amount: net, description: `Salaire ${period} — ${emp?.nom||''}`,
+        amount: net, description: `Salaire ${period} — ${emp2?.nom||''}`,
         employeeId: empId, date: today(), createdAt: new Date().toISOString()
       });
       // Déduire les avances
@@ -628,7 +715,8 @@
       render();
     };
     window.hrEditFiche = async (empId, period) => {
-      const emp = await DB.dbGet('employees', empId);
+      let rawEmp = await DB.dbGet('users', empId);
+      const emp = rawEmp ? { ...rawEmp, nom: rawEmp.nom || rawEmp.name || rawEmp.username || '' } : null;
       const fiches = await DB.dbGetAll('hr_payroll');
       const fiche = fiches.find(f => f.employeeId === empId && f.period === period) || { salaire: emp?.salaire||0, primes:0, heuresSup:0, retenues:0, avancesDed:0 };
       UI.openModal({
@@ -668,7 +756,8 @@
   window.hrPrintPayslip = async function (payrollId) {
     const fiche = await DB.dbGet('hr_payroll', payrollId);
     if (!fiche) { UI.toast('Fiche introuvable', 'error'); return; }
-    const emp = await DB.dbGet('employees', fiche.employeeId);
+    let rawEmp = await DB.dbGet('users', fiche.employeeId);
+    const emp = rawEmp ? { ...rawEmp, nom: rawEmp.nom || rawEmp.name || rawEmp.username || '' } : null;
     const pharmacyName = gs('pharmacy_name') || 'Pharmacie';
     const pharmacyAddr = gs('pharmacy_address') || '';
     const pharmacyTel = gs('pharmacy_phone') || '';
@@ -756,7 +845,8 @@
   //  ONGLET 4 — AVANCES
   // ═══════════════════════════════════════════════════════════════════════
   async function renderAvances(c) {
-    const [employees, advances] = await Promise.all([DB.dbGetAll('employees'), DB.dbGetAll('hr_advances')]);
+    const [rawEmployees, advances] = await Promise.all([DB.dbGetAll('users'), DB.dbGetAll('hr_advances')]);
+    const employees = rawEmployees.map(e => ({ ...e, nom: e.nom || e.name || e.username || '', status: e.status || (e.active !== false ? 'actif' : 'inactif') }));
     const empMap = new Map(employees.map(e => [e.id, e]));
 
     function render() {
@@ -897,7 +987,8 @@
   //  ONGLET 5 — CONGÉS & ABSENCES
   // ═══════════════════════════════════════════════════════════════════════
   async function renderConges(c) {
-    const [employees, leaves] = await Promise.all([DB.dbGetAll('employees'), DB.dbGetAll('hr_leaves')]);
+    const [rawEmployees, leaves] = await Promise.all([DB.dbGetAll('users'), DB.dbGetAll('hr_leaves')]);
+    const employees = rawEmployees.map(e => ({ ...e, nom: e.nom || e.name || e.username || '', status: e.status || (e.active !== false ? 'actif' : 'inactif') }));
     const empMap = new Map(employees.map(e => [e.id, e]));
     const typeLabel = { conge:'Congé Payé', maladie:'Maladie', maternite:'Maternité', absence:'Absence Injustifiée', retard:'Retard', permission:'Permission' };
     const typeColor = { conge:'#3b82f6', maladie:'#f59e0b', maternite:'#ec4899', absence:'#ef4444', retard:'#f97316', permission:'#8b5cf6' };
@@ -1070,7 +1161,8 @@
   //  ONGLET 6 — PRÉSENCE
   // ═══════════════════════════════════════════════════════════════════════
   async function renderPresence(c) {
-    const [employees, attendance] = await Promise.all([DB.dbGetAll('employees'), DB.dbGetAll('hr_attendance')]);
+    const [rawEmployees, attendance] = await Promise.all([DB.dbGetAll('users'), DB.dbGetAll('hr_attendance')]);
+    const employees = rawEmployees.map(e => ({ ...e, nom: e.nom || e.name || e.username || '', status: e.status || (e.active !== false ? 'actif' : 'inactif') }));
     const empMap = new Map(employees.map(e => [e.id, e]));
     let selectedDate = today();
 
