@@ -1,5 +1,5 @@
 {
-  "version": "9.7.57",
+  "version": "9.7.58",
   "date": "2026-07-12",
-  "changelog": "v9.7.57 : Intégration d'un mécanisme de self-healing et d'invalidation de cache agressif (Cache-Busting) au chargement de l'application dans index.html pour forcer la mise à jour immédiate du Service Worker et de tous les fichiers JS mis en cache."
+  "changelog": "v9.7.58 : Intégration du contrôle d'accès dynamique et individuel aux modules (Stock, Caisse, Achats, RH, Rapports) dans le menu de navigation latérale (initSidebar) et la fonction de routage (navigatePage)."
 }

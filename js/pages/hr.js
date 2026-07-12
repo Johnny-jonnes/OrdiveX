@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-//  OrdiveX — Module Ressources Humaines v9.7.57
+//  OrdiveX — Module Ressources Humaines v9.7.58
 //  js/pages/hr.js
 //  7 onglets : dashboard, employes, paie, avances, conges, presence, comptabilite
 // ═══════════════════════════════════════════════════════════════════════════
