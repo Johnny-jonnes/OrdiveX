@@ -33,6 +33,8 @@ const Auth = {
     await DB.dbPut('sessions', session);
     DB.AppState.currentUser = { ...user, sessionId: session.id };
     await DB.writeAudit('LOGIN', 'session', session.id, { username }, user.id);
+    // Charger les permissions dynamiques pour ce rôle
+    await Auth.loadPermissions();
     // Forcer la mise à jour immédiate du sidebar et topbar avec le BON utilisateur
     setTimeout(() => {
       if (typeof initSidebar === 'function') initSidebar();
@@ -66,14 +68,69 @@ const Auth = {
   can(action) {
     const user = DB.AppState.currentUser;
     if (!user) return false;
-    const perms = {
-      admin: ['*'],
-      pharmacien: ['view_all', 'sell', 'validate_prescription', 'manage_stock', 'view_reports', 'manage_orders', 'view_finance', 'destroy_medicine'],
-      caissier: ['sell', 'view_products', 'view_stock_readonly'],
-    };
-    const userPerms = perms[user.role] || [];
-    return userPerms.includes('*') || userPerms.includes(action);
-  }
+    // Admin a toutes les permissions
+    if (user.role === 'admin') return true;
+    const roleKey = String(user.role || '').toLowerCase().replace(/[\s-]+/g, '_');
+    // Lire les permissions dynamiques chargées au login (ou utiliser les défauts)
+    const rolePerms = (window._rolePermissions || {})[roleKey] || Auth._defaultPerms[roleKey] || [];
+    return rolePerms.includes(action);
+  },
+
+  // Permissions par défaut pour chaque rôle (modifiables depuis les Paramètres)
+  _defaultPerms: {
+    responsable:       ['voir_ca','voir_benefices','voir_valeur_stock','voir_marges','voir_rapports_financiers','modifier_prix','effectuer_inventaire','exporter_donnees','gerer_utilisateurs'],
+    rh:                ['voir_salaires','gerer_utilisateurs'],
+    pharmacien:        ['voir_ca','voir_valeur_stock','voir_cout_achat','effectuer_inventaire','exporter_donnees','modifier_prix'],
+    caissier:          [],
+    receptionniste:    [],
+    gestionnaire_stock:['voir_valeur_stock','effectuer_inventaire','exporter_donnees'],
+    comptable:         ['voir_ca','voir_benefices','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers'],
+    assistant:         [],
+  },
+
+  // Charger les permissions depuis IndexedDB au login
+  async loadPermissions() {
+    try {
+      const rec = await DB.dbGetByKey('settings', 'role_permissions').catch(() => null);
+      if (rec && rec.value) {
+        window._rolePermissions = typeof rec.value === 'string' ? JSON.parse(rec.value) : rec.value;
+      } else {
+        window._rolePermissions = {};
+      }
+    } catch(e) {
+      window._rolePermissions = {};
+    }
+  },
+
+  // Liste de toutes les permissions disponibles
+  ALL_PERMISSIONS: [
+    { key: 'voir_ca',                label: 'Voir le chiffre d\'affaires' },
+    { key: 'voir_benefices',         label: 'Voir les bénéfices' },
+    { key: 'voir_cout_achat',        label: 'Voir le coût d\'achat' },
+    { key: 'voir_valeur_stock',      label: 'Voir la valeur du stock' },
+    { key: 'voir_marges',            label: 'Voir les marges' },
+    { key: 'voir_rapports_financiers', label: 'Voir les rapports financiers' },
+    { key: 'voir_salaires',          label: 'Voir les salaires RH' },
+    { key: 'modifier_prix',          label: 'Modifier les prix produits' },
+    { key: 'supprimer_vente',        label: 'Supprimer une vente' },
+    { key: 'annuler_facture',        label: 'Annuler une facture' },
+    { key: 'effectuer_inventaire',   label: 'Effectuer un inventaire' },
+    { key: 'exporter_donnees',       label: 'Exporter des données' },
+    { key: 'gerer_utilisateurs',     label: 'Gérer les utilisateurs' },
+    { key: 'gerer_parametres',       label: 'Gérer les paramètres' },
+    { key: 'acceder_sauvegardes',    label: 'Accéder aux sauvegardes' },
+  ],
+
+  ALL_ROLES: [
+    { key: 'responsable',        label: 'Responsable' },
+    { key: 'rh',                 label: 'RH' },
+    { key: 'pharmacien',         label: 'Pharmacien' },
+    { key: 'caissier',           label: 'Caissier' },
+    { key: 'receptionniste',     label: 'Réceptionniste' },
+    { key: 'gestionnaire_stock', label: 'Gestionnaire de stock' },
+    { key: 'comptable',          label: 'Comptable' },
+    { key: 'assistant',          label: 'Assistant' },
+  ],
 };
 
 const Router = {

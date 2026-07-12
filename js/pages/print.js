@@ -630,62 +630,63 @@ const PrintEngine = {
         html, body {
           margin: 0 !important;
           padding: 0 !important;
-          width: 76mm;
+          width: 80mm;
           height: auto !important;
           min-height: 0 !important;
           color: #000;
           background: #fff;
-          font-family: monospace;
-          font-size: 11px;
-          line-height: 1.2;
+          font-family: 'Courier New', monospace;
+          font-size: 13px;
+          line-height: 1.3;
         }
         @page {
-          size: 76mm auto;
+          size: 80mm auto;
           margin: 0 !important;
         }
         .ticket-container {
-          width: 76mm;
+          width: 80mm;
           margin: 0 !important;
-          padding: 4px 6px 0px 6px !important;
+          padding: 5px 7px 4px 7px !important;
           height: auto !important;
           min-height: 0 !important;
           display: block;
           overflow: hidden;
         }
         .ticket-logo { font-size: 20px; text-align: center; margin-bottom: 2px; }
-        .ticket-name { font-size: 13px; font-weight: bold; text-align: center; color: #000 !important; text-transform: uppercase; }
-        .ticket-addr, .ticket-phone { font-size: 9.5px; text-align: center; color: #000 !important; }
-        .ticket-divider { text-align: center; font-size: 10px; margin: 3px 0; color: #000 !important; font-weight: bold; letter-spacing: -1px; }
-        .ticket-meta { margin: 4px 0; }
-        .ticket-row { display: flex; justify-content: space-between; font-size: 10px; padding: 1.5px 0; color: #000 !important; }
+        .ticket-name { font-size: 15px; font-weight: bold; text-align: center; color: #000 !important; text-transform: uppercase; margin-bottom: 1px; }
+        .ticket-addr, .ticket-phone { font-size: 11px; text-align: center; color: #000 !important; margin: 0; }
+        .ticket-divider { text-align: center; font-size: 11px; margin: 3px 0; color: #000 !important; font-weight: bold; letter-spacing: -1px; }
+        .ticket-meta { margin: 3px 0; }
+        .ticket-row { display: flex; justify-content: space-between; font-size: 12px; padding: 1px 0; color: #000 !important; }
         .ticket-row span { color: #000 !important; }
-        .ticket-items { width: 100%; font-size: 10px; border-collapse: collapse; color: #000 !important; margin: 2px 0; }
-        .ticket-items td { padding: 2px 1px; color: #000 !important; border-bottom: 1px dotted #000; vertical-align: top; }
+        .ticket-items { width: 100%; font-size: 12px; border-collapse: collapse; color: #000 !important; margin: 2px 0; }
+        .ticket-items td { padding: 2px 1px; color: #000 !important; border-bottom: 1px dotted #333; vertical-align: top; }
         .ticket-items tr:last-child td { border-bottom: none; }
-        .item-name { text-align: left; }
-        .item-qty { text-align: center; width: 25px; font-weight: bold; }
-        .item-price { text-align: right; width: 60px; }
-        .item-total { text-align: right; font-weight: bold; width: 65px; }
-        .ticket-total { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; padding: 4px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; margin-top: 3px; color: #000 !important; }
+        .item-name { text-align: left; font-weight: bold; color: #000 !important; }
+        .item-qty { text-align: center; width: 28px; font-weight: bold; color: #000 !important; }
+        .item-price { text-align: right; width: 65px; color: #000 !important; }
+        .item-total { text-align: right; font-weight: bold; width: 70px; color: #000 !important; }
+        .ticket-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; padding: 4px 0; border-top: 2px solid #000; border-bottom: 2px solid #000; margin-top: 3px; color: #000 !important; }
         .ticket-total span { color: #000 !important; }
-        .ticket-thanks, .ticket-advice, .ticket-legal { text-align: center; font-size: 9.5px; margin-top: 3px; color: #000 !important; font-weight: bold; }
-        .ticket-thanks { margin-top: 6px; }
+        .ticket-thanks { text-align: center; font-size: 12px; margin-top: 5px; color: #000 !important; font-weight: bold; }
+        .ticket-advice, .ticket-legal { text-align: center; font-size: 10px; margin-top: 2px; color: #000 !important; }
 
         @media print {
           html, body {
-            width: 76mm;
+            width: 80mm;
             height: auto !important;
             min-height: 0 !important;
             margin: 0 !important;
             padding: 0 !important;
           }
           .ticket-container {
-            width: 76mm;
+            width: 80mm;
             height: auto !important;
             min-height: 0 !important;
             margin: 0 !important;
-            padding: 4px 6px 0px 6px !important;
+            padding: 5px 7px 4px 7px !important;
           }
+          * { color: #000 !important; }
         }
       </style>`;
     } else {

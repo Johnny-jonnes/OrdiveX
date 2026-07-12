@@ -9,6 +9,14 @@ const UI = {
     return `${formatted} GNF`;
   },
 
+  normalizeText(str) {
+    if (!str) return '';
+    const trimmed = str.trim();
+    if (!trimmed) return '';
+    // Règle : Première lettre en majuscule, le reste en minuscules
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  },
+
   formatDate(dateStr) {
     if (!dateStr) return '—';
     const d = new Date(dateStr);

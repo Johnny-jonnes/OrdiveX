@@ -501,6 +501,13 @@ async function submitProduct() {
   const form = document.getElementById('product-form');
   if (!form?.checkValidity()) { form?.reportValidity(); return; }
   const data = Object.fromEntries(new FormData(form));
+  data.name = UI.normalizeText(data.name);
+  if (data.dci) data.dci = UI.normalizeText(data.dci);
+  if (data.brand) data.brand = UI.normalizeText(data.brand);
+  if (data.form) data.form = UI.normalizeText(data.form);
+  if (data.category) data.category = UI.normalizeText(data.category);
+  if (data.manufacturer) data.manufacturer = UI.normalizeText(data.manufacturer);
+  
   data.requiresPrescription = data.requiresPrescription === '1';
   data.isControlled = data.isControlled === '1';
   data.controlledClass = data.isControlled ? (data.controlledClass || 'Stupéfiant') : null;
@@ -712,12 +719,12 @@ async function updateProduct(id) {
   const updated = {
     ...original,
     code: data.code,
-    name: data.name,
-    dci: data.dci,
-    brand: data.brand,
-    form: data.form,
+    name: UI.normalizeText(data.name),
+    dci: data.dci ? UI.normalizeText(data.dci) : '',
+    brand: data.brand ? UI.normalizeText(data.brand) : '',
+    form: data.form ? UI.normalizeText(data.form) : '',
     dosage: data.dosage,
-    category: data.category,
+    category: data.category ? UI.normalizeText(data.category) : '',
     requiresPrescription: data.requiresPrescription === '1',
     isControlled: data.isControlled === '1',
     controlledClass: data.isControlled === '1' ? (data.controlledClass || 'Stupéfiant') : null,

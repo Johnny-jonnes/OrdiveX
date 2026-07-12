@@ -1,5 +1,5 @@
 {
-  "version": "9.7.52",
+  "version": "9.7.53",
   "date": "2026-07-12",
-  "changelog": "v9.7.52 : Module Ressources Humaines complet (gestion employees, paie avec PDF, avances sur salaire, conges & absences, presence/pointage). Caisse RH isolee des sorties classiques. 5 nouveaux onglets Parametres : Paiements (moyens actifs/inactifs), Ventes, Achats, Stock et Interface. Migration base de donnees v6."
+  "changelog": "v9.7.53 : Normalisation textuelle automatique des dossiers patients (patients.js). Modele de permissions dynamiques par roles avec onglet Permissions dedie (settings.js) et persistance. Masquage des KPIs financiers (CA, marges, benefices) et graphiques sensibles selon permissions du role dans le Dashboard. Demon de notification automatique de fin de session d'equipe (toutes les 12 minutes). Optimisation ergonomique de l'impression thermique (police 13px, contraste noir pur, elimination du gaspillage papier)."
 }

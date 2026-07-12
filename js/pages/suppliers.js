@@ -270,6 +270,10 @@ async function submitSupplier() {
   const form = document.getElementById('supplier-form');
   if (!form?.checkValidity()) { form?.reportValidity(); return; }
   const data = Object.fromEntries(new FormData(form));
+  data.name = UI.normalizeText(data.name);
+  if (data.contact) data.contact = UI.normalizeText(data.contact);
+  if (data.specialty) data.specialty = UI.normalizeText(data.specialty);
+  if (data.address) data.address = UI.normalizeText(data.address);
   data.paymentTerms = parseInt(data.paymentTerms || 30);
   try {
     await DB.dbAdd('suppliers', data);
@@ -362,6 +366,10 @@ async function submitEditSupplier(supId) {
     var existing = await DB.dbGet('suppliers', supId);
     if (!existing) { UI.toast('Fournisseur introuvable', 'error'); return; }
     var data = Object.fromEntries(new FormData(form));
+    data.name = UI.normalizeText(data.name);
+    if (data.contact) data.contact = UI.normalizeText(data.contact);
+    if (data.specialty) data.specialty = UI.normalizeText(data.specialty);
+    if (data.address) data.address = UI.normalizeText(data.address);
     data.paymentTerms = parseInt(data.paymentTerms) || 30;
     // Préserver les champs internes (complaints, etc.)
     var updated = Object.assign({}, existing, data, { id: supId });

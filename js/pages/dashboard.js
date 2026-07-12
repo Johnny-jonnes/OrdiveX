@@ -137,7 +137,7 @@ async function _refreshDashboard(container) {
         <div class="kpi-card kpi-blue">
           <div class="kpi-icon"><i data-lucide="banknote"></i></div>
           <div class="kpi-content">
-            <div class="kpi-value">${UI.formatCurrency(todayRevenue)}</div>
+            <div class="kpi-value">${Auth.can('voir_ca') ? UI.formatCurrency(todayRevenue) : '<span style="font-size:14px;opacity:.5">Accès restreint</span>'}</div>
             <div class="kpi-label">Ventes Aujourd'hui</div>
             <div class="kpi-sub">${todaySales.length} transactions</div>
           </div>
@@ -145,9 +145,9 @@ async function _refreshDashboard(container) {
         <div class="kpi-card kpi-green">
           <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
           <div class="kpi-content">
-            <div class="kpi-value">${UI.formatCurrency(monthRevenue)}</div>
+            <div class="kpi-value">${Auth.can('voir_ca') ? UI.formatCurrency(monthRevenue) : '<span style="font-size:14px;opacity:.5">Accès restreint</span>'}</div>
             <div class="kpi-label">CA du Mois</div>
-            <div class="kpi-sub">${DB.AppState.currentUser?.role !== 'caissier' ? `Marge : ${marginPct}%` : 'Performance mensuelle'}</div>
+            <div class="kpi-sub">${Auth.can('voir_marges') ? `Marge : ${marginPct}%` : 'Performance mensuelle'}</div>
           </div>
         </div>
         <div class="kpi-card kpi-orange ${lowStockProducts.length > 0 ? 'kpi-alert' : ''}">
@@ -174,7 +174,7 @@ async function _refreshDashboard(container) {
           <div class="chart-header">
             <h3 class="chart-title">Ventes des 15 derniers jours</h3>
           </div>
-          <canvas id="chart-sales" width="500" height="280"></canvas>
+          ${Auth.can('voir_ca') ? `<canvas id="chart-sales" width="500" height="280"></canvas>` : `<div style="padding:40px;text-align:center;color:var(--text-muted);font-size:13px"><i data-lucide="lock" style="width:32px;height:32px;display:block;margin:0 auto 8px;opacity:.3"></i>Accès restreint — Rapport CA</div>`}
         </div>
         <div class="chart-card">
           <div class="chart-header">

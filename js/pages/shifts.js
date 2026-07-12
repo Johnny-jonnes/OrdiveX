@@ -856,3 +856,93 @@ window._removeAbsence        = _removeAbsence;
 window._toggleShiftSales     = _toggleShiftSales;
 
 Router.register('shifts', renderShifts);
+
+// ─── DÉMON : Fin automatique de session d'équipe ──────────────────────────────
+// Vérifie toutes les 60 secondes si une session ouverte a dépassé son horaire de fin.
+// Affiche une modale d'alerte, représentée toutes les 12 minutes si refusée.
+(function _initShiftExpiryDaemon() {
+  let _lastWarnedShiftId = null;
+  let _lastWarnTime = 0;
+  const REMIND_INTERVAL_MS = 12 * 60 * 1000; // 12 minutes
+
+  async function _checkShiftExpiry() {
+    if (!DB.AppState.currentUser) return;
+    try {
+      const allShifts = await DB.dbGetAll('shifts');
+      const openShift = allShifts.find(s => s.status === 'open');
+      if (!openShift) { _lastWarnedShiftId = null; return; }
+
+      const t = SHIFT_TYPES[openShift.type];
+      if (!t || !t.hours) return;
+
+      // Extraire l'heure de fin : "07h00 - 14h00" => "14h00"
+      const parts = t.hours.split('-');
+      if (parts.length < 2) return;
+      const endStr = parts[1].trim().replace('h', ':');
+      const [endH, endM] = endStr.split(':').map(Number);
+      if (isNaN(endH) || isNaN(endM)) return;
+
+      const startStr = parts[0].trim().replace('h', ':');
+      const [startH] = startStr.split(':').map(Number);
+      const now = new Date();
+      const curH = now.getHours();
+      const curM = now.getMinutes();
+
+      // Calcul d'expiration (gère le shift de nuit)
+      let expired = false;
+      if (startH > endH) {
+        // Shift de nuit : expire le lendemain matin
+        if (curH >= endH && curH < startH) expired = true;
+      } else {
+        if (curH > endH || (curH === endH && curM >= endM)) expired = true;
+      }
+
+      if (!expired) return;
+
+      const now_ms = Date.now();
+      const alreadyWarned = (_lastWarnedShiftId === openShift.id);
+      const cooldownPassed = (now_ms - _lastWarnTime) >= REMIND_INTERVAL_MS;
+
+      if (alreadyWarned && !cooldownPassed) return;
+
+      _lastWarnedShiftId = openShift.id;
+      _lastWarnTime = now_ms;
+
+      // Afficher la modale d'alerte de fin de session
+      const endTime = t.hours.split('-')[1].trim();
+      const overlay = document.createElement('div');
+      overlay.id = 'shift-expiry-alert';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+      overlay.innerHTML = `
+        <div style="background:var(--surface,#fff);border-radius:20px;padding:32px 36px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+          <div style="font-size:54px;margin-bottom:12px">⏰</div>
+          <h2 style="font-size:18px;font-weight:800;margin-bottom:8px;color:var(--text,#000)">Session terminée</h2>
+          <p style="font-size:13px;color:var(--text-muted,#666);line-height:1.5;margin-bottom:20px">
+            L'horaire de l'<strong>${t.label}</strong> s'est terminé à <strong>${endTime}</strong>.<br>
+            Veuillez clôturer la session pour enregistrer les données et laisser la place à l'équipe suivante.
+          </p>
+          <div style="display:flex;gap:10px;justify-content:center">
+            <button id="shift-expiry-close-btn" style="flex:1;padding:11px 16px;border-radius:10px;background:#c0392b;color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer">
+              ✅ Clôturer maintenant
+            </button>
+            <button id="shift-expiry-later-btn" style="flex:1;padding:11px 16px;border-radius:10px;background:var(--surface-2,#f0f0f0);color:var(--text,#333);border:none;font-size:14px;cursor:pointer">
+              Continuer (rappel dans 12 min)
+            </button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      document.getElementById('shift-expiry-close-btn').onclick = async () => {
+        overlay.remove();
+        await closeCurrentShift(openShift.id);
+      };
+      document.getElementById('shift-expiry-later-btn').onclick = () => {
+        overlay.remove();
+      };
+    } catch(e) { /* silencieux */ }
+  }
+
+  // Lancement immédiat puis toutes les 60 secondes
+  setTimeout(_checkShiftExpiry, 5000);
+  setInterval(_checkShiftExpiry, 60000);
+})();

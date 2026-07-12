@@ -428,6 +428,8 @@ async function submitPatient() {
   const form = document.getElementById('patient-form');
   if (!form?.checkValidity()) { form?.reportValidity(); return; }
   const data = Object.fromEntries(new FormData(form));
+  data.name = UI.normalizeText(data.name);
+  if (data.employer) data.employer = UI.normalizeText(data.employer);
   data.assurances = extractAssurances(data);
   try {
     const id = await DB.dbAdd('patients', data);
@@ -498,6 +500,8 @@ async function updatePatient(patientId) {
   const form = document.getElementById('edit-patient-form');
   if (!form?.checkValidity()) { form?.reportValidity(); return; }
   const data = Object.fromEntries(new FormData(form));
+  data.name = UI.normalizeText(data.name);
+  if (data.employer) data.employer = UI.normalizeText(data.employer);
   data.assurances = extractAssurances(data);
   const existing = await DB.dbGet('patients', patientId);
   await DB.dbPut('patients', { ...existing, ...data });

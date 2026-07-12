@@ -526,6 +526,7 @@ async function renderSettings(container) {
       <button class="settings-tab-btn" onclick="switchSettingsTab('achats',this)"><i data-lucide="package"></i> Achats</button>
       <button class="settings-tab-btn" onclick="switchSettingsTab('stock_params',this)"><i data-lucide="warehouse"></i> Stock</button>
       <button class="settings-tab-btn" onclick="switchSettingsTab('interface',this)"><i data-lucide="monitor"></i> Interface</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('permissions',this)"><i data-lucide="shield-check"></i> Permissions</button>
     </div>
 
     <!-- ══════════════ ONGLET : PHARMACIE ══════════════ -->
@@ -985,6 +986,18 @@ async function renderSettings(container) {
         </div>
       </div>
     </div>
+
+    <!-- ══════════════ ONGLET : PERMISSIONS ══════════════ -->
+    <div class="settings-tab-pane" id="tab-permissions">
+      <div class="settings-card2" style="overflow-x:auto">
+        <h3 class="settings-card2-title"><i data-lucide="shield-check"></i> Permissions par Rôle</h3>
+        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">Configurez précisément ce que chaque rôle peut voir ou faire. Les changements sont appliqués immédiatement. L'Administrateur a toujours toutes les permissions.</p>
+        <div id="permissions-grid-container"><p style="color:var(--text-muted);font-size:13px">Chargement de la grille...</p></div>
+        <div style="margin-top:16px">
+          <button class="btn btn-primary" onclick="savePermissionsGrid()"><i data-lucide="save"></i> Enregistrer les permissions</button>
+        </div>
+      </div>
+    </div>
   `;
 
   // Rendre les icônes Lucide IMMÉDIATEMENT pour éviter le layout shift
@@ -1001,7 +1014,76 @@ window.switchSettingsTab = function(tabName, btn) {
   if (pane) pane.classList.add('active');
   if (btn) btn.classList.add('active');
   if (window.lucide) lucide.createIcons();
+  // Charger la grille de permissions lors de l'affichage de l'onglet
+  if (tabName === 'permissions') {
+    setTimeout(() => renderPermissionsGrid(), 50);
+  }
 };
+
+// ─── GRILLE PERMISSIONS ───────────────────────────────────────────────────────
+window.renderPermissionsGrid = async function() {
+  const container = document.getElementById('permissions-grid-container');
+  if (!container) return;
+
+  // Charger permissions actuelles depuis settings
+  const rec = await DB.dbGetByKey('settings', 'role_permissions').catch(() => null);
+  const currentPerms = rec && rec.value
+    ? (typeof rec.value === 'string' ? JSON.parse(rec.value) : rec.value)
+    : {};
+
+  const roles = Auth.ALL_ROLES;
+  const perms = Auth.ALL_PERMISSIONS;
+
+  const getCurrent = (roleKey, permKey) => {
+    const stored = (currentPerms[roleKey] !== undefined) ? currentPerms[roleKey] : Auth._defaultPerms[roleKey];
+    return (stored || []).includes(permKey);
+  };
+
+  let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">
+    <thead>
+      <tr style="background:var(--primary-color);color:#fff">
+        <th style="padding:10px 12px;text-align:left;border-radius:6px 0 0 0;white-space:nowrap">Permission</th>
+        ${roles.map(r => `<th style="padding:10px 8px;text-align:center;white-space:nowrap">${r.label}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>`;
+
+  perms.forEach((perm, i) => {
+    const bg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2)';
+    html += `<tr style="background:${bg}">
+      <td style="padding:9px 12px;font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">${perm.label}</td>
+      ${roles.map(role => `
+      <td style="text-align:center;border-bottom:1px solid var(--border)">
+        <input type="checkbox" id="perm_${role.key}_${perm.key}"
+          ${getCurrent(role.key, perm.key) ? 'checked' : ''}
+          style="width:16px;height:16px;cursor:pointer;accent-color:var(--primary-color)">
+      </td>`).join('')}
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+};
+
+window.savePermissionsGrid = async function() {
+  const roles = Auth.ALL_ROLES;
+  const perms = Auth.ALL_PERMISSIONS;
+  const newPerms = {};
+  roles.forEach(role => {
+    newPerms[role.key] = perms
+      .filter(p => document.getElementById(`perm_${role.key}_${p.key}`)?.checked)
+      .map(p => p.key);
+  });
+  try {
+    await DB.dbPut('settings', { key: 'role_permissions', value: JSON.stringify(newPerms) });
+    window._rolePermissions = newPerms;
+    UI.toast('✅ Permissions enregistrées et appliquées immédiatement', 'success', 3000);
+  } catch(e) {
+    UI.toast('Erreur lors de la sauvegarde des permissions', 'error');
+  }
+};
+
+
 
 // Sauvegarde d'un paramètre toggle (boolean)
 window.saveToggleSetting = async function(key, value) {
