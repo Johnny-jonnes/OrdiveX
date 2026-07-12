@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
-//  OrdiveX — Module Ressources Humaines v9.7.53
+//  OrdiveX — Module Ressources Humaines v9.7.54
 //  js/pages/hr.js
-//  6 onglets : dashboard, employes, paie, avances, conges, presence
+//  7 onglets : dashboard, employes, paie, avances, conges, presence, comptabilite
 // ═══════════════════════════════════════════════════════════════════════════
 
 (function () {
@@ -57,6 +57,9 @@
         <button class="hr-tab-btn" onclick="hrSwitchTab('presence',this)" id="hr-btn-presence">
           <i data-lucide="clock"></i> Présence
         </button>
+        <button class="hr-tab-btn" onclick="hrSwitchTab('comptabilite',this)" id="hr-btn-comptabilite">
+          <i data-lucide="line-chart"></i> Comptabilité RH
+        </button>
       </div>
 
       <div id="hr-tab-content"></div>
@@ -77,12 +80,13 @@
     c.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
     try {
       switch (tab) {
-        case 'dashboard': await renderHRDashboard(c); break;
-        case 'employes':  await renderEmployes(c); break;
-        case 'paie':      await renderPaie(c); break;
-        case 'avances':   await renderAvances(c); break;
-        case 'conges':    await renderConges(c); break;
-        case 'presence':  await renderPresence(c); break;
+        case 'dashboard':    await renderHRDashboard(c); break;
+        case 'employes':     await renderEmployes(c); break;
+        case 'paie':         await renderPaie(c); break;
+        case 'avances':      await renderAvances(c); break;
+        case 'conges':       await renderConges(c); break;
+        case 'presence':     await renderPresence(c); break;
+        case 'comptabilite': await renderComptabilite(c); break;
         default: c.innerHTML = '<p>Onglet inconnu</p>';
       }
     } catch (e) {
@@ -267,9 +271,14 @@
               <option value="suspendu" ${filterStatus==='suspendu'?'selected':''}>Suspendu</option>
             </select>
           </div>
-          <button class="btn btn-primary" onclick="hrOpenEmployeForm()">
-            <i data-lucide="user-plus"></i> Nouvel Employé
-          </button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="hrExportEmployesPDF()">
+              <i data-lucide="file-text"></i> Exporter PDF
+            </button>
+            <button class="btn btn-primary" onclick="hrOpenEmployeForm()">
+              <i data-lucide="user-plus"></i> Nouvel Employé
+            </button>
+          </div>
         </div>
 
         ${list.length === 0 ? `
@@ -975,6 +984,14 @@
       if (!montant) return;
       const newSolde = Math.max(0, (adv.solde || 0) - montant);
       await DB.dbPut('hr_advances', { ...adv, solde: newSolde, status: newSolde <= 0 ? 'remboursee' : 'approuvee' });
+      
+      const empName = empMap.get(adv.employeeId)?.nom || '';
+      await DB.dbPut('cashRegister', {
+        type: 'entree', category: 'RH', subCategory: 'remboursement_avance',
+        amount: montant, description: `Remboursement avance — ${empName}`,
+        employeeId: adv.employeeId, date: today(), createdAt: new Date().toISOString()
+      });
+
       UI.toast('Remboursement enregistré', 'success');
       advances.length = 0;
       (await DB.dbGetAll('hr_advances')).forEach(a => advances.push(a));
@@ -1031,7 +1048,12 @@
       c.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
           <h3 style="font-size:.95rem;font-weight:700">Congés & Absences</h3>
-          <button class="btn btn-primary" onclick="hrNewLeave()"><i data-lucide="plus"></i> Nouveau</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="hrExportCongesPDF('${viewMonth}')">
+              <i data-lucide="file-text"></i> Exporter PDF
+            </button>
+            <button class="btn btn-primary" onclick="hrNewLeave()"><i data-lucide="plus"></i> Nouveau</button>
+          </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:20px;align-items:start">
@@ -1145,14 +1167,15 @@
     };
     window.hrDelLeave = async (id) => {
       if (!confirm('Supprimer ce congé / cette absence ?')) return;
-      // Soft delete : marquer supprimé
-      const l = await DB.dbGet('hr_leaves', id);
-      if (l) {
+      try {
+        await DB.dbDelete('hr_leaves', id);
         const idx = leaves.findIndex(x => x.id === id);
         if (idx !== -1) leaves.splice(idx, 1);
-        // Pas de suppression physique — on le retire juste de la liste affichée
+        UI.toast('Congé/absence supprimé', 'success');
+        render();
+      } catch (e) {
+        UI.toast('Erreur lors de la suppression', 'error');
       }
-      render();
     };
     render();
   }
@@ -1184,9 +1207,14 @@
             <label style="font-weight:600;font-size:.9rem">Date :</label>
             <input type="date" class="form-control" style="width:180px" value="${selectedDate}" onchange="hrPresDate(this.value)">
           </div>
-          <button class="btn btn-primary" onclick="hrSavePresence('${selectedDate}')">
-            <i data-lucide="save"></i> Enregistrer le pointage
-          </button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" onclick="hrExportPresencePDF('${selectedDate}')">
+              <i data-lucide="file-text"></i> Exporter PDF
+            </button>
+            <button class="btn btn-primary" onclick="hrSavePresence('${selectedDate}')">
+              <i data-lucide="save"></i> Enregistrer le pointage
+            </button>
+          </div>
         </div>
 
         <div class="card" style="overflow:auto">
@@ -1239,5 +1267,429 @@
     };
     render();
   }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  //  ONGLET 7 — COMPTABILITÉ & HISTORIQUE FINANCIER
+  // ═══════════════════════════════════════════════════════════════════════
+  async function renderComptabilite(c) {
+    const [rawEmployees, payroll, advances, cashReg] = await Promise.all([
+      DB.dbGetAll('users'),
+      DB.dbGetAll('hr_payroll'),
+      DB.dbGetAll('hr_advances'),
+      DB.dbGetAll('cashRegister')
+    ]);
+    const employees = rawEmployees.map(e => ({
+      ...e,
+      nom: e.nom || e.name || e.username || '',
+      status: e.status || (e.active !== false ? 'actif' : 'inactif')
+    }));
+
+    let selectedEmpId = employees[0]?.id || '';
+
+    function render() {
+      const emp = employees.find(e => e.id === Number(selectedEmpId));
+      
+      // Filtrer les opérations pour cet employé
+      const empPayroll = payroll.filter(p => p.employeeId === Number(selectedEmpId) && p.status === 'paye');
+      const empAdvances = advances.filter(a => a.employeeId === Number(selectedEmpId));
+      const empRepayments = cashReg.filter(cr => cr.employeeId === Number(selectedEmpId) && cr.subCategory === 'remboursement_avance');
+
+      // Rassembler toutes les transactions chronologiquement
+      const txs = [];
+      
+      // 1. Salaires payés
+      empPayroll.forEach(p => {
+        txs.push({
+          date: p.payedAt || p.createdAt || today(),
+          type: 'Salaire',
+          details: `Période ${p.period} (Base: ${fmt(p.salaire)}, Primes: ${fmt(p.primes)}, Retenues: -${fmt(p.retenues)})`,
+          debit: p.netAPayer,
+          credit: 0
+        });
+      });
+
+      // 2. Avances accordées
+      empAdvances.forEach(a => {
+        txs.push({
+          date: a.date || a.createdAt || today(),
+          type: 'Avance',
+          details: `Avance accordée (Motif: ${a.motif || 'Aucun'})`,
+          debit: a.montant,
+          credit: 0
+        });
+      });
+
+      // 3. Remboursements (automatiques lors de la paie, ou manuels)
+      empPayroll.forEach(p => {
+        if (p.avancesDed > 0) {
+          txs.push({
+            date: p.payedAt || p.createdAt || today(),
+            type: 'Remboursement (Paie)',
+            details: `Déduction automatique sur salaire période ${p.period}`,
+            debit: 0,
+            credit: p.avancesDed
+          });
+        }
+      });
+
+      empRepayments.forEach(r => {
+        txs.push({
+          date: r.date || r.createdAt || today(),
+          type: 'Remboursement (Manuel)',
+          details: r.description || 'Remboursement manuel d\'avance',
+          debit: 0,
+          credit: r.amount
+        });
+      });
+
+      // Trier chronologiquement (les plus récentes d'abord)
+      txs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const totalSalaires = empPayroll.reduce((s, p) => s + (p.netAPayer || 0), 0);
+      const totalAvances  = empAdvances.reduce((s, a) => s + (a.montant || 0), 0);
+      const totalRembourses = txs.filter(t => t.credit > 0).reduce((s, t) => s + t.credit, 0);
+      const soldeAvances = Math.max(0, totalAvances - totalRembourses);
+
+      c.innerHTML = `
+        <div style="background:var(--surface);padding:20px;border-radius:12px;border:1px solid var(--border);margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <label style="font-weight:700;color:var(--text-primary)">Sélectionner un employé :</label>
+              <select id="comp-emp-select" class="form-control" style="width:240px" onchange="hrChangeCompEmp(this.value)">
+                ${employees.map(e => `<option value="${e.id}" ${e.id === Number(selectedEmpId) ? 'selected' : ''}>${e.nom} (${e.poste || '—'})</option>`).join('')}
+              </select>
+            </div>
+            ${emp ? `
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" onclick="hrPrintCompta('${selectedEmpId}')">
+                <i data-lucide="printer"></i> Imprimer
+              </button>
+              <button class="btn btn-secondary" onclick="hrExportComptaPDF('${selectedEmpId}')">
+                <i data-lucide="file-text"></i> Exporter PDF
+              </button>
+            </div>` : ''}
+          </div>
+        </div>
+
+        ${!emp ? `
+          <div class="empty-state">
+            <i data-lucide="line-chart" style="width:48px;height:48px;color:var(--text-muted)"></i>
+            <h3>Aucun employé sélectionné</h3>
+          </div>` : `
+          <div class="hr-kpi-grid" style="margin-bottom:20px">
+            <div class="hr-kpi-card blue">
+              <div class="hr-kpi-icon blue"><i data-lucide="wallet"></i></div>
+              <div class="hr-kpi-value">${fmt(emp.salaire || 0)}</div>
+              <div class="hr-kpi-label">Salaire de Base</div>
+              <div class="hr-kpi-sub">Configuré sur la fiche</div>
+            </div>
+            <div class="hr-kpi-card green">
+              <div class="hr-kpi-icon green"><i data-lucide="banknote"></i></div>
+              <div class="hr-kpi-value">${fmt(totalSalaires)}</div>
+              <div class="hr-kpi-label">Salaires Versés</div>
+              <div class="hr-kpi-sub">Total net à payer payé</div>
+            </div>
+            <div class="hr-kpi-card orange">
+              <div class="hr-kpi-icon orange"><i data-lucide="landmark"></i></div>
+              <div class="hr-kpi-value">${fmt(totalAvances)}</div>
+              <div class="hr-kpi-label">Avances Accordées</div>
+              <div class="hr-kpi-sub">Cumul de tous les prêts</div>
+            </div>
+            <div class="hr-kpi-card red">
+              <div class="hr-kpi-icon red"><i data-lucide="coins"></i></div>
+              <div class="hr-kpi-value">${fmt(soldeAvances)}</div>
+              <div class="hr-kpi-label">Solde Avances Dû</div>
+              <div class="hr-kpi-sub">Remboursé : ${fmt(totalRembourses)}</div>
+            </div>
+          </div>
+
+          <div class="card" style="padding:20px">
+            <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px">Historique Financier de ${emp.nom}</h3>
+            
+            ${txs.length === 0 ? `
+              <div class="empty-state">
+                <p>Aucune transaction financière enregistrée pour cet employé.</p>
+              </div>` : `
+              <div style="overflow-x:auto">
+                <table class="table" style="width:100%;border-collapse:collapse;font-size:13px">
+                  <thead>
+                    <tr style="border-bottom:2px solid var(--border);text-align:left">
+                      <th style="padding:10px">Date</th>
+                      <th style="padding:10px">Type d'opération</th>
+                      <th style="padding:10px">Description / Détails</th>
+                      <th style="padding:10px;text-align:right">Débit (Sortie)</th>
+                      <th style="padding:10px;text-align:right">Crédit (Entrée)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${txs.map(t => `
+                      <tr style="border-bottom:1px solid var(--border)">
+                        <td style="padding:10px">${dateLabel(t.date)}</td>
+                        <td style="padding:10px">
+                          <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;
+                            background:${t.debit > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)'};
+                            color:${t.debit > 0 ? 'var(--danger)' : 'var(--success)'}">
+                            ${t.type}
+                          </span>
+                        </td>
+                        <td style="padding:10px;color:var(--text-muted)">${t.details}</td>
+                        <td style="padding:10px;text-align:right;font-weight:700;color:var(--danger)">
+                          ${t.debit > 0 ? fmt(t.debit) : '—'}
+                        </td>
+                        <td style="padding:10px;text-align:right;font-weight:700;color:var(--success)">
+                          ${t.credit > 0 ? fmt(t.credit) : '—'}
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `}
+          </div>
+        `}
+      `;
+      if (window.lucide) lucide.createIcons({ node: c });
+    }
+
+    window.hrChangeCompEmp = (id) => {
+      selectedEmpId = id;
+      render();
+    };
+
+    window.hrPrintCompta = async (empId) => {
+      const emp = employees.find(e => e.id === Number(empId));
+      if (!emp) return;
+      
+      const empPayroll = payroll.filter(p => p.employeeId === Number(empId) && p.status === 'paye');
+      const empAdvances = advances.filter(a => a.employeeId === Number(empId));
+      const empRepayments = cashReg.filter(cr => cr.employeeId === Number(empId) && cr.subCategory === 'remboursement_avance');
+
+      const txs = [];
+      empPayroll.forEach(p => txs.push({ date: p.payedAt || p.createdAt || today(), type: 'Salaire', details: `Période ${p.period}`, debit: p.netAPayer, credit: 0 }));
+      empAdvances.forEach(a => txs.push({ date: a.date || a.createdAt || today(), type: 'Avance', details: a.motif || '—', debit: a.montant, credit: 0 }));
+      empPayroll.forEach(p => { if (p.avancesDed > 0) txs.push({ date: p.payedAt || p.createdAt || today(), type: 'Remb. (Paie)', details: `Déduction période ${p.period}`, debit: 0, credit: p.avancesDed }); });
+      empRepayments.forEach(r => txs.push({ date: r.date || r.createdAt || today(), type: 'Remb. (Manuel)', details: r.description, debit: 0, credit: r.amount }));
+      txs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const totalSalaires = empPayroll.reduce((s, p) => s + (p.netAPayer || 0), 0);
+      const totalAvances  = empAdvances.reduce((s, a) => s + (a.montant || 0), 0);
+      const totalRembourses = txs.filter(t => t.credit > 0).reduce((s, t) => s + t.credit, 0);
+      const soldeAvances = Math.max(0, totalAvances - totalRembourses);
+
+      const rowsHTML = txs.map(t => `
+        <tr>
+          <td style="padding:6px;border-bottom:1px solid #ddd">${dateLabel(t.date)}</td>
+          <td style="padding:6px;border-bottom:1px solid #ddd;font-weight:700">${t.type}</td>
+          <td style="padding:6px;border-bottom:1px solid #ddd">${t.details}</td>
+          <td style="padding:6px;border-bottom:1px solid #ddd;text-align:right;color:#c0392b">${t.debit > 0 ? fmt(t.debit) : '—'}</td>
+          <td style="padding:6px;border-bottom:1px solid #ddd;text-align:right;color:#27ae60">${t.credit > 0 ? fmt(t.credit) : '—'}</td>
+        </tr>
+      `).join('');
+
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+        <head>
+          <title>Fiche Financière — ${emp.nom}</title>
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 12px; margin: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background: #f2f2f2; text-align: left; padding: 8px; border-bottom: 2px solid #ddd; }
+            .kpi-box { display: flex; gap: 15px; margin-top: 15px; }
+            .kpi { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <h2>Fiche Financière Individuelle</h2>
+          <div><strong>Employé :</strong> ${emp.nom}</div>
+          <div><strong>Poste :</strong> ${emp.poste || '—'}</div>
+          <div><strong>Généré le :</strong> ${new Date().toLocaleDateString('fr-FR')}</div>
+          
+          <div class="kpi-box">
+            <div class="kpi"><strong>Salaire de Base</strong><br>${fmt(emp.salaire || 0)}</div>
+            <div class="kpi"><strong>Salaires Versés</strong><br>${fmt(totalSalaires)}</div>
+            <div class="kpi"><strong>Avances Accordées</strong><br>${fmt(totalAvances)}</div>
+            <div class="kpi"><strong>Solde Avances Dû</strong><br>${fmt(soldeAvances)}</div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Détails</th>
+                <th style="text-align:right">Débit (Sortie)</th>
+                <th style="text-align:right">Crédit (Entrée)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHTML || '<tr><td colspan="5" style="text-align:center;padding:10px">Aucune opération</td></tr>'}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.onload = () => printWindow.print();
+    };
+
+    window.hrExportComptaPDF = async (empId) => {
+      const emp = employees.find(e => e.id === Number(empId));
+      if (!emp) return;
+      
+      const empPayroll = payroll.filter(p => p.employeeId === Number(empId) && p.status === 'paye');
+      const empAdvances = advances.filter(a => a.employeeId === Number(empId));
+      const empRepayments = cashReg.filter(cr => cr.employeeId === Number(empId) && cr.subCategory === 'remboursement_avance');
+
+      const txs = [];
+      empPayroll.forEach(p => txs.push({ date: p.payedAt || p.createdAt || today(), type: 'Salaire', details: `Période ${p.period}`, debit: p.netAPayer, credit: 0 }));
+      empAdvances.forEach(a => txs.push({ date: a.date || a.createdAt || today(), type: 'Avance', details: a.motif || '—', debit: a.montant, credit: 0 }));
+      empPayroll.forEach(p => { if (p.avancesDed > 0) txs.push({ date: p.payedAt || p.createdAt || today(), type: 'Remb. (Paie)', details: `Déduction période ${p.period}`, debit: 0, credit: p.avancesDed }); });
+      empRepayments.forEach(r => txs.push({ date: r.date || r.createdAt || today(), type: 'Remb. (Manuel)', details: r.description, debit: 0, credit: r.amount }));
+      txs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const totalSalaires = empPayroll.reduce((s, p) => s + (p.netAPayer || 0), 0);
+      const totalAvances  = empAdvances.reduce((s, a) => s + (a.montant || 0), 0);
+      const totalRembourses = txs.filter(t => t.credit > 0).reduce((s, t) => s + t.credit, 0);
+      const soldeAvances = Math.max(0, totalAvances - totalRembourses);
+
+      const headers = ['Date', 'Type d\'opération', 'Détails', 'Débit (Sortie)', 'Crédit (Entrée)'];
+      const data = txs.map(t => [
+        dateLabel(t.date),
+        t.type,
+        t.details,
+        t.debit > 0 ? fmtN(t.debit) + ' GNF' : '—',
+        t.credit > 0 ? fmtN(t.credit) + ' GNF' : '—'
+      ]);
+
+      const subHeader = [
+        `Employé : ${emp.nom} (${emp.poste || '—'})`,
+        `Date d'export : ${new Date().toLocaleDateString('fr-FR')}`,
+        `Salaire de base : ${fmt(emp.salaire || 0)} | Total versé : ${fmt(totalSalaires)}`,
+        `Total avances accordées : ${fmt(totalAvances)} | Solde avances dû : ${fmt(soldeAvances)}`
+      ];
+
+      if (window.PDFExport && typeof window.PDFExport.generate === 'function') {
+        await window.PDFExport.generate(
+          `Relevé Financier — ${emp.nom}`,
+          headers,
+          data,
+          { subHeader }
+        );
+      } else {
+        UI.toast('Export PDF non disponible. Utilisez l\'impression.', 'error');
+      }
+    };
+
+    render();
+  }
+
+  // Helper pour l'export des employés en PDF
+  window.hrExportEmployesPDF = async () => {
+    const rawEmployees = await DB.dbGetAll('users');
+    const employees = rawEmployees.map(e => ({
+      ...e,
+      nom: e.nom || e.name || e.username || '',
+      status: e.status || (e.active !== false ? 'actif' : 'inactif')
+    }));
+
+    const headers = ['Nom', 'Poste', 'Département', 'Téléphone', 'Salaire', 'Date Embauche', 'Statut'];
+    const data = employees.map(e => [
+      e.nom,
+      e.poste || '—',
+      e.department || '—',
+      e.phone || e.telephone || '—',
+      e.salaire ? fmtN(e.salaire) + ' GNF' : '—',
+      dateLabel(e.dateEmbauche || e.hireDate),
+      e.status
+    ]);
+
+    if (window.PDFExport && typeof window.PDFExport.generate === 'function') {
+      await window.PDFExport.generate(
+        `Liste du Personnel — ${new Date().toLocaleDateString('fr-FR')}`,
+        headers,
+        data,
+        { subHeader: [`Nombre d'employés : ${employees.length}`] }
+      );
+    } else {
+      UI.toast('Export PDF non disponible', 'error');
+    }
+  };
+
+  // Helper pour l'export des congés en PDF
+  window.hrExportCongesPDF = async (monthStr) => {
+    const [rawEmployees, leaves] = await Promise.all([DB.dbGetAll('users'), DB.dbGetAll('hr_leaves')]);
+    const employees = rawEmployees.map(e => ({ ...e, nom: e.nom || e.name || e.username || '', status: e.status || (e.active !== false ? 'actif' : 'inactif') }));
+    const empMap = new Map(employees.map(e => [e.id, e]));
+    const typeLabel = { conge:'Congé Payé', maladie:'Maladie', maternite:'Maternité', absence:'Absence Injustifiée', retard:'Retard', permission:'Permission' };
+
+    const monthLeaves = leaves.filter(l => {
+      const d = l.dateDebut || '';
+      return d.slice(0, 7) === monthStr || (l.dateFin && l.dateFin.slice(0, 7) === monthStr);
+    });
+
+    const headers = ['Employé', 'Type', 'Début', 'Fin', 'Commentaire / Justificatif'];
+    const data = monthLeaves.map(l => [
+      empMap.get(l.employeeId)?.nom || '—',
+      typeLabel[l.type] || l.type,
+      dateLabel(l.dateDebut),
+      l.dateFin ? dateLabel(l.dateFin) : dateLabel(l.dateDebut),
+      l.justificatif || '—'
+    ]);
+
+    if (window.PDFExport && typeof window.PDFExport.generate === 'function') {
+      await window.PDFExport.generate(
+        `Registre des Congés & Absences — ${monthStr}`,
+        headers,
+        data,
+        { subHeader: [`Période : ${monthStr}`, `Nombre de dossiers : ${monthLeaves.length}`] }
+      );
+    } else {
+      UI.toast('Export PDF non disponible', 'error');
+    }
+  };
+
+  // Helper pour l'export de la présence en PDF
+  window.hrExportPresencePDF = async (dateStr) => {
+    const [rawEmployees, attendance] = await Promise.all([DB.dbGetAll('users'), DB.dbGetAll('hr_attendance')]);
+    const employees = rawEmployees.map(e => ({ ...e, nom: e.nom || e.name || e.username || '', status: e.status || (e.active !== false ? 'actif' : 'inactif') }));
+    const empMap = new Map(employees.map(e => [e.id, e]));
+
+    const dayRecords = attendance.filter(a => a.date === dateStr);
+    const recMap = new Map(dayRecords.map(r => [r.employeeId, r]));
+    const actifs = employees.filter(e => e.status === 'actif');
+
+    function calcH(a, d) {
+      if (!a || !d) return 0;
+      const [ah, am] = a.split(':').map(Number);
+      const [dh, dm] = d.split(':').map(Number);
+      return Math.max(0, (dh * 60 + dm - ah * 60 - am) / 60);
+    }
+
+    const headers = ['Employé', 'Poste', 'Heure Arrivée', 'Heure Départ', 'Heures de présence', 'Statut'];
+    const data = actifs.map(emp => {
+      const rec = recMap.get(emp.id) || {};
+      const h = calcH(rec.arrivee, rec.depart);
+      return [
+        emp.nom,
+        emp.poste || '—',
+        rec.arrivee || '—',
+        rec.depart || '—',
+        h > 0 ? h.toFixed(2) + ' h' : '—',
+        rec.arrivee ? 'Présent' : 'Absent'
+      ];
+    });
+
+    if (window.PDFExport && typeof window.PDFExport.generate === 'function') {
+      await window.PDFExport.generate(
+        `Registre de Présence du ${new Date(dateStr).toLocaleDateString('fr-FR')}`,
+        headers,
+        data,
+        { subHeader: [`Date du rapport : ${dateStr}`, `Employés actifs : ${actifs.length}`] }
+      );
+    } else {
+      UI.toast('Export PDF non disponible', 'error');
+    }
+  };
 
 })();

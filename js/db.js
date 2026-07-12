@@ -1092,6 +1092,11 @@ async function dbGetAll(storeName, indexName, query) {
   });
 }
 
+async function dbGetByKey(storeName, key) {
+  const all = await dbGetAll(storeName);
+  return all.find(r => r.key === key) || null;
+}
+
 /**
  * Chargement paginé par curseur pour les stores très volumineux (audit, mouvements)
  * Retourne les N derniers éléments triés par index décroissant
@@ -2360,6 +2365,6 @@ if (typeof indexedDB !== 'undefined') {
 // La gestion de connectivité est centralisée et gérée par NetworkManager.
 // Plus de listeners online/offline ou d'écriture brute sur le Service Worker ici.
 
-const _DBExports = { initDB, dbAdd, dbPut, dbBulkPut, dbGet, dbGetAll, dbGetRecent, dbSearchProducts, dbCountProducts, dbDelete, dbCount, dbStockValue, writeAudit, seedDemoData, syncToSupabase, pullFromSupabase, _internalSyncToSupabase, _internalPullFromSupabase, resetSupabaseClient, forceSyncAll, trackInstallation, getSupabaseClient, STORES, AppState, doBackup, startAutoBackup, startAutoPull, autoBackupToStorage, restoreFromBackup };
+const _DBExports = { initDB, dbAdd, dbPut, dbBulkPut, dbGet, dbGetAll, dbGetRecent, dbGetByKey, dbSearchProducts, dbCountProducts, dbDelete, dbCount, dbStockValue, writeAudit, seedDemoData, syncToSupabase, pullFromSupabase, _internalSyncToSupabase, _internalPullFromSupabase, resetSupabaseClient, forceSyncAll, trackInstallation, getSupabaseClient, STORES, AppState, doBackup, startAutoBackup, startAutoPull, autoBackupToStorage, restoreFromBackup };
 Object.defineProperty(_DBExports, '_isPulling', { get: () => _isPulling });
 window.DB = _DBExports;

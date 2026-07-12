@@ -1,5 +1,5 @@
 {
-  "version": "9.7.53",
+  "version": "9.7.54",
   "date": "2026-07-12",
-  "changelog": "v9.7.53 : Normalisation textuelle automatique des dossiers patients (patients.js). Modele de permissions dynamiques par roles avec onglet Permissions dedie (settings.js) et persistance. Masquage des KPIs financiers (CA, marges, benefices) et graphiques sensibles selon permissions du role dans le Dashboard. Demon de notification automatique de fin de session d'equipe (toutes les 12 minutes). Optimisation ergonomique de l'impression thermique (police 13px, contraste noir pur, elimination du gaspillage papier)."
+  "changelog": "v9.7.54 : Finalisation du module RH & Comptabilité. Ajout d'un onglet Comptabilité & Historique Financier complet par employé (Salaires, Avances, Primes, Retenues, remboursements et écritures de caisse associées). Intégration de l'exportation PDF professionnelle pour les employés, congés, présences et historique de comptabilité individuelle. Correction critique du système de permissions RBAC (implémentation de DB.dbGetByKey manquante) et de la suppression définitive des congés."
 }
