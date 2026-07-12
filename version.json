@@ -1,5 +1,5 @@
 {
-  "version": "9.7.50",
-  "date": "2026-07-10",
-  "changelog": "v9.7.50 : Coh\u00e9rence des dates de p\u00e9remption entre Stock et Catalogue. Calcul dynamique bas\u00e9 sur les lots actifs avec stock > 0. Les produits vendus/\u00e9puis\u00e9s ne polluent plus le filtre expiration proche. Recalcul automatique apr\u00e8s chaque vente FEFO."
+  "version": "9.7.52",
+  "date": "2026-07-12",
+  "changelog": "v9.7.52 : Module Ressources Humaines complet (gestion employees, paie avec PDF, avances sur salaire, conges & absences, presence/pointage). Caisse RH isolee des sorties classiques. 5 nouveaux onglets Parametres : Paiements (moyens actifs/inactifs), Ventes, Achats, Stock et Interface. Migration base de donnees v6."
 }

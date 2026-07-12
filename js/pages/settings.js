@@ -521,6 +521,11 @@ async function renderSettings(container) {
       <button class="settings-tab-btn" onclick="switchSettingsTab('securite',this)"><i data-lucide="shield-check"></i> Sécurité</button>
       <button class="settings-tab-btn" onclick="switchSettingsTab('cloud',this)"><i data-lucide="cloud"></i> Cloud & Sync</button>
       <button class="settings-tab-btn" onclick="switchSettingsTab('sms',this)"><i data-lucide="message-square"></i> SMS</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('paiements',this)"><i data-lucide="credit-card"></i> Paiements</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('ventes',this)"><i data-lucide="shopping-cart"></i> Ventes</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('achats',this)"><i data-lucide="package"></i> Achats</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('stock_params',this)"><i data-lucide="warehouse"></i> Stock</button>
+      <button class="settings-tab-btn" onclick="switchSettingsTab('interface',this)"><i data-lucide="monitor"></i> Interface</button>
     </div>
 
     <!-- ══════════════ ONGLET : PHARMACIE ══════════════ -->
@@ -839,6 +844,147 @@ async function renderSettings(container) {
         </div>
       </div>
     </div>
+
+    <!-- ══════════════ ONGLET : PAIEMENTS ══════════════ -->
+    <div class="settings-tab-pane" id="tab-paiements">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="credit-card"></i> Moyens de Paiement Acceptés</h3>
+          <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">Activez uniquement les moyens de paiement utilisés dans votre pharmacie. Les options désactivées n'apparaîtront pas au Point de Vente.</p>
+          <div>
+            ${[['payment_cash','Espèces','Paiement en liquide','banknote'],['payment_orange','Orange Money','Paiement mobile Orange','smartphone'],['payment_wave','Wave','Paiement mobile Wave','zap'],['payment_card','Carte Bancaire','Visa, Mastercard, etc.','credit-card'],['payment_virement','Virement Bancaire','Virement inter-bancaire','arrow-right-left'],['payment_assurance','Assurance / Mutuelle','Tiers payant assurance','shield'],['payment_credit','Vente à Crédit','Paiement différé client','clock'],['payment_autre','Autre','Autre moyen de paiement','more-horizontal']].map(([key,label,desc,icon]) => `
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-label">
+                <strong><i data-lucide="${icon}" style="width:14px;height:14px;vertical-align:middle;margin-right:6px"></i>${label}</strong>
+                <span>${desc}</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-${key}" ${gs('${key}') !== 'false' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : VENTES ══════════════ -->
+    <div class="settings-tab-pane" id="tab-ventes">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="shopping-cart"></i> Paramètres de Vente</h3>
+          <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">Configurez le comportement du Point de Vente selon vos règles métier.</p>
+          <div>
+            ${[['sale_allow_credit','Autoriser la Vente à Crédit','Permet de valider une vente sans paiement immédiat'],['sale_allow_no_stock','Vente sans Stock','Autorise la vente même si le stock est insuffisant ou nul'],['sale_allow_discount','Remise autorisée','Affiche le champ de remise sur le POS'],['sale_auto_print','Impression automatique du ticket','Imprime le reçu automatiquement après chaque vente'],['sale_open_drawer','Ouverture tiroir-caisse','Commande d\'ouverture automatique du tiroir-caisse']].map(([key,label,desc]) => `
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-label"><strong>${label}</strong><span>${desc}</span></div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-${key}" ${gs('${key}') === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : ACHATS ══════════════ -->
+    <div class="settings-tab-pane" id="tab-achats">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="package"></i> Paramètres des Achats</h3>
+          <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">Définissez les champs obligatoires lors de la réception de marchandises.</p>
+          <div>
+            ${[['purchase_lot_required','N° de Lot obligatoire','Exige la saisie du numéro de lot à la réception'],['purchase_expiry_required','Date d\'expiration obligatoire','Bloque la validation sans date de péremption'],['purchase_saleprice_required','Prix de Vente obligatoire','Exige la saisie du prix de vente à la réception'],['purchase_allow_edit_after','Modifier après validation','Autorise les corrections après validation d\'un bon de réception']].map(([key,label,desc]) => `
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-label"><strong>${label}</strong><span>${desc}</span></div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-${key}" ${gs('${key}') === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : STOCK ══════════════ -->
+    <div class="settings-tab-pane" id="tab-stock_params">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="warehouse"></i> Paramètres du Stock</h3>
+          <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">Configurez le comportement de la gestion des stocks.</p>
+          <div class="form-grid" style="gap:14px;margin-bottom:20px">
+            <div class="form-group">
+              <label>Seuil d'alerte par défaut (unités)</label>
+              <input type="number" id="set-stock_alert_threshold" class="form-control" style="max-width:160px" value="${gs('stock_alert_threshold') || '5'}" min="0" onchange="saveInputSetting('stock_alert_threshold',this.value)">
+              <small style="color:var(--text-muted)">Un produit passe en alerte sous ce seuil</small>
+            </div>
+            <div class="form-group">
+              <label>Méthode de valorisation</label>
+              <select id="set-stock_valuation_method" class="form-control" style="max-width:200px" onchange="saveInputSetting('stock_valuation_method',this.value)">
+                <option value="FEFO" ${gs('stock_valuation_method')==='FEFO'?'selected':''}>FEFO (Premier expiré, premier sorti)</option>
+                <option value="FIFO" ${gs('stock_valuation_method')==='FIFO'?'selected':''}>FIFO (Premier entré, premier sorti)</option>
+                <option value="LIFO" ${gs('stock_valuation_method')==='LIFO'?'selected':''}>LIFO (Dernier entré, premier sorti)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            ${[['stock_allow_negative','Autoriser Stock Négatif','Permet de vendre même si le stock descend sous zéro'],['stock_block_on_rupture','Bloquer la vente en rupture','Empêche la validation au POS si le stock est à zéro']].map(([key,label,desc]) => `
+            <div class="settings-toggle-row">
+              <div class="settings-toggle-label"><strong>${label}</strong><span>${desc}</span></div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="set-${key}" ${gs('${key}') === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════ ONGLET : INTERFACE ══════════════ -->
+    <div class="settings-tab-pane" id="tab-interface">
+      <div class="settings-2col">
+        <div class="settings-card2">
+          <h3 class="settings-card2-title"><i data-lucide="monitor"></i> Personnalisation de l'Interface</h3>
+          <div class="form-grid" style="gap:14px">
+            <div class="form-group">
+              <label>Devise</label>
+              <select id="set-currency" class="form-control" onchange="saveInputSetting('currency',this.value)">
+                <option value="GNF" ${gs('currency')==='GNF'||!gs('currency')?'selected':''}>GNF — Franc Guinéen</option>
+                <option value="USD" ${gs('currency')==='USD'?'selected':''}>USD — Dollar américain</option>
+                <option value="EUR" ${gs('currency')==='EUR'?'selected':''}>EUR — Euro</option>
+                <option value="XOF" ${gs('currency')==='XOF'?'selected':''}>XOF — Franc CFA BCEAO</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Format de date</label>
+              <select id="set-date_format" class="form-control" onchange="saveInputSetting('date_format',this.value)">
+                <option value="DD/MM/YYYY" ${gs('date_format')==='DD/MM/YYYY'||!gs('date_format')?'selected':''}>DD/MM/YYYY (ex: 12/07/2026)</option>
+                <option value="MM/DD/YYYY" ${gs('date_format')==='MM/DD/YYYY'?'selected':''}>MM/DD/YYYY (ex: 07/12/2026)</option>
+                <option value="YYYY-MM-DD" ${gs('date_format')==='YYYY-MM-DD'?'selected':''}>YYYY-MM-DD (ISO)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Format ticket de caisse</label>
+              <select id="set-ticket_format" class="form-control" onchange="saveInputSetting('ticket_format',this.value)">
+                <option value="compact" ${gs('ticket_format')==='compact'||!gs('ticket_format')?'selected':''}>Compact (58mm)</option>
+                <option value="standard" ${gs('ticket_format')==='standard'?'selected':''}>Standard (80mm)</option>
+                <option value="a4" ${gs('ticket_format')==='a4'?'selected':''}>A4</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Format impression A4</label>
+              <select id="set-print_format_a4" class="form-control" onchange="saveInputSetting('print_format_a4',this.value)">
+                <option value="portrait" ${gs('print_format_a4')==='portrait'||!gs('print_format_a4')?'selected':''}>Portrait</option>
+                <option value="landscape" ${gs('print_format_a4')==='landscape'?'selected':''}>Paysage</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   `;
 
   // Rendre les icônes Lucide IMMÉDIATEMENT pour éviter le layout shift
@@ -855,6 +1001,28 @@ window.switchSettingsTab = function(tabName, btn) {
   if (pane) pane.classList.add('active');
   if (btn) btn.classList.add('active');
   if (window.lucide) lucide.createIcons();
+};
+
+// Sauvegarde d'un paramètre toggle (boolean)
+window.saveToggleSetting = async function(key, value) {
+  try {
+    await DB.dbPut('settings', { key, value: value ? 'true' : 'false' });
+    if (window._appSettings) window._appSettings[key] = value ? 'true' : 'false';
+    UI.toast('Paramètre enregistré', 'success', 1500);
+  } catch(e) {
+    UI.toast('Erreur lors de la sauvegarde', 'error');
+  }
+};
+
+// Sauvegarde d'un paramètre texte/number
+window.saveInputSetting = async function(key, value) {
+  try {
+    await DB.dbPut('settings', { key, value: String(value) });
+    if (window._appSettings) window._appSettings[key] = String(value);
+    UI.toast('Paramètre enregistré', 'success', 1500);
+  } catch(e) {
+    UI.toast('Erreur lors de la sauvegarde', 'error');
+  }
 };
 
 window.simulatePrice = function(price) {

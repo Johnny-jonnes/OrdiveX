@@ -133,7 +133,7 @@
 
 
 const DB_NAME = 'OrdiveXDB';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 const STORES = {
   products: 'products',
@@ -779,6 +779,35 @@ async function initDB() {
         adjStore.createIndex('userId', 'userId');
         adjStore.createIndex('productId', 'productId');
         adjStore.createIndex('inventoryId', 'inventoryId');
+      }
+
+      // ── RH v6 ─────────────────────────────────────────────────────
+      if (!database.objectStoreNames.contains('employees')) {
+        const emp = database.createObjectStore('employees', { keyPath: 'id', autoIncrement: true });
+        emp.createIndex('status', 'status');
+        emp.createIndex('department', 'department');
+      }
+      if (!database.objectStoreNames.contains('hr_payroll')) {
+        const pay = database.createObjectStore('hr_payroll', { keyPath: 'id', autoIncrement: true });
+        pay.createIndex('employeeId', 'employeeId');
+        pay.createIndex('period', 'period'); // 'YYYY-MM'
+        pay.createIndex('status', 'status');
+      }
+      if (!database.objectStoreNames.contains('hr_advances')) {
+        const adv = database.createObjectStore('hr_advances', { keyPath: 'id', autoIncrement: true });
+        adv.createIndex('employeeId', 'employeeId');
+        adv.createIndex('status', 'status');
+      }
+      if (!database.objectStoreNames.contains('hr_leaves')) {
+        const lv = database.createObjectStore('hr_leaves', { keyPath: 'id', autoIncrement: true });
+        lv.createIndex('employeeId', 'employeeId');
+        lv.createIndex('status', 'status');
+        lv.createIndex('type', 'type');
+      }
+      if (!database.objectStoreNames.contains('hr_attendance')) {
+        const att = database.createObjectStore('hr_attendance', { keyPath: 'id', autoIncrement: true });
+        att.createIndex('employeeId', 'employeeId');
+        att.createIndex('date', 'date');
       }
     };
   });

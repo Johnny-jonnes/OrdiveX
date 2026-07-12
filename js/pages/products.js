@@ -859,7 +859,7 @@ window._buildCategoryInput = _buildCategoryInput;
 function showImportModal() {
   UI.modal('<i data-lucide="upload" class="modal-icon-inline"></i> Importation de Produits (CSV)', `
     <div class="import-container">
-      <p class="mb-1 text-sm">Importez votre catalogue existant depuis un fichier CSV (Excel). Les colonnes attendues sont : <strong>Code, Nom, DCI, Marque, Categorie, Prix Vente, Prix Achat, Rx</strong>.</p>
+      <p class="mb-1 text-sm">Importez votre catalogue existant depuis un fichier CSV (Excel). Les colonnes attendues sont : <strong>Code, Nom, DCI, Marque, Categorie, Forme, Prix Vente, Prix Achat, Rx</strong>.</p>
       
       <div id="import-drop-zone" class="import-drop-zone">
         <i data-lucide="file-up"></i>
@@ -959,6 +959,7 @@ async function processImportCSV(content) {
   // Optional columns
   map.brand = columns.findIndex(c => c.includes('marque') || c.includes('brand'));
   map.category = columns.findIndex(c => c.includes('cat'));
+  map.form = columns.findIndex(c => c.includes('form'));
   map.purchasePrice = columns.findIndex(c => c.includes('achat') || c.includes('purchase'));
   map.rx = columns.findIndex(c => c.includes('rx') || c.includes('ord'));
   map.quantity = columns.findIndex(c => c.includes('quantite') || c.includes('quantity') || c.includes('qte') || c.includes('qty') || c.includes('stock'));
@@ -994,6 +995,7 @@ async function processImportCSV(content) {
         dci: map.dci !== -1 ? (row[map.dci] || '') : (existing?.dci || ''),
         brand: map.brand !== -1 ? (row[map.brand] || '') : (existing?.brand || ''),
         category: map.category !== -1 ? (row[map.category] || 'Autre') : (existing?.category || 'Autre'),
+        form: map.form !== -1 ? (row[map.form] || '') : (existing?.form || ''),
         salePrice: parseFloat((row[map.salePrice] || '0').replace(/[^\d.]/g, '')) || 0,
         purchasePrice: map.purchasePrice !== -1 ? parseFloat((row[map.purchasePrice] || '0').replace(/[^\d.]/g, '')) || 0 : (existing?.purchasePrice || 0),
         requiresPrescription: map.rx !== -1 ? (row[map.rx]?.toLowerCase().includes('oui') || row[map.rx] === '1') : (existing?.requiresPrescription || false),

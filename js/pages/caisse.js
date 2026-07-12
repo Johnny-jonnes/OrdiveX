@@ -7,11 +7,16 @@ async function renderCaisse(container) {
   UI.loading(container, 'Chargement de la caisse...');
 
   const today = new Date().toISOString().split('T')[0];
-  const [sales, cashRegister, returns] = await Promise.all([
+  const [sales, cashRegisterRaw, returns] = await Promise.all([
     DB.dbGetAll('sales'),
     DB.dbGetAll('cashRegister'),
     DB.dbGetAll('returns'),
   ]);
+
+  // ── Filtre RH : les opérations RH (salaires, avances) sont gérées
+  // dans le module Ressources Humaines et n'apparaissent PAS ici. ──
+  const cashRegister = cashRegisterRaw.filter(c => c.category !== 'RH');
+
 
   // Today's sales (we need completed, paid, AND pending if it's assurance because patient pays ticket modérateur today)
   const todaySalesRaw = sales.filter(s => s.date && s.date.startsWith(today) && ['completed', 'paid', 'pending'].includes(s.status));
