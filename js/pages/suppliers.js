@@ -1191,8 +1191,9 @@ async function receiveOrder(orderId) {
 
   window._currentReceiveOrder = JSON.parse(JSON.stringify(order));
   (window._currentReceiveOrder.items || []).forEach((item, idx) => {
-    const prod = products.find(p => p.id === item.productId);
-    item._recvQty = item.quantity;
+    const prod = products.find(p => Number(p.id) === Number(item.productId));
+    const remaining = Math.max(0, Number(item.quantity) - (Number(item.receivedQty) || 0));
+    item._recvQty = remaining;
     item._recvLot = `LOT-AUTO-${Date.now()}-${idx}`;
     item._recvExpiry = prod && prod.expiryDate ? prod.expiryDate : '';
     item._recvPrice = item.unitPrice || (prod ? prod.purchasePrice : 0);
@@ -1402,13 +1403,15 @@ async function confirmReceiveOrder(orderId) {
 
     if (!conform) hasNonConformity = true;
 
+    const previouslyReceived = Number(item.receivedQty) || 0;
+
     updatedItems.push({ 
       productId: item.productId, 
       productName: item.productName, 
       quantity: item.quantity, 
       unitPrice: recvPrice, 
       salePrice: recvSalePrice, 
-      receivedQty: qtyReceived, 
+      receivedQty: previouslyReceived + qtyReceived, 
       lotNumber, 
       expiryDate, 
       conform 
@@ -1430,15 +1433,15 @@ async function confirmReceiveOrder(orderId) {
       });
 
       const stockAll = await DB.dbGetAll('stock');
-      const existing = stockAll.find(s => s.productId === item.productId);
+      const existing = stockAll.find(s => Number(s.productId) === Number(item.productId));
       if (existing) {
-        await DB.dbPut('stock', { ...existing, quantity: existing.quantity + qtyReceived });
+        await DB.dbPut('stock', { ...existing, quantity: (existing.quantity || 0) + qtyReceived });
       } else {
-        await DB.dbAdd('stock', { productId: item.productId, quantity: qtyReceived, reservedQuantity: 0 });
+        await DB.dbAdd('stock', { productId: Number(item.productId), quantity: qtyReceived, reservedQuantity: 0 });
       }
 
       await DB.dbAdd('movements', {
-        productId: item.productId, type: 'ENTRY', subType: 'PURCHASE',
+        productId: Number(item.productId), type: 'ENTRY', subType: 'PURCHASE',
         quantity: qtyReceived, lotNumber, date: new Date().toISOString(),
         userId: DB.AppState.currentUser?.id, reference: order.orderNumber,
         invoiceRef: createInvoice ? invoiceNum : null,
@@ -1447,7 +1450,7 @@ async function confirmReceiveOrder(orderId) {
       // Mise à jour des prix dans le catalogue (comme pour une facture fournisseur)
       try {
         const productsAll = await DB.dbGetAll('products');
-        const existingProd = productsAll.find(p => p.id === item.productId);
+        const existingProd = productsAll.find(p => Number(p.id) === Number(item.productId));
         if (existingProd) {
           let updatedProd = false;
           if (recvPrice && existingProd.purchasePrice !== recvPrice) {

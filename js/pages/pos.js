@@ -2058,6 +2058,41 @@ async function _validerVenteLogic() {
   const disc = getDiscount();
   const sub = posCart.reduce((a, c) => a + c.total, 0);
 
+  // ── Helper: lire un paramètre applicatif ──
+  const getSetting = (key) => (window._appSettings || {})[key];
+
+  // ── Contrôle: vente à crédit autorisée ? ──
+  if (method === 'credit' && getSetting('sale_allow_credit') === 'false') {
+    UI.toast('⛔ La vente à crédit est désactivée dans les paramètres.', 'error', 5000);
+    return;
+  }
+
+  // ── Contrôle: vente sans stock autorisée ? ──
+  if (getSetting('sale_allow_no_stock') !== 'true') {
+    const stockAll = await DB.dbGetAll('stock');
+    const stockMap = new Map();
+    stockAll.forEach(s => stockMap.set(Number(s.productId), s));
+    for (const item of posCart) {
+      const s = stockMap.get(Number(item.productId));
+      const available = s ? (s.quantity || 0) : 0;
+      if (item.qty > available) {
+        UI.toast(`⛔ Stock insuffisant pour « ${item.name} » — Disponible: ${available}, Demandé: ${item.qty}`, 'error', 6000);
+        return;
+      }
+    }
+  }
+
+  // ── Contrôle: remise autorisée ? ──
+  if (disc > 0 && getSetting('sale_allow_discount') === 'false') {
+    UI.toast('⛔ Les remises sont désactivées dans les paramètres.', 'error', 5000);
+    return;
+  }
+  // ── Contrôle: remise autorisée par permission utilisateur ? ──
+  if (disc > 0 && !Auth.can('appliquer_remise') && DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('⛔ Vous n\'avez pas la permission d\'appliquer une remise.', 'error', 5000);
+    return;
+  }
+
   // ── Gate substances contrôlées ──
   const hasControlled = posCart.some(i => i.isControlled);
   if (hasControlled) {

@@ -1416,7 +1416,8 @@ async function _internalSyncToSupabase() {
     // Colonnes CONNUES comme inexistantes dans Supabase (fallback hardcodé)
     var _knownBadCols = {
       saleItems: ['lotNumber'],
-      sales: ['paymentDetails']
+      sales: ['paymentDetails'],
+      cashRegister: ['category', 'subCategory', 'description', 'employeeId', 'createdAt', 'updatedAt']
     };
     var _colCache = {};
     try { 
@@ -1525,6 +1526,7 @@ async function _internalSyncToSupabase() {
         let retries = 0;
         const maxRetries = 10;
         let lastError = null;
+        let skipBackoff = false;
         // Délais backoff exponentiel : 0, 500ms, 1s, 2s, 5s...
         const _backoffDelays = [0, 500, 1000, 2000, 5000, 10000, 15000, 20000, 30000, 60000];
 
@@ -1538,8 +1540,8 @@ async function _internalSyncToSupabase() {
             throw new Error('network_offline');
           }
 
-          // Backoff : attendre avant de réessayer (sauf premier essai)
-          if (retries > 0) {
+          // Backoff : attendre avant de réessayer (sauf premier essai et apprentissage de colonne)
+          if (retries > 0 && !skipBackoff) {
             const delay = _backoffDelays[Math.min(retries, _backoffDelays.length - 1)];
             await new Promise(r => setTimeout(r, delay));
             // Re-vérifier après le délai d'attente
@@ -1547,6 +1549,7 @@ async function _internalSyncToSupabase() {
               throw new Error('network_offline');
             }
           }
+          skipBackoff = false;
 
           lastError = null;
           allSuccess = true;
@@ -1588,7 +1591,12 @@ async function _internalSyncToSupabase() {
             break;
           }
 
-          const colMatch = (lastError?.message || '').match(/Could not find the '([^']+)' column/);
+          const errorMsg = lastError?.message || '';
+          const colMatch = errorMsg.match(/Could not find the '([^']+)' column/) ||
+                           errorMsg.match(/column "([^"]+)" of relation "[^"]+" does not exist/) ||
+                           errorMsg.match(/column "([^"]+)" does not exist/) ||
+                           errorMsg.match(/column [^.]+\.([^ ]+) does not exist/);
+
           if (colMatch && retries < maxRetries) {
             const badCol = colMatch[1];
             // On ne log que si c'est une nouvelle découverte
@@ -1604,6 +1612,7 @@ async function _internalSyncToSupabase() {
             if (!_colCache[storeName].includes(badCol)) _colCache[storeName].push(badCol);
             localStorage.setItem('pharma_bad_columns', JSON.stringify(_colCache));
             retries++;
+            skipBackoff = true; // Skip delay since we learned a column schema difference
           } else {
             // Si c'est une erreur réseau, lever l'exception immédiatement
             if (window.NM && !window.NM.isOnline()) {
@@ -1651,7 +1660,11 @@ async function _internalSyncToSupabase() {
       for (var hbRetry = 0; hbRetry < 3; hbRetry++) {
         var hbRes = await sb.from('settings').upsert(hbPayload, { onConflict: 'key' });
         if (!hbRes.error) break;
-        var hbCol = (hbRes.error.message || '').match(/Could not find the '([^']+)' column/);
+        const hbErrMsg = hbRes.error.message || '';
+        var hbCol = hbErrMsg.match(/Could not find the '([^']+)' column/) ||
+                    hbErrMsg.match(/column "([^"]+)" of relation "[^"]+" does not exist/) ||
+                    hbErrMsg.match(/column "([^"]+)" does not exist/) ||
+                    hbErrMsg.match(/column [^.]+\.([^ ]+) does not exist/);
         if (hbCol) {
           delete hbPayload[hbCol[1]];
         } else {

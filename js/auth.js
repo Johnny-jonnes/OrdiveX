@@ -71,7 +71,13 @@ const Auth = {
     // Admin a toutes les permissions
     if (user.role === 'admin') return true;
     const roleKey = String(user.role || '').toLowerCase().replace(/[\s-]+/g, '_');
-    // Lire les permissions dynamiques chargées au login (ou utiliser les défauts)
+    // 1. Vérifier les permissions individuelles (overrides par utilisateur)
+    //    Stockées dans user.permissions : { perm_key: true|false }
+    const userPerms = user.permissions || {};
+    if (typeof userPerms[action] === 'boolean') {
+      return userPerms[action];
+    }
+    // 2. Vérifier les permissions du rôle (chargées dynamiquement ou par défaut)
     const rolePerms = (window._rolePermissions || {})[roleKey] || Auth._defaultPerms[roleKey] || [];
     return rolePerms.includes(action);
   },
@@ -100,25 +106,69 @@ const Auth = {
     } catch(e) {
       window._rolePermissions = {};
     }
+    // Charger TOUS les paramètres applicatifs dans _appSettings
+    try {
+      const allSettings = await DB.dbGetAll('settings');
+      window._appSettings = {};
+      (allSettings || []).forEach(s => {
+        if (s.key) window._appSettings[s.key] = s.value;
+      });
+    } catch(e) {
+      window._appSettings = {};
+    }
+    // Charger les permissions individuelles de l'utilisateur courant
+    try {
+      const user = DB.AppState.currentUser;
+      if (user && user.id) {
+        const rec2 = await DB.dbGetByKey('settings', `user_permissions_${user.id}`).catch(() => null);
+        if (rec2 && rec2.value) {
+          const perms = typeof rec2.value === 'string' ? JSON.parse(rec2.value) : rec2.value;
+          DB.AppState.currentUser.permissions = perms;
+        }
+      }
+    } catch(e) { /* silencieux */ }
   },
 
   // Liste de toutes les permissions disponibles
   ALL_PERMISSIONS: [
-    { key: 'voir_ca',                label: 'Voir le chiffre d\'affaires' },
-    { key: 'voir_benefices',         label: 'Voir les bénéfices' },
-    { key: 'voir_cout_achat',        label: 'Voir le coût d\'achat' },
-    { key: 'voir_valeur_stock',      label: 'Voir la valeur du stock' },
-    { key: 'voir_marges',            label: 'Voir les marges' },
-    { key: 'voir_rapports_financiers', label: 'Voir les rapports financiers' },
-    { key: 'voir_salaires',          label: 'Voir les salaires RH' },
-    { key: 'modifier_prix',          label: 'Modifier les prix produits' },
-    { key: 'supprimer_vente',        label: 'Supprimer une vente' },
-    { key: 'annuler_facture',        label: 'Annuler une facture' },
-    { key: 'effectuer_inventaire',   label: 'Effectuer un inventaire' },
-    { key: 'exporter_donnees',       label: 'Exporter des données' },
-    { key: 'gerer_utilisateurs',     label: 'Gérer les utilisateurs' },
-    { key: 'gerer_parametres',       label: 'Gérer les paramètres' },
-    { key: 'acceder_sauvegardes',    label: 'Accéder aux sauvegardes' },
+    // === Financier ===
+    { key: 'voir_ca',                  label: 'Voir le chiffre d\'affaires',   cat: 'financier' },
+    { key: 'voir_benefices',           label: 'Voir les bénéfices',            cat: 'financier' },
+    { key: 'voir_prix_achat',          label: 'Voir les prix d\'achat',        cat: 'financier' },
+    { key: 'voir_cout_achat',          label: 'Voir le coût d\'achat',         cat: 'financier' },
+    { key: 'voir_valeur_stock',        label: 'Voir la valeur du stock',       cat: 'financier' },
+    { key: 'voir_marges',              label: 'Voir les marges',               cat: 'financier' },
+    { key: 'voir_rapports_financiers', label: 'Voir les rapports financiers',  cat: 'financier' },
+    { key: 'voir_statistiques',        label: 'Voir les statistiques',         cat: 'financier' },
+    { key: 'voir_salaires',            label: 'Voir les salaires RH',          cat: 'financier' },
+    // === Actions commerciales ===
+    { key: 'modifier_prix',            label: 'Modifier les prix produits',    cat: 'commercial' },
+    { key: 'annuler_vente',            label: 'Annuler une vente',             cat: 'commercial' },
+    { key: 'supprimer_vente',          label: 'Supprimer une vente',           cat: 'commercial' },
+    { key: 'annuler_facture',          label: 'Annuler une facture',           cat: 'commercial' },
+    { key: 'appliquer_remise',         label: 'Appliquer une remise',          cat: 'commercial' },
+    // === Stock & Inventaire ===
+    { key: 'effectuer_inventaire',     label: 'Effectuer un inventaire',       cat: 'stock' },
+    { key: 'effectuer_sortie_stock',   label: 'Effectuer une sortie de stock', cat: 'stock' },
+    // === Administration ===
+    { key: 'exporter_donnees',         label: 'Exporter des données',          cat: 'admin' },
+    { key: 'gerer_utilisateurs',       label: 'Gérer les utilisateurs',        cat: 'admin' },
+    { key: 'gerer_parametres',         label: 'Gérer les paramètres',          cat: 'admin' },
+    { key: 'acceder_sauvegardes',      label: 'Accéder aux sauvegardes',       cat: 'admin' },
+    // === Modules ===
+    { key: 'module_stock',             label: 'Accéder au module Stock',       cat: 'modules' },
+    { key: 'module_achats',            label: 'Accéder au module Achats',      cat: 'modules' },
+    { key: 'module_rh',                label: 'Accéder au module RH',          cat: 'modules' },
+    { key: 'module_rapports',          label: 'Accéder aux Rapports',          cat: 'modules' },
+    { key: 'module_caisse',            label: 'Accéder à la Caisse',           cat: 'modules' },
+  ],
+
+  ALL_PERMISSION_CATS: [
+    { key: 'financier',  label: '💰 Données Financières' },
+    { key: 'commercial', label: '🛒 Actions Commerciales' },
+    { key: 'stock',      label: '📦 Stock & Inventaire' },
+    { key: 'admin',      label: '⚙️ Administration' },
+    { key: 'modules',    label: '🧩 Accès Modules' },
   ],
 
   ALL_ROLES: [

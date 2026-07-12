@@ -1,5 +1,5 @@
 {
-  "version": "9.7.54",
+  "version": "9.7.57",
   "date": "2026-07-12",
-  "changelog": "v9.7.54 : Finalisation du module RH & Comptabilité. Ajout d'un onglet Comptabilité & Historique Financier complet par employé (Salaires, Avances, Primes, Retenues, remboursements et écritures de caisse associées). Intégration de l'exportation PDF professionnelle pour les employés, congés, présences et historique de comptabilité individuelle. Correction critique du système de permissions RBAC (implémentation de DB.dbGetByKey manquante) et de la suppression définitive des congés."
+  "changelog": "v9.7.57 : Intégration d'un mécanisme de self-healing et d'invalidation de cache agressif (Cache-Busting) au chargement de l'application dans index.html pour forcer la mise à jour immédiate du Service Worker et de tous les fichiers JS mis en cache."
 }
