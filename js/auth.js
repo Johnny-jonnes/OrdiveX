@@ -84,15 +84,16 @@ const Auth = {
 
   // Permissions par défaut pour chaque rôle (modifiables depuis les Paramètres)
   _defaultPerms: {
-    responsable:        ['voir_ca','voir_benefices','voir_prix_achat','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers','voir_statistiques','voir_salaires','modifier_prix','annuler_vente','annuler_facture','appliquer_remise','effectuer_inventaire','effectuer_sortie_stock','exporter_donnees','gerer_utilisateurs','gerer_parametres','acceder_sauvegardes','module_stock','module_achats','module_rh','module_rapports','module_caisse'],
-    rh:                 ['voir_salaires','gerer_utilisateurs','module_rh'],
-    pharmacien:         ['voir_ca','voir_valeur_stock','voir_cout_achat','voir_prix_achat','effectuer_inventaire','effectuer_sortie_stock','exporter_donnees','modifier_prix','appliquer_remise','module_stock','module_achats','module_caisse','module_rapports'],
+    responsable:        ['voir_ca','voir_benefices','voir_prix_achat','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers','voir_statistiques','voir_salaires','caisse_voir_historique','modifier_prix','modifier_prix_panier','annuler_vente','annuler_facture','supprimer_facture','appliquer_remise','pos_allow_credit','effectuer_inventaire','effectuer_sortie_stock','supprimer_produit','exporter_donnees','gerer_utilisateurs','gerer_rh','gerer_parametres','acceder_sauvegardes','caisse_depot_retrait','caisse_cloture','module_stock','module_achats','module_rh','module_rapports','module_caisse'],
+    rh:                 ['voir_salaires','gerer_utilisateurs','gerer_rh','module_rh'],
+    pharmacien:         ['voir_ca','voir_valeur_stock','voir_cout_achat','voir_prix_achat','voir_marges','voir_rapports_financiers','voir_statistiques','caisse_voir_historique','effectuer_inventaire','effectuer_sortie_stock','exporter_donnees','modifier_prix','appliquer_remise','pos_allow_credit','annuler_vente','annuler_facture','caisse_cloture','caisse_depot_retrait','module_stock','module_achats','module_caisse','module_rapports'],
     caissier:           ['appliquer_remise','module_caisse'],
     receptionniste:     ['module_caisse'],
     gestionnaire_stock: ['voir_valeur_stock','effectuer_inventaire','effectuer_sortie_stock','exporter_donnees','module_stock'],
-    comptable:          ['voir_ca','voir_benefices','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers','voir_statistiques','exporter_donnees','module_rapports'],
+    comptable:          ['voir_ca','voir_benefices','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers','voir_statistiques','caisse_voir_historique','exporter_donnees','module_rapports'],
     assistant:          [],
   },
+
 
   // Charger les permissions depuis IndexedDB au login
   async loadPermissions() {
@@ -129,46 +130,57 @@ const Auth = {
     } catch(e) { /* silencieux */ }
   },
 
-  // Liste de toutes les permissions disponibles
   ALL_PERMISSIONS: [
     // === Financier ===
-    { key: 'voir_ca',                  label: 'Voir le chiffre d\'affaires',   cat: 'financier' },
-    { key: 'voir_benefices',           label: 'Voir les bénéfices',            cat: 'financier' },
-    { key: 'voir_prix_achat',          label: 'Voir les prix d\'achat',        cat: 'financier' },
-    { key: 'voir_cout_achat',          label: 'Voir le coût d\'achat',         cat: 'financier' },
-    { key: 'voir_valeur_stock',        label: 'Voir la valeur du stock',       cat: 'financier' },
-    { key: 'voir_marges',              label: 'Voir les marges',               cat: 'financier' },
-    { key: 'voir_rapports_financiers', label: 'Voir les rapports financiers',  cat: 'financier' },
-    { key: 'voir_statistiques',        label: 'Voir les statistiques',         cat: 'financier' },
-    { key: 'voir_salaires',            label: 'Voir les salaires RH',          cat: 'financier' },
-    // === Actions commerciales ===
-    { key: 'modifier_prix',            label: 'Modifier les prix produits',    cat: 'commercial' },
-    { key: 'annuler_vente',            label: 'Annuler une vente',             cat: 'commercial' },
-    { key: 'supprimer_vente',          label: 'Supprimer une vente',           cat: 'commercial' },
-    { key: 'annuler_facture',          label: 'Annuler une facture',           cat: 'commercial' },
-    { key: 'appliquer_remise',         label: 'Appliquer une remise',          cat: 'commercial' },
+    { key: 'voir_ca',                  label: 'Voir le chiffre d\'affaires',           cat: 'financier' },
+    { key: 'voir_benefices',           label: 'Voir les bénéfices nets',               cat: 'financier' },
+    { key: 'voir_prix_achat',          label: 'Voir les prix d\'achat fournisseur',     cat: 'financier' },
+    { key: 'voir_cout_achat',          label: 'Voir le coût d\'achat global',           cat: 'financier' },
+    { key: 'voir_valeur_stock',        label: 'Voir la valeur totale du stock',         cat: 'financier' },
+    { key: 'voir_marges',              label: 'Voir les marges produits',               cat: 'financier' },
+    { key: 'voir_rapports_financiers', label: 'Voir les rapports financiers',           cat: 'financier' },
+    { key: 'voir_statistiques',        label: 'Voir les statistiques et graphiques',    cat: 'financier' },
+    { key: 'voir_salaires',            label: 'Voir les salaires du personnel',         cat: 'financier' },
+    { key: 'caisse_voir_historique',   label: 'Voir l\'historique complet de la caisse', cat: 'financier' },
+    // === Point de Vente (POS) ===
+    { key: 'appliquer_remise',         label: 'Appliquer une remise sur une vente',     cat: 'pos' },
+    { key: 'pos_allow_credit',         label: 'Autoriser les ventes à crédit (dette)',  cat: 'pos' },
+    { key: 'modifier_prix',            label: 'Modifier le prix de vente d\'un produit', cat: 'pos' },
+    { key: 'modifier_prix_panier',     label: 'Modifier le prix unitaire dans le panier POS', cat: 'pos' },
+    { key: 'annuler_vente',            label: 'Annuler / rembourser une vente',         cat: 'pos' },
+    { key: 'supprimer_vente',          label: 'Supprimer définitivement une vente',     cat: 'pos' },
+    // === Caisse ===
+    { key: 'caisse_depot_retrait',     label: 'Effectuer des mouvements de caisse manuels (dépôt/retrait)', cat: 'caisse' },
+    { key: 'caisse_cloture',           label: 'Effectuer la clôture journalière de la caisse', cat: 'caisse' },
+    // === Actions Achats / Factures ===
+    { key: 'annuler_facture',          label: 'Annuler une facture d\'achat',           cat: 'achats' },
+    { key: 'supprimer_facture',        label: 'Supprimer définitivement une facture d\'achat', cat: 'achats' },
     // === Stock & Inventaire ===
-    { key: 'effectuer_inventaire',     label: 'Effectuer un inventaire',       cat: 'stock' },
-    { key: 'effectuer_sortie_stock',   label: 'Effectuer une sortie de stock', cat: 'stock' },
+    { key: 'effectuer_inventaire',     label: 'Effectuer un inventaire physique',       cat: 'stock' },
+    { key: 'effectuer_sortie_stock',   label: 'Effectuer une sortie de stock manuelle', cat: 'stock' },
+    { key: 'supprimer_produit',        label: 'Désactiver / retirer un produit du catalogue', cat: 'stock' },
     // === Administration ===
-    { key: 'exporter_donnees',         label: 'Exporter des données',          cat: 'admin' },
-    { key: 'gerer_utilisateurs',       label: 'Gérer les utilisateurs',        cat: 'admin' },
-    { key: 'gerer_parametres',         label: 'Gérer les paramètres',          cat: 'admin' },
-    { key: 'acceder_sauvegardes',      label: 'Accéder aux sauvegardes',       cat: 'admin' },
-    // === Modules ===
-    { key: 'module_stock',             label: 'Accéder au module Stock',       cat: 'modules' },
-    { key: 'module_achats',            label: 'Accéder au module Achats',      cat: 'modules' },
-    { key: 'module_rh',                label: 'Accéder au module RH',          cat: 'modules' },
-    { key: 'module_rapports',          label: 'Accéder aux Rapports',          cat: 'modules' },
-    { key: 'module_caisse',            label: 'Accéder à la Caisse',           cat: 'modules' },
+    { key: 'exporter_donnees',         label: 'Exporter des données (CSV / PDF)',       cat: 'admin' },
+    { key: 'gerer_utilisateurs',       label: 'Gérer les utilisateurs & employés',      cat: 'admin' },
+    { key: 'gerer_rh',                 label: 'Gérer les paies, congés et avances RH',  cat: 'admin' },
+    { key: 'gerer_parametres',         label: 'Modifier les paramètres de l\'application', cat: 'admin' },
+    { key: 'acceder_sauvegardes',      label: 'Accéder aux sauvegardes et restauration', cat: 'admin' },
+    // === Accès Modules ===
+    { key: 'module_stock',             label: 'Accéder au module Stock',               cat: 'modules' },
+    { key: 'module_achats',            label: 'Accéder au module Achats / Fournisseurs', cat: 'modules' },
+    { key: 'module_rh',                label: 'Accéder au module Ressources Humaines', cat: 'modules' },
+    { key: 'module_rapports',          label: 'Accéder aux Rapports & Statistiques',   cat: 'modules' },
+    { key: 'module_caisse',            label: 'Accéder à la Caisse Journalière',       cat: 'modules' },
   ],
 
   ALL_PERMISSION_CATS: [
-    { key: 'financier',  label: '💰 Données Financières' },
-    { key: 'commercial', label: '🛒 Actions Commerciales' },
-    { key: 'stock',      label: '📦 Stock & Inventaire' },
-    { key: 'admin',      label: '⚙️ Administration' },
-    { key: 'modules',    label: '🧩 Accès Modules' },
+    { key: 'financier', label: '💰 Données Financières' },
+    { key: 'pos',       label: '🛒 Point de Vente (POS)' },
+    { key: 'caisse',    label: '🏧 Caisse & Mouvements' },
+    { key: 'achats',    label: '📋 Achats & Factures' },
+    { key: 'stock',     label: '📦 Stock & Inventaire' },
+    { key: 'admin',     label: '⚙️ Administration' },
+    { key: 'modules',   label: '🧩 Accès Modules' },
   ],
 
   ALL_ROLES: [

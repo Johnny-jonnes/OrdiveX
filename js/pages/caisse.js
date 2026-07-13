@@ -509,6 +509,10 @@ function switchCaisseTab(btn, tabId) {
 }
 
 function openAddCashEntry() {
+  if (window.Auth && !Auth.can('caisse_depot_retrait') && DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('⛔ Vous n\'avez pas la permission d\'effectuer des mouvements de caisse manuels.', 'error', 5000);
+    return;
+  }
   UI.modal('<i data-lucide="banknote" class="modal-icon-inline"></i> Mouvement de Caisse Manuel', `
     <form id="cash-entry-form" class="form-grid">
       <div class="form-group">
@@ -683,10 +687,11 @@ function calcClosureEcart() {
 async function confirmCaisseClose() {
   if (window._caisseCloseEnCours) { UI.toast('Cloture en cours...', 'warning', 2000); return; }
   window._caisseCloseEnCours = true;
-  // Restriction : seul le pharmacien ou l'admin peut cloturer
+  // Restriction : permission caisse_cloture ou rôle admin/pharmacien
   const role = DB.AppState.currentUser?.role;
-  if (!['admin', 'pharmacien'].includes(role)) {
-    UI.toast('Seul(e) le/la pharmacien(ne) ou l\'administrateur peut clôturer la caisse.', 'error', 5000);
+  const canClose = (window.Auth && Auth.can('caisse_cloture')) || ['admin', 'pharmacien'].includes(role);
+  if (!canClose) {
+    UI.toast('Vous n\'avez pas la permission de clôturer la caisse. Contactez le responsable.', 'error', 5000);
     UI.closeModal();
     window._caisseCloseEnCours = false;
     return;

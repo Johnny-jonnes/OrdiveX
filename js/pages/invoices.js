@@ -1227,6 +1227,10 @@ async function unvalidateInvoice(invoiceId) {
 }
 
 async function deleteInvoice(invoiceId) {
+  if (window.Auth && !Auth.can('supprimer_facture') && DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('⛔ Vous n\'avez pas la permission de supprimer des factures.', 'error', 5000);
+    return;
+  }
   const confirm = await UI.confirm('Voulez-vous supprimer définitivement ce brouillon de facture ?');
   if (!confirm) return;
   try {

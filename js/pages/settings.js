@@ -861,7 +861,7 @@ async function renderSettings(container) {
                 <span>${desc}</span>
               </div>
               <label class="toggle-switch">
-                <input type="checkbox" id="set-${key}" ${gs('${key}') !== 'false' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <input type="checkbox" id="set-${key}" ${gs(key) !== 'false' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
                 <span class="toggle-slider"></span>
               </label>
             </div>`).join('')}
@@ -881,7 +881,7 @@ async function renderSettings(container) {
             <div class="settings-toggle-row">
               <div class="settings-toggle-label"><strong>${label}</strong><span>${desc}</span></div>
               <label class="toggle-switch">
-                <input type="checkbox" id="set-${key}" ${gs('${key}') === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <input type="checkbox" id="set-${key}" ${gs(key) === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
                 <span class="toggle-slider"></span>
               </label>
             </div>`).join('')}
@@ -901,7 +901,7 @@ async function renderSettings(container) {
             <div class="settings-toggle-row">
               <div class="settings-toggle-label"><strong>${label}</strong><span>${desc}</span></div>
               <label class="toggle-switch">
-                <input type="checkbox" id="set-${key}" ${gs('${key}') === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <input type="checkbox" id="set-${key}" ${gs(key) === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
                 <span class="toggle-slider"></span>
               </label>
             </div>`).join('')}
@@ -936,7 +936,7 @@ async function renderSettings(container) {
             <div class="settings-toggle-row">
               <div class="settings-toggle-label"><strong>${label}</strong><span>${desc}</span></div>
               <label class="toggle-switch">
-                <input type="checkbox" id="set-${key}" ${gs('${key}') === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
+                <input type="checkbox" id="set-${key}" ${gs(key) === 'true' ? 'checked' : ''} onchange="saveToggleSetting('${key}',this.checked)">
                 <span class="toggle-slider"></span>
               </label>
             </div>`).join('')}

@@ -136,6 +136,29 @@ const UI = {
     return overlay;
   },
 
+  openModal(config) {
+    let footer = config.footer || '';
+    if (config.buttons && Array.isArray(config.buttons)) {
+      footer = config.buttons.map(b => {
+        let onClickAction = '';
+        if (b.action === 'close') {
+          onClickAction = "UI.closeModal()";
+        } else if (typeof b.action === 'function') {
+          const fnName = 'modal_btn_cb_' + Math.random().toString(36).slice(2, 9);
+          window[fnName] = b.action;
+          onClickAction = `window.${fnName}()`;
+        } else if (typeof b.action === 'string') {
+          onClickAction = b.action;
+        }
+        return `<button class="btn ${b.class || 'btn-secondary'}" onclick="${onClickAction}">${b.label}</button>`;
+      }).join(' ');
+    }
+    return this.modal(config.title, config.body || config.contentHTML, {
+      ...config,
+      footer: footer
+    });
+  },
+
   closeModal() {
     const m = document.getElementById('global-modal');
     if (m) m.remove();

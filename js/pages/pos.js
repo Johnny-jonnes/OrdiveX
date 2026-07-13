@@ -2191,6 +2191,11 @@ async function _validerVenteLogic() {
   }
 
   if (method === 'credit') {
+    // Vérifier la permission de vente à crédit
+    if (window.Auth && !Auth.can('pos_allow_credit') && DB.AppState.currentUser?.role !== 'admin') {
+      UI.toast('⛔ Vous n\'avez pas la permission d\'effectuer des ventes à crédit. Contactez le responsable.', 'error', 5000);
+      return;
+    }
     if (!posCurrentPatient) {
       UI.toast('Un patient doit être sélectionné pour une vente à crédit', 'error'); return;
     }
@@ -2213,6 +2218,7 @@ async function _validerVenteLogic() {
       console.error('[Credit Check Error]', e);
     }
   }
+
 
   const btn = document.getElementById('btn-valider');
   if (btn) { btn.disabled = true; btn.textContent = 'Traitement...'; }

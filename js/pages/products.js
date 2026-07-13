@@ -768,6 +768,10 @@ async function updateProduct(id) {
 }
 
 async function deleteProduct(id) {
+  if (window.Auth && !Auth.can('supprimer_produit') && DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('⛔ Vous n\'avez pas la permission de désactiver des produits.', 'error', 5000);
+    return;
+  }
   const p = await DB.dbGet('products', id);
   if (!p) return;
   const ok = await UI.confirm(`Êtes-vous sûr de vouloir désactiver "${p.name}" ?\n\nLe produit ne sera plus visible dans le catalogue ni au point de vente.`);
@@ -777,6 +781,7 @@ async function deleteProduct(id) {
   UI.toast('Produit désactivé', 'success');
   Router.navigate('products');
 }
+
 
 function exportProducts() {
   const data = window._productsData || [];
