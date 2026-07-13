@@ -152,7 +152,7 @@ const AlertsEngine = {
       if (days === null) continue;
 
       const prod = productMap[lot.productId];
-      if (!prod) continue;
+      if (!prod || prod.status === 'inactive') continue;
 
       // Don't re-alert same lot same day
       const hasAlert = existingAlerts.some(a =>

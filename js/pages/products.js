@@ -87,6 +87,11 @@ async function renderProducts(container) {
         <option value="1">Ordonnance (Rx)</option>
         <option value="0">Sans ordonnance (OTC)</option>
       </select>
+      <select id="prod-status" class="filter-select" onchange="filterProducts()">
+        <option value="active" selected>Statut : Actifs</option>
+        <option value="inactive">Statut : Inactifs (Supprimés)</option>
+        <option value="all">Statut : Tous</option>
+      </select>
     </div>
     <div id="prod-table-container"></div>
   `;
@@ -102,7 +107,7 @@ async function renderProducts(container) {
 
   window._productsData = enrichedProducts;
   window._selectedProductIds = new Set(); // init sélection vide
-  renderProductsTable(enrichedProducts);
+  filterProducts();
   if (window.lucide) lucide.createIcons();
   if (window._autoAnimateKPIValues) setTimeout(_autoAnimateKPIValues, 100);
 }
@@ -113,12 +118,20 @@ function filterProducts() {
   const form = document.getElementById('prod-form')?.value || '';
   const sort = document.getElementById('prod-sort')?.value || 'alpha-asc';
   const rx = document.getElementById('prod-rx')?.value;
+  const status = document.getElementById('prod-status')?.value || 'active';
   let data = window._productsData || [];
   
   if (search) data = data.filter(p => p.name.toLowerCase().includes(search) || (p.dci || '').toLowerCase().includes(search) || (p.code || '').toLowerCase().includes(search));
   if (cat) data = data.filter(p => p.category === cat);
   if (form) data = data.filter(p => (p.form || p.forme || '').trim() === form);
   if (rx !== '') data = data.filter(p => p.requiresPrescription === (rx === '1'));
+  
+  if (status === 'active') {
+    data = data.filter(p => p.status !== 'inactive');
+  } else if (status === 'inactive') {
+    data = data.filter(p => p.status === 'inactive');
+  }
+
   
   // Sorting
   if (sort === 'alpha' || sort === 'alpha-asc') {

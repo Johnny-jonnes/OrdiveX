@@ -5,11 +5,12 @@
 async function renderStock(container) {
   UI.loading(container, 'Chargement des stocks...');
 
-  const [products, stockAll, lots] = await Promise.all([
+  const [allProducts, stockAll, lots] = await Promise.all([
     DB.dbGetAll('products'),
     DB.dbGetAll('stock'),
     DB.dbGetAll('lots'),
   ]);
+  const products = allProducts.filter(p => p.status !== 'inactive');
   await new Promise(r => setTimeout(r, 0));
 
   const stockMap = {};
