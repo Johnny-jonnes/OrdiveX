@@ -1073,35 +1073,35 @@ async function updateProduct(id) {
     await DB.dbPut('products', updated);
     await DB.writeAudit('EDIT_PRODUCT', 'products', id, { name: updated.name, changes: data });
 
-    // ── Propagation en cascade vers les lots actifs du produit ──
-    const pricePropagation = updated.salePrice !== original.salePrice || updated.purchasePrice !== original.purchasePrice;
-    const expiryPropagation = updated.expiryDate && updated.expiryDate !== original.expiryDate;
+    // ══ PROPAGATION EN CASCADE VERS LES LOTS ACTIFS ══════════════════
+    // Prix de vente, prix d'achat ou date de péremption modifiés ?
+    const salePriceChanged    = updated.salePrice !== original.salePrice;
+    const purchasePriceChanged = updated.purchasePrice !== original.purchasePrice;
+    const expiryChanged        = updated.expiryDate !== original.expiryDate;
 
-    if (pricePropagation || expiryPropagation) {
+    if (salePriceChanged || purchasePriceChanged || expiryChanged) {
       try {
         const allLots = await DB.dbGetAll('lots');
         const productLots = allLots.filter(l => l.productId === id && l.status === 'active');
+        let lotsUpdated = 0;
         for (const lot of productLots) {
           const lotUpdate = { ...lot, updatedAt: Date.now() };
-          if (pricePropagation) {
-            if (updated.salePrice !== original.salePrice) lotUpdate.salePrice = updated.salePrice;
-            if (updated.purchasePrice !== original.purchasePrice) lotUpdate.purchasePrice = updated.purchasePrice;
-          }
-          if (expiryPropagation) {
-            // Propagation de la date seulement si le lot n'a pas sa propre date ou si elle correspond à l'ancienne
-            if (!lot.expiryDate || lot.expiryDate === original.expiryDate) {
-              lotUpdate.expiryDate = updated.expiryDate;
-            }
-          }
+          // Prix : propagation inconditionnelle vers tous les lots actifs
+          if (salePriceChanged)     lotUpdate.salePrice     = updated.salePrice;
+          if (purchasePriceChanged) lotUpdate.purchasePrice  = updated.purchasePrice;
+          // Date : propagation inconditionnelle vers tous les lots actifs
+          if (expiryChanged && updated.expiryDate) lotUpdate.expiryDate = updated.expiryDate;
           await DB.dbPut('lots', lotUpdate);
+          lotsUpdated++;
         }
-        if (productLots.length > 0) {
-          console.log(`[Products] Cascade: ${productLots.length} lot(s) mis à jour pour le produit ${id}`);
+        if (lotsUpdated > 0) {
+          console.log(`[Products] Cascade: ${lotsUpdated} lot(s) synchronisés pour "${updated.name}"`);
         }
       } catch (cascadeErr) {
         console.warn('[Products] Erreur cascade lots:', cascadeErr);
       }
     }
+    // ═════════════════════════════════════════════════════════════════
 
     UI.closeModal();
     UI.toast('Produit modifié avec succès', 'success');

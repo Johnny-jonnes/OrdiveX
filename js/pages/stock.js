@@ -503,14 +503,44 @@ async function submitStockEntry() {
       });
       if (window.UI) UI.toast("Nouveau produit créé automatiquement", "info");
     } else {
-      // Update existing product's sale/purchase price if provided
-      if (data.purchasePrice || data.salePrice) {
-        const productsAll = await DB.dbGetAll('products');
-        const existingProd = productsAll.find(p => p.id === productId);
-        if (existingProd) {
-          if (data.purchasePrice) existingProd.purchasePrice = parseFloat(data.purchasePrice);
-          if (data.salePrice) existingProd.salePrice = parseFloat(data.salePrice);
+      // ── Synchronisation bidirectionnelle : stock → fiche produit ──
+      // Si des prix ou une date sont saisis dans l'entrée stock,
+      // on met à jour la fiche produit ET tous ses lots actifs existants
+      const existingProd = await DB.dbGet('products', productId).catch(() => null);
+      if (existingProd) {
+        let prodChanged = false;
+        if (data.purchasePrice && parseFloat(data.purchasePrice) > 0 && parseFloat(data.purchasePrice) !== existingProd.purchasePrice) {
+          existingProd.purchasePrice = parseFloat(data.purchasePrice);
+          prodChanged = true;
+        }
+        if (data.salePrice && parseFloat(data.salePrice) > 0 && parseFloat(data.salePrice) !== existingProd.salePrice) {
+          existingProd.salePrice = parseFloat(data.salePrice);
+          prodChanged = true;
+        }
+        if (data.expiryDate && data.expiryDate !== existingProd.expiryDate) {
+          existingProd.expiryDate = data.expiryDate;
+          prodChanged = true;
+        }
+        if (prodChanged) {
+          existingProd.updatedAt = Date.now();
           await DB.dbPut('products', existingProd);
+          // Propager aux lots actifs existants
+          try {
+            const allLots = await DB.dbGetAll('lots');
+            const productLots = allLots.filter(l => l.productId === productId && l.status === 'active');
+            for (const lot of productLots) {
+              const lotUpdate = { ...lot, updatedAt: Date.now() };
+              if (data.purchasePrice && parseFloat(data.purchasePrice) > 0) lotUpdate.purchasePrice = parseFloat(data.purchasePrice);
+              if (data.salePrice && parseFloat(data.salePrice) > 0) lotUpdate.salePrice = parseFloat(data.salePrice);
+              // Date : uniquement si le lot n'a pas sa propre date récente
+              if (data.expiryDate && (!lot.expiryDate || lot.expiryDate === existingProd.expiryDate)) {
+                lotUpdate.expiryDate = data.expiryDate;
+              }
+              await DB.dbPut('lots', lotUpdate);
+            }
+          } catch (cascadeErr) {
+            console.warn('[StockEntry] Erreur cascade lots:', cascadeErr);
+          }
         }
       }
     }
