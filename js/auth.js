@@ -84,14 +84,14 @@ const Auth = {
 
   // Permissions par défaut pour chaque rôle (modifiables depuis les Paramètres)
   _defaultPerms: {
-    responsable:       ['voir_ca','voir_benefices','voir_valeur_stock','voir_marges','voir_rapports_financiers','modifier_prix','effectuer_inventaire','exporter_donnees','gerer_utilisateurs'],
-    rh:                ['voir_salaires','gerer_utilisateurs'],
-    pharmacien:        ['voir_ca','voir_valeur_stock','voir_cout_achat','effectuer_inventaire','exporter_donnees','modifier_prix'],
-    caissier:          [],
-    receptionniste:    [],
-    gestionnaire_stock:['voir_valeur_stock','effectuer_inventaire','exporter_donnees'],
-    comptable:         ['voir_ca','voir_benefices','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers'],
-    assistant:         [],
+    responsable:        ['voir_ca','voir_benefices','voir_prix_achat','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers','voir_statistiques','voir_salaires','modifier_prix','annuler_vente','annuler_facture','appliquer_remise','effectuer_inventaire','effectuer_sortie_stock','exporter_donnees','gerer_utilisateurs','gerer_parametres','acceder_sauvegardes','module_stock','module_achats','module_rh','module_rapports','module_caisse'],
+    rh:                 ['voir_salaires','gerer_utilisateurs','module_rh'],
+    pharmacien:         ['voir_ca','voir_valeur_stock','voir_cout_achat','voir_prix_achat','effectuer_inventaire','effectuer_sortie_stock','exporter_donnees','modifier_prix','appliquer_remise','module_stock','module_achats','module_caisse','module_rapports'],
+    caissier:           ['appliquer_remise','module_caisse'],
+    receptionniste:     ['module_caisse'],
+    gestionnaire_stock: ['voir_valeur_stock','effectuer_inventaire','effectuer_sortie_stock','exporter_donnees','module_stock'],
+    comptable:          ['voir_ca','voir_benefices','voir_cout_achat','voir_valeur_stock','voir_marges','voir_rapports_financiers','voir_statistiques','exporter_donnees','module_rapports'],
+    assistant:          [],
   },
 
   // Charger les permissions depuis IndexedDB au login

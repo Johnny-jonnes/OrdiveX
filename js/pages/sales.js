@@ -120,8 +120,20 @@ function filterSales() {
 
   let data = window._salesData || [];
 
-  if (from) data = data.filter(s => new Date(s.date) >= new Date(from));
-  if (to) data = data.filter(s => new Date(s.date) <= new Date(to + 'T23:59:59'));
+  if (from) {
+    data = data.filter(s => {
+      if (!s.date) return false;
+      const dStr = s.date.slice(0, 10);
+      return dStr >= from;
+    });
+  }
+  if (to) {
+    data = data.filter(s => {
+      if (!s.date) return false;
+      const dStr = s.date.slice(0, 10);
+      return dStr <= to;
+    });
+  }
   if (pay) data = data.filter(s => s.paymentMethod === pay);
   if (returnStatus === 'normal') data = data.filter(s => !s.returnStatus);
   else if (returnStatus === 'partially_returned') data = data.filter(s => s.returnStatus === 'partially_returned');
@@ -327,7 +339,7 @@ async function viewSaleDetail(saleId) {
 }
 
 function exportSales() {
-  const data = window._salesData || [];
+  const data = window._filteredSales || window._salesData || [];
   const csv = '\uFEFFN° Vente,Date,Total,Remise,Paiement,Statut\n' +
     data.map(s => [s.id, UI.formatDateTime(new Date(s.date).getTime()), s.total, s.discount || 0, s.paymentMethod, s.status].join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -783,7 +795,7 @@ async function annulerVente(saleId) {
 
 window.exportSalesPDF = function() {
   if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
-  const data = (window._salesData || []).map(s => [
+  const data = (window._filteredSales || window._salesData || []).map(s => [
     'V-' + s.id.toString().slice(-6),
     new Date(s.date).toLocaleString('fr-FR'),
     UI.formatCurrency(s.total),

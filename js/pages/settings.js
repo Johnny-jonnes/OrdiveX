@@ -990,12 +990,28 @@ async function renderSettings(container) {
 
     <!-- ══════════════ ONGLET : PERMISSIONS ══════════════ -->
     <div class="settings-tab-pane" id="tab-permissions">
-      <div class="settings-card2" style="overflow-x:auto">
-        <h3 class="settings-card2-title"><i data-lucide="shield-check"></i> Permissions par Rôle</h3>
-        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">Configurez précisément ce que chaque rôle peut voir ou faire. Les changements sont appliqués immédiatement. L'Administrateur a toujours toutes les permissions.</p>
-        <div id="permissions-grid-container"><p style="color:var(--text-muted);font-size:13px">Chargement de la grille...</p></div>
-        <div style="margin-top:16px">
-          <button class="btn btn-primary" onclick="savePermissionsGrid()"><i data-lucide="save"></i> Enregistrer les permissions</button>
+      <div class="settings-card2">
+        <h3 class="settings-card2-title"><i data-lucide="shield-check"></i> Permissions Individuelles</h3>
+        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:20px">Choisissez un utilisateur pour configurer précisément ce qu'il peut voir ou faire dans l'application. L'Administrateur a toujours toutes les permissions.</p>
+
+        <div style="margin-bottom:24px;max-width:480px">
+          <label style="font-weight:700;font-size:.85rem;display:block;margin-bottom:8px;color:var(--text)"><i data-lucide="user" style="width:14px;height:14px;vertical-align:-2px"></i> Choisir un utilisateur / employé :</label>
+          <select id="perm-user-select" class="form-control" style="font-size:.9rem" onchange="window.onPermUserSelectChange(this.value)">
+            <option value="">-- Sélectionner un utilisateur --</option>
+            ${users.filter(u => u.role !== 'admin').map(u => `<option value="${u.id}">${u.name || u.username} (@${u.username}) — ${u.role}</option>`).join('')}
+          </select>
+        </div>
+
+        <div id="permissions-grid-container">
+          <div style="text-align:center;padding:40px 20px;background:var(--bg);border-radius:12px;border:2px dashed var(--border)">
+            <i data-lucide="users" style="width:36px;height:36px;color:var(--text-muted);margin-bottom:12px;display:block;margin-inline:auto"></i>
+            <p style="color:var(--text-muted);font-size:.88rem;margin:0">Veuillez choisir un utilisateur ci-dessus pour configurer ses permissions.</p>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;display:none;gap:10px" id="perm-save-btn-container">
+          <button class="btn btn-danger btn-sm" onclick="window.resetSelectedUserPermissions()"><i data-lucide="rotate-ccw"></i> Réinitialiser</button>
+          <button class="btn btn-primary" onclick="window.saveSelectedUserPermissions()"><i data-lucide="save"></i> Enregistrer les permissions</button>
         </div>
       </div>
     </div>
@@ -1015,80 +1031,138 @@ window.switchSettingsTab = function(tabName, btn) {
   if (pane) pane.classList.add('active');
   if (btn) btn.classList.add('active');
   if (window.lucide) lucide.createIcons();
-  // Charger la grille de permissions lors de l'affichage de l'onglet
-  if (tabName === 'permissions') {
-    setTimeout(() => renderPermissionsGrid(), 50);
-  }
+  // Re-init Lucide icons inside the newly visible pane
+  if (pane && window.lucide) lucide.createIcons({ node: pane });
 };
 
-// ─── GRILLE PERMISSIONS PAR RÔLE (avec catégories) ─────────────────────────────
+// ─── SÉLECTION UTILISATEUR POUR PERMISSIONS ───────────────────────────────────
+window.onPermUserSelectChange = function(userId) {
+  window._selectedPermUserId = userId ? parseInt(userId) : null;
+  renderPermissionsGrid();
+};
+
+// ─── GRILLE PERMISSIONS PAR UTILISATEUR ───────────────────────────────────────
 window.renderPermissionsGrid = async function() {
   const container = document.getElementById('permissions-grid-container');
+  const saveBtn = document.getElementById('perm-save-btn-container');
   if (!container) return;
 
-  const rec = await DB.dbGetByKey('settings', 'role_permissions').catch(() => null);
-  const currentPerms = rec && rec.value
+  const userId = window._selectedPermUserId;
+  if (!userId) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;background:var(--bg);border-radius:12px;border:2px dashed var(--border)">
+        <i data-lucide="users" style="width:36px;height:36px;color:var(--text-muted);margin-bottom:12px;display:block;margin-inline:auto"></i>
+        <p style="color:var(--text-muted);font-size:.88rem;margin:0">Veuillez choisir un utilisateur ci-dessus pour configurer ses permissions.</p>
+      </div>`;
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (window.lucide) lucide.createIcons({ node: container });
+    return;
+  }
+
+  const user = await DB.dbGet('users', userId).catch(() => null);
+  if (!user) { container.innerHTML = '<p style="color:red">Utilisateur introuvable.</p>'; return; }
+
+  // Charger les permissions individuelles existantes
+  const rec = await DB.dbGetByKey('settings', `user_permissions_${userId}`).catch(() => null);
+  const userPerms = rec && rec.value
     ? (typeof rec.value === 'string' ? JSON.parse(rec.value) : rec.value)
-    : {};
+    : null; // null = pas encore d'overrides → utiliser les defaults du rôle
 
-  const roles = Auth.ALL_ROLES;
+  const roleKey = String(user.role || '').toLowerCase().replace(/[\s-]+/g, '_');
+  const rolePerms = (window._rolePermissions || {})[roleKey] || Auth._defaultPerms[roleKey] || [];
+
   const perms = Auth.ALL_PERMISSIONS;
-  const cats = Auth.ALL_PERMISSION_CATS || [{ key: 'all', label: 'Toutes' }];
+  const cats = Auth.ALL_PERMISSION_CATS || [{ key: 'all', label: 'Toutes les permissions' }];
 
-  const getCurrent = (roleKey, permKey) => {
-    const stored = (currentPerms[roleKey] !== undefined) ? currentPerms[roleKey] : Auth._defaultPerms[roleKey];
-    return (stored || []).includes(permKey);
-  };
+  const badgeColors = { admin:'#7c3aed', pharmacien:'#0ea5e9', caissier:'#10b981', responsable:'#f59e0b', rh:'#ec4899', gestionnaire_stock:'#6366f1', comptable:'#14b8a6', assistant:'#94a3b8' };
+  const roleColor = badgeColors[roleKey] || '#6366f1';
 
-  let html = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">
-    <thead>
-      <tr style="background:var(--primary-color);color:#fff">
-        <th style="padding:10px 12px;text-align:left;border-radius:6px 0 0 0;white-space:nowrap">Permission</th>
-        ${roles.map(r => `<th style="padding:10px 8px;text-align:center;white-space:nowrap">${r.label}</th>`).join('')}
-      </tr>
-    </thead>
-    <tbody>`;
+  let html = `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg);border-radius:10px;margin-bottom:16px;border:1px solid var(--border)">
+      <div style="width:40px;height:40px;border-radius:50%;background:${roleColor};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0">${(user.name||'?').charAt(0).toUpperCase()}</div>
+      <div>
+        <div style="font-weight:700;font-size:.95rem">${user.name || user.username}</div>
+        <div style="font-size:.78rem;color:var(--text-muted)">@${user.username} — <span style="color:${roleColor};font-weight:600">${user.role}</span>${userPerms ? ' · <span style="color:#10b981;font-weight:600">Permissions personnalisées</span>' : ' · Permissions par défaut du rôle'}</div>
+      </div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden">`;
 
   cats.forEach(cat => {
     const catPerms = perms.filter(p => (p.cat || 'all') === cat.key);
     if (catPerms.length === 0) return;
-    // En-tête catégorie
-    html += `<tr><td colspan="${roles.length + 1}" style="background:var(--primary-color);color:#fff;padding:8px 12px;font-weight:700;font-size:13px;letter-spacing:.3px">${cat.label}</td></tr>`;
+    html += `<div style="background:var(--primary);color:#fff;padding:10px 16px;font-weight:700;font-size:13px;letter-spacing:.3px">${cat.label}</div>`;
     catPerms.forEach((perm, i) => {
-      const bg = i % 2 === 0 ? 'var(--surface)' : 'var(--surface-2, var(--bg))';
-      html += `<tr style="background:${bg}">
-        <td style="padding:9px 12px 9px 24px;font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap">${perm.label}</td>
-        ${roles.map(role => `
-        <td style="text-align:center;border-bottom:1px solid var(--border)">
-          <input type="checkbox" id="perm_${role.key}_${perm.key}"
-            ${getCurrent(role.key, perm.key) ? 'checked' : ''}
-            style="width:16px;height:16px;cursor:pointer;accent-color:var(--primary-color)">
-        </td>`).join('')}
-      </tr>`;
+      const bg = i % 2 === 0 ? 'var(--surface)' : 'var(--bg)';
+      let hasPerm;
+      if (userPerms !== null && userPerms[perm.key] !== undefined) {
+        hasPerm = userPerms[perm.key];
+      } else {
+        hasPerm = rolePerms.includes(perm.key);
+      }
+      const isCustomized = userPerms !== null && userPerms[perm.key] !== undefined;
+      html += `
+        <label style="display:flex;align-items:center;padding:11px 16px;background:${bg};border-bottom:1px solid var(--border);gap:14px;cursor:pointer">
+          <input type="checkbox" id="user_perm_${perm.key}" ${hasPerm ? 'checked' : ''}
+            style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary);flex-shrink:0">
+          <span style="flex:1;font-size:.88rem;font-weight:500">${perm.label}</span>
+          ${isCustomized ? '<span style="font-size:.72rem;color:#f59e0b;white-space:nowrap;font-weight:700;background:rgba(245,158,11,.12);padding:2px 7px;border-radius:10px">Personnalisé</span>' : '<span style="font-size:.72rem;color:var(--text-muted);white-space:nowrap">Hérité du rôle</span>'}
+        </label>`;
     });
   });
 
-  html += `</tbody></table></div>`;
+  html += `</div>`;
   container.innerHTML = html;
+  if (saveBtn) saveBtn.style.display = 'flex';
+  if (window.lucide) lucide.createIcons({ node: container });
 };
 
-window.savePermissionsGrid = async function() {
-  const roles = Auth.ALL_ROLES;
+// ─── SAUVEGARDER LES PERMISSIONS D'UN UTILISATEUR ─────────────────────────────
+window.saveSelectedUserPermissions = async function() {
+  const userId = window._selectedPermUserId;
+  if (!userId) { UI.toast('Veuillez d\'abord choisir un utilisateur', 'warning'); return; }
   const perms = Auth.ALL_PERMISSIONS;
-  const newPerms = {};
-  roles.forEach(role => {
-    newPerms[role.key] = perms
-      .filter(p => document.getElementById(`perm_${role.key}_${p.key}`)?.checked)
-      .map(p => p.key);
+  const overrides = {};
+  perms.forEach(perm => {
+    const chk = document.getElementById(`user_perm_${perm.key}`);
+    if (chk) overrides[perm.key] = chk.checked;
   });
   try {
-    await DB.dbPut('settings', { key: 'role_permissions', value: JSON.stringify(newPerms) });
-    window._rolePermissions = newPerms;
-    UI.toast('✅ Permissions par rôle enregistrées et appliquées', 'success', 3000);
+    await DB.dbPut('settings', { key: `user_permissions_${userId}`, value: JSON.stringify(overrides) });
+    if (DB.AppState.currentUser && DB.AppState.currentUser.id === userId) {
+      DB.AppState.currentUser.permissions = overrides;
+      if (typeof initSidebar === 'function') initSidebar();
+    }
+    await DB.writeAudit('SET_USER_PERMISSIONS', 'users', userId, { overrides });
+    UI.toast('✅ Permissions enregistrées et appliquées immédiatement', 'success', 3000);
+    renderPermissionsGrid(); // Re-render pour afficher les badges "Personnalisé"
   } catch(e) {
-    UI.toast('Erreur lors de la sauvegarde des permissions', 'error');
+    UI.toast('Erreur : ' + (e.message || e), 'error');
   }
 };
+
+// ─── RÉINITIALISER LES PERMISSIONS D'UN UTILISATEUR ───────────────────────────
+window.resetSelectedUserPermissions = async function() {
+  const userId = window._selectedPermUserId;
+  if (!userId) return;
+  const ok = await UI.confirm('Réinitialiser les permissions personnalisées de cet utilisateur ?\n\nIl retrouvera les permissions par défaut de son rôle.');
+  if (!ok) return;
+  try {
+    await DB.dbDelete('settings', `user_permissions_${userId}`);
+    if (DB.AppState.currentUser && DB.AppState.currentUser.id === userId) {
+      DB.AppState.currentUser.permissions = {};
+      if (typeof initSidebar === 'function') initSidebar();
+    }
+    UI.toast('Permissions réinitialisées — retour aux défauts du rôle', 'success', 3000);
+    renderPermissionsGrid();
+  } catch(e) {
+    UI.toast('Erreur : ' + (e.message || e), 'error');
+  }
+};
+
+// Alias conservé pour compatibilité
+window.savePermissionsGrid = window.saveSelectedUserPermissions;
+
+
 
 // ─── PERMISSIONS PAR UTILISATEUR (Overrides individuels) ──────────────────────
 window.editUserPermissions = async function(userId) {

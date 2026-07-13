@@ -1,5 +1,5 @@
 {
-  "version": "9.7.59",
+  "version": "9.7.60",
   "date": "2026-07-13",
-  "changelog": "v9.7.59 : Paramètres fonctionnels (devise dynamique, format de date, auto-print, stock négatif, lot/expiration/prix obligatoires, seuil d'alerte configurable, orientation PDF). Permissions renforcées (annulation vente avec restauration stock/lots, annulation facture avec rollback, modifier_prix, ajuster_stock). Édition et suppression de factures. Pagination RH (employés 20/page, paie 25/page)."
+  "changelog": "v9.7.60 : Correction export ventes (PDF/CSV utilise les ventes filtrées). Refonte onglet Permissions : sélecteur d'utilisateur + cases à cocher par catégorie (Modules, Financier, Commercial, Stock, Admin). Correction filtrage par date timezone-safe. Permissions de module incluses dans les défauts de chaque rôle. Priorité permissions individuelles > rôle dans le menu."
 }
