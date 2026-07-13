@@ -343,17 +343,17 @@ function bulkEditProducts() {
   if (!ids.length) return;
 
   const FIELDS = [
-    { value: 'category',           label: '📂 Catégorie' },
-    { value: 'form',               label: '💊 Forme galénique' },
-    { value: 'salePrice',          label: '💰 Prix de vente' },
-    { value: 'purchasePrice',      label: '🛒 Prix d\'achat' },
-    { value: 'minStock',           label: '📦 Seuil minimum de stock' },
-    { value: 'expiryDate',         label: '📅 Date de péremption' },
-    { value: 'requiresPrescription', label: '📋 Ordonnance requise (Rx/OTC)' },
-    { value: 'status',             label: '🔘 Statut (actif/inactif)' },
-    { value: 'brand',              label: '🏷️ Marque / Laboratoire' },
-    { value: 'tva',                label: '📊 TVA (%)' },
-    { value: 'unit',               label: '📐 Unité de vente' },
+    { value: 'category',             label: 'Categorie' },
+    { value: 'form',                 label: 'Forme galenique' },
+    { value: 'salePrice',            label: 'Prix de vente' },
+    { value: 'purchasePrice',        label: "Prix d'achat" },
+    { value: 'minStock',             label: 'Seuil minimum de stock' },
+    { value: 'expiryDate',           label: 'Date de peremption' },
+    { value: 'requiresPrescription', label: 'Ordonnance requise (Rx/OTC)' },
+    { value: 'status',               label: 'Statut (actif/inactif)' },
+    { value: 'brand',                label: 'Marque / Laboratoire' },
+    { value: 'tva',                  label: 'TVA (%)' },
+    { value: 'unit',                 label: 'Unite de vente' },
   ];
 
   UI.modal(
@@ -438,8 +438,8 @@ function renderBulkEditInput() {
       <div class="form-group">
         <label class="form-label">Statut</label>
         <select id="bulk-value" class="form-select">
-          <option value="active">✅ Actif — visible dans le catalogue</option>
-          <option value="inactive">❌ Inactif — masqué du catalogue et POS</option>
+          <option value="active">Actif — visible dans le catalogue</option>
+          <option value="inactive">Inactif — masqué du catalogue et POS</option>
         </select>
       </div>`,
     brand: `
@@ -482,17 +482,32 @@ async function applyBulkEdit() {
 
   const ids = [...(window._selectedProductIds || [])];
   let done = 0;
+
+  // ── Champs à propager en cascade vers les lots actifs ──
+  const lotCascadeFields = { salePrice: 'salePrice', purchasePrice: 'purchasePrice', expiryDate: 'expiryDate' };
+
   for (const id of ids) {
     const p = await DB.dbGet('products', id).catch(() => null);
-    if (p) {
-      await DB.dbPut('products', { ...p, [field]: value, updatedAt: Date.now() });
-      done++;
+    if (!p) continue;
+
+    // Mise à jour du produit
+    await DB.dbPut('products', { ...p, [field]: value, updatedAt: Date.now() });
+    done++;
+
+    // ── Propagation en cascade vers les lots actifs ──
+    if (lotCascadeFields[field]) {
+      const allLots = await DB.dbGetAll('lots').catch(() => []);
+      const productLots = allLots.filter(l => l.productId === id && l.status === 'active');
+      for (const lot of productLots) {
+        await DB.dbPut('lots', { ...lot, [lotCascadeFields[field]]: value, updatedAt: Date.now() });
+      }
     }
   }
+
   await DB.writeAudit('BULK_EDIT', 'products', null, { ids, field, value, count: done });
   UI.closeModal();
   window._selectedProductIds = new Set();
-  UI.toast(`✅ Champ "${field}" mis à jour sur ${done} produit${done > 1 ? 's' : ''}.`, 'success');
+  UI.toast(`Champ "${field}" mis à jour sur ${done} produit${done > 1 ? 's' : ''} (et leurs lots).`, 'success');
   Router.navigate('products');
 }
 
@@ -1057,6 +1072,37 @@ async function updateProduct(id) {
   try {
     await DB.dbPut('products', updated);
     await DB.writeAudit('EDIT_PRODUCT', 'products', id, { name: updated.name, changes: data });
+
+    // ── Propagation en cascade vers les lots actifs du produit ──
+    const pricePropagation = updated.salePrice !== original.salePrice || updated.purchasePrice !== original.purchasePrice;
+    const expiryPropagation = updated.expiryDate && updated.expiryDate !== original.expiryDate;
+
+    if (pricePropagation || expiryPropagation) {
+      try {
+        const allLots = await DB.dbGetAll('lots');
+        const productLots = allLots.filter(l => l.productId === id && l.status === 'active');
+        for (const lot of productLots) {
+          const lotUpdate = { ...lot, updatedAt: Date.now() };
+          if (pricePropagation) {
+            if (updated.salePrice !== original.salePrice) lotUpdate.salePrice = updated.salePrice;
+            if (updated.purchasePrice !== original.purchasePrice) lotUpdate.purchasePrice = updated.purchasePrice;
+          }
+          if (expiryPropagation) {
+            // Propagation de la date seulement si le lot n'a pas sa propre date ou si elle correspond à l'ancienne
+            if (!lot.expiryDate || lot.expiryDate === original.expiryDate) {
+              lotUpdate.expiryDate = updated.expiryDate;
+            }
+          }
+          await DB.dbPut('lots', lotUpdate);
+        }
+        if (productLots.length > 0) {
+          console.log(`[Products] Cascade: ${productLots.length} lot(s) mis à jour pour le produit ${id}`);
+        }
+      } catch (cascadeErr) {
+        console.warn('[Products] Erreur cascade lots:', cascadeErr);
+      }
+    }
+
     UI.closeModal();
     UI.toast('Produit modifié avec succès', 'success');
     Router.navigate('products');

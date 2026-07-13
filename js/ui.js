@@ -274,7 +274,12 @@ const UI = {
     var theadRow = document.createElement('tr');
     for (var ci = 0; ci < columns.length; ci++) {
       var th = document.createElement('th');
-      th.textContent = columns[ci].label || '';
+      var labelVal = columns[ci].label || '';
+      if (typeof labelVal === 'string' && (labelVal.includes('<') || labelVal.includes('&'))) {
+        th.innerHTML = labelVal;
+      } else {
+        th.textContent = labelVal;
+      }
       theadRow.appendChild(th);
     }
     thead.appendChild(theadRow);
@@ -295,7 +300,13 @@ const UI = {
       for (var cj = 0; cj < columns.length; cj++) {
         var col = columns[cj];
         var td = document.createElement('td');
-        td.setAttribute('data-label', col.label || '');
+        
+        var labelClean = col.label || '';
+        if (typeof labelClean === 'string' && labelClean.includes('<')) {
+          labelClean = ''; // Pas de code HTML dans l'attribut responsive
+        }
+        td.setAttribute('data-label', labelClean);
+        
         var val = typeof col.render === 'function' ? col.render(row, globalIdx) : (row[col.key] !== undefined && row[col.key] !== null ? row[col.key] : '-');
         // Seul innerHTML si la valeur contient du HTML (badges, etc)
         if (typeof val === 'string' && (val.includes('<') || val.includes('&'))) {
