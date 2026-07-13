@@ -1,5 +1,5 @@
 {
-  "version": "9.7.58",
-  "date": "2026-07-12",
-  "changelog": "v9.7.58 : Intégration du contrôle d'accès dynamique et individuel aux modules (Stock, Caisse, Achats, RH, Rapports) dans le menu de navigation latérale (initSidebar) et la fonction de routage (navigatePage)."
+  "version": "9.7.59",
+  "date": "2026-07-13",
+  "changelog": "v9.7.59 : Paramètres fonctionnels (devise dynamique, format de date, auto-print, stock négatif, lot/expiration/prix obligatoires, seuil d'alerte configurable, orientation PDF). Permissions renforcées (annulation vente avec restauration stock/lots, annulation facture avec rollback, modifier_prix, ajuster_stock). Édition et suppression de factures. Pagination RH (employés 20/page, paie 25/page)."
 }

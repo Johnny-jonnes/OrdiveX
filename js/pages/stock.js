@@ -696,8 +696,11 @@ async function showAdjustStock(productId) {
 
 async function submitAdjustStock(productId, oldQty) {
   try {
-    if (!DB.AppState.currentUser || DB.AppState.currentUser.role !== 'admin') {
-      UI.toast('Permission refus\u00e9e', 'error'); return;
+    // ── Contrôle de permission ──
+    const isAdmin = DB.AppState.currentUser?.role === 'admin';
+    const canAdjust = Auth.can('effectuer_sortie_stock') || Auth.can('ajuster_stock');
+    if (!DB.AppState.currentUser || (!isAdmin && !canAdjust)) {
+      UI.toast('⛔ Permission refusée — Vous n\'avez pas le droit d\'ajuster le stock.', 'error'); return;
     }
     var form = document.getElementById('adjust-stock-form');
     if (!form || !form.checkValidity()) { if (form) form.reportValidity(); return; }

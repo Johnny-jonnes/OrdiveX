@@ -8,12 +8,33 @@
   'use strict';
 
   // ─── Helpers ────────────────────────────────────────────────────────────
-  const fmt = (n) => Number(n || 0).toLocaleString('fr-GN') + ' GNF';
+  const fmt = (n) => UI.formatCurrency(n);
   const fmtN = (n) => Number(n || 0).toLocaleString('fr-GN');
   const today = () => new Date().toISOString().slice(0, 10);
   const ym = () => new Date().toISOString().slice(0, 7);
   const initials = (s) => (s || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  const dateLabel = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+  const dateLabel = (d) => d ? UI.formatDate(d) : '—';
+
+  // ─── Pagination helper ─────────────────────────────────────────────────
+  function paginateData(data, page, pageSize = 25) {
+    const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+    const safePage = Math.min(Math.max(1, page), totalPages);
+    const start = (safePage - 1) * pageSize;
+    return { items: data.slice(start, start + pageSize), page: safePage, totalPages, total: data.length };
+  }
+
+  function renderPaginationBar(containerId, currentPage, totalPages, total, onPageChange) {
+    if (totalPages <= 1) return '';
+    const prevDisabled = currentPage <= 1 ? 'disabled' : '';
+    const nextDisabled = currentPage >= totalPages ? 'disabled' : '';
+    // Store callback globally for onclick
+    window['_hrPaginate_' + containerId] = onPageChange;
+    return `<div class="pagination-bar" style="display:flex;align-items:center;justify-content:center;gap:10px;margin:12px 0;font-size:13px;">
+      <button class="btn btn-xs btn-secondary" ${prevDisabled} onclick="_hrPaginate_${containerId}(${currentPage - 1})"><i data-lucide="chevron-left"></i></button>
+      <span>Page <strong>${currentPage}</strong> / ${totalPages} — ${total} éléments</span>
+      <button class="btn btn-xs btn-secondary" ${nextDisabled} onclick="_hrPaginate_${containerId}(${currentPage + 1})"><i data-lucide="chevron-right"></i></button>
+    </div>`;
+  }
 
   function gs(key) {
     return window._appSettings ? (window._appSettings[key] || '') : '';
@@ -244,6 +265,7 @@
     }));
     let search = '';
     let filterStatus = '';
+    let empPage = 1;
 
     function render() {
       let list = employees.filter(e => {
@@ -252,6 +274,9 @@
         const stMatch = !filterStatus || e.status === filterStatus;
         return match && stMatch;
       });
+
+      const pg = paginateData(list, empPage, 20);
+      const pageItems = pg.items;
 
       const badgeClass = { actif:'emp-badge-actif', inactif:'emp-badge-inactif', conge:'emp-badge-conge', suspendu:'emp-badge-suspendu' };
       const badgeLabel = { actif:'Actif', inactif:'Inactif', conge:'En Congé', suspendu:'Suspendu' };
@@ -288,7 +313,7 @@
           </div>
         ` : `
           <div class="hr-employee-grid">
-            ${list.map(e => `
+            ${pageItems.map(e => `
               <div class="hr-employee-card" onclick="hrOpenEmployeDetail(${e.id})">
                 <div class="hr-emp-avatar">${e.photo ? `<img src="${e.photo}" alt="">` : initials(e.nom)}</div>
                 <div class="hr-emp-info">
@@ -307,13 +332,14 @@
               </div>
             `).join('')}
           </div>
+          ${renderPaginationBar('emp', pg.page, pg.totalPages, pg.total, (p) => { empPage = p; render(); })}
         `}
       `;
       if (window.lucide) lucide.createIcons({ node: c });
     }
 
-    window.hrEmpSearch = (v) => { search = v; render(); };
-    window.hrEmpFilter = (v) => { filterStatus = v; render(); };
+    window.hrEmpSearch = (v) => { search = v; empPage = 1; render(); };
+    window.hrEmpFilter = (v) => { filterStatus = v; empPage = 1; render(); };
     render();
   }
 
@@ -563,6 +589,7 @@
     }));
     const actifs = employees.filter(e => e.status === 'actif');
     let selectedPeriod = ym();
+    let paiePage = 1;
 
     function render() {
       const fiches = payroll.filter(p => p.period === selectedPeriod);
@@ -618,7 +645,7 @@
             </thead>
             <tbody>
               ${actifs.length === 0 ? `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-muted)">Aucun employé actif</td></tr>` : ''}
-              ${actifs.map(emp => {
+              ${(() => { const pgP = paginateData(actifs, paiePage, 25); return pgP.items.map(emp => {
                 const fiche = ficheMap.get(emp.id) || {};
                 const base = fiche.salaire ?? emp.salaire ?? 0;
                 const primes = fiche.primes || 0;
@@ -644,10 +671,7 @@
                     </td>
                   </tr>
                 `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
+              }).join('') + '</tbody></table>' + renderPaginationBar('paie', pgP.page, pgP.totalPages, pgP.total, (p) => { paiePage = p; render(); }) + '</div>'; })()}
       `;
       if (window.lucide) lucide.createIcons({ node: c });
     }

@@ -20,10 +20,11 @@ const PDFExport = {
     }
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF(options.orientation || 'portrait', 'mm', 'a4');
-    
     const settings = await DB.dbGetAll('settings') || [];
     const getSetting = (k) => { const s = settings.find(x => x.key === k); return s ? s.value : ''; };
+    const defaultOrientation = getSetting('print_format_a4') || 'portrait';
+    
+    const doc = new jsPDF(options.orientation || defaultOrientation, 'mm', 'a4');
     
     const pharmacyName = getSetting('pharmacy_name') || 'OrdiveX Pharmacie';
     const pharmacyAddress = getSetting('pharmacy_address') || '';

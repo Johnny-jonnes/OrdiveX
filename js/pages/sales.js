@@ -182,10 +182,12 @@ function renderSalesTable(data) {
       label: 'Actions', render: r => {
         const isPending = r.status === 'pending' && ['credit', 'assurance'].includes(r.paymentMethod);
         const canSms = r.paymentMethod === 'credit' && r.status === 'pending' && r.patientId;
+        const canAnnul = (Auth.can('annuler_vente') || Auth.can('supprimer_vente') || DB.AppState.currentUser?.role === 'admin') && r.status !== 'annulled';
         return `
           <button class="btn btn-xs btn-primary" onclick="viewSaleDetail(${r.id})">Détail</button>
           ${canSms ? `<button class="btn btn-xs" style="margin-left:4px;background:var(--info);color:white;border:none" onclick="openSmsModal(${r.patientId})" title="Envoyer rappel SMS"><i data-lucide="message-square" style="width:12px;height:12px"></i></button>` : ''}
           ${isPending ? `<button class="btn btn-xs btn-success" style="margin-left:4px" onclick="settleDebt(${r.id})"><i data-lucide="check-circle" style="width:12px;height:12px"></i> Encaisser</button>` : ''}
+          ${canAnnul ? `<button class="btn btn-xs btn-danger" style="margin-left:4px" onclick="annulerVente(${r.id})" title="Annuler la vente"><i data-lucide="trash-2" style="width:12px;height:12px"></i></button>` : ''}
         `;
       }
     },
@@ -709,6 +711,76 @@ async function confirmSettleDebt(saleId) {
   }
 }
 
+async function annulerVente(saleId) {
+  const confirm = await UI.confirm("Êtes-vous sûr de vouloir annuler cette vente ?\n\nLes articles vendus seront rajoutés au stock et la vente sera marquée comme annulée.");
+  if (!confirm) return;
+
+  try {
+    const sale = await DB.dbGet('sales', saleId);
+    if (!sale) { UI.toast("Vente introuvable", "error"); return; }
+    if (sale.status === 'annulled') { UI.toast("Vente déjà annulée", "info"); return; }
+
+    const allSaleItems = await DB.dbGetAll('saleItems');
+    const items = allSaleItems.filter(si => si.saleId === saleId);
+
+    const stockAll = await DB.dbGetAll('stock');
+    const stockMap = new Map();
+    stockAll.forEach(s => stockMap.set(s.productId, s));
+
+    const lotsAll = await DB.dbGetAll('lots');
+    const productsAll = await DB.dbGetAll('products');
+    const prodMap = new Map(productsAll.map(p => [p.id, p]));
+
+    for (const item of items) {
+      const p = prodMap.get(item.productId);
+      let deductQty = item.quantity;
+      if (p?.allowUnitSale) {
+        if (item.saleMode === 'box') deductQty = item.quantity * (p.unitsPerBox || 1) * (p.subUnitsPerBox || 1);
+        else if (item.saleMode === 'subunit') deductQty = item.quantity * (p.unitsPerBox || 1);
+      }
+
+      // 1. Restaurer le stock global
+      const se = stockMap.get(item.productId);
+      if (se) {
+        await DB.dbPut('stock', { ...se, quantity: (se.quantity || 0) + deductQty });
+      }
+
+      // 2. Restaurer le lot
+      if (item.lotNumber) {
+        const lot = lotsAll.find(l => l.productId === item.productId && l.lotNumber === item.lotNumber);
+        if (lot) {
+          lot.quantity = (lot.quantity || 0) + deductQty;
+          lot.status = 'active';
+          await DB.dbPut('lots', lot);
+        }
+      }
+
+      // 3. Mouvement de stock inverse
+      await DB.dbAdd('movements', {
+        productId: item.productId,
+        type: 'ENTRY',
+        subType: 'SALE_CANCEL',
+        quantity: deductQty,
+        date: new Date().toISOString(),
+        userId: DB.AppState.currentUser?.id,
+        reference: `CANCEL-${saleId}`,
+        lotNumber: item.lotNumber || null
+      });
+    }
+
+    sale.status = 'annulled';
+    await DB.dbPut('sales', sale);
+
+    await DB.writeAudit('SALE_CANCEL', 'sales', saleId, { total: sale.total });
+    UI.toast("Vente annulée avec succès et stocks restaurés", "success");
+
+    // Re-render
+    renderSales(document.getElementById('app-content'));
+  } catch (err) {
+    UI.toast("Erreur lors de l'annulation : " + err.message, "error");
+  }
+}
+
 window.exportSalesPDF = function() {
   if (!window.PDFExport) return UI.toast("Module PDF non chargé", "error");
   const data = (window._salesData || []).map(s => [
@@ -717,7 +789,7 @@ window.exportSalesPDF = function() {
     UI.formatCurrency(s.total),
     UI.formatCurrency(s.discount || 0),
     s.paymentMethod || 'Espèces',
-    s.status === 'completed' ? 'Terminé' : s.status === 'credit' ? 'Crédit' : 'Annulé'
+    s.status === 'completed' ? 'Terminé' : s.status === 'credit' ? 'Crédit' : s.status === 'annulled' ? 'Annulé' : s.status
   ]);
   const headers = ["N° Vente", "Date & Heure", "Total", "Remise", "Paiement", "Statut"];
   window.PDFExport.generate("Historique des Ventes", headers, data);
@@ -729,6 +801,7 @@ window.exportSales = exportSales;
 window.settleDebt = settleDebt;
 window.selectDebtPayMethod = selectDebtPayMethod;
 window.confirmSettleDebt = confirmSettleDebt;
+window.annulerVente = annulerVente;
 
 Router.register('sales', renderSales);
 Router.register('reports', renderReports);

@@ -38,14 +38,19 @@ const AlertsEngine = {
   },
 
   async checkStockAlerts() {
-    const [products, stockAll, existingAlerts] = await Promise.all([
+    const [products, stockAll, existingAlerts, allSettings] = await Promise.all([
       DB.dbGetAll('products'),
       DB.dbGetAll('stock'),
       DB.dbGetAll('alerts'),
+      DB.dbGetAll('settings'),
     ]);
 
     const stockMap = {};
     stockAll.forEach(s => { stockMap[s.productId] = s.quantity; });
+
+    // Récupérer le seuil d'alerte global configuré
+    const thresholdSetting = (allSettings || []).find(s => s.key === 'stock_alert_threshold');
+    const defaultThreshold = parseInt(thresholdSetting ? thresholdSetting.value : '5', 10) || 5;
 
     // --- RESCUE MODE : Nettoyage d'urgence si la BDD a été spammée ---
     if (existingAlerts.length > 3000) {
@@ -71,7 +76,7 @@ const AlertsEngine = {
     for (const product of products) {
       if (product.status !== 'active') continue;
       const qty = stockMap[product.id] || 0;
-      const min = product.minStock || 10;
+      const min = product.minStock || defaultThreshold;
 
       if (qty === 0) {
         if (!ruptureSet.has(product.id) && !ruptureSet.has(-1)) newRuptures.push(product);

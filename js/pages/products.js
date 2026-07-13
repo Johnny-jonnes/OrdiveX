@@ -716,6 +716,15 @@ async function updateProduct(id) {
   const data = Object.fromEntries(new FormData(form));
   const original = await DB.dbGet('products', id);
   if (!original) return;
+
+  // ── Contrôle de permission : modification du prix ──
+  const newSalePrice = parseFloat(data.salePrice);
+  const newPurchasePrice = parseFloat(data.purchasePrice || 0);
+  if ((newSalePrice !== original.salePrice || newPurchasePrice !== original.purchasePrice)
+      && !Auth.can('modifier_prix') && DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('⛔ Vous n\'avez pas la permission de modifier les prix.', 'error', 5000);
+    return;
+  }
   const updated = {
     ...original,
     code: data.code,

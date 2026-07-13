@@ -1347,7 +1347,37 @@ async function confirmReceiveOrder(orderId) {
 
   // 1. Génération de la facture fournisseur (si coché)
   let invoiceId = null;
+  const gs = (key) => (window._appSettings || {})[key];
   if (createInvoice) {
+    let validationError = null;
+    for (let idx = 0; idx < (order.items || []).length; idx++) {
+      const item = order.items[idx];
+      const qtyReceived = parseInt(item._recvQty) || 0;
+      const conform = item._recvConform === '1';
+      const lotNumber = (item._recvLot || '').trim();
+      const expiryDate = item._recvExpiry || '';
+      const recvSalePrice = parseFloat(item._recvSalePrice || 0);
+
+      if (qtyReceived > 0 && conform) {
+        if (gs('purchase_expiry_required') !== 'false' && !expiryDate) {
+          validationError = `La date d'expiration est requise pour « ${item.productName} » (paramètre Achats activé).`;
+          break;
+        }
+        if (gs('purchase_lot_required') === 'true' && !lotNumber) {
+          validationError = `Le N° de lot est requis pour « ${item.productName} » (paramètre Achats activé).`;
+          break;
+        }
+        if (gs('purchase_saleprice_required') === 'true' && (!recvSalePrice || recvSalePrice <= 0)) {
+          validationError = `Le prix de vente est requis pour « ${item.productName} » (paramètre Achats activé).`;
+          break;
+        }
+      }
+    }
+    if (validationError) {
+      UI.toast(validationError, 'error');
+      return;
+    }
+
     for (let idx = 0; idx < (order.items || []).length; idx++) {
       const item = order.items[idx];
       const qtyReceived = parseInt(item._recvQty) || 0;

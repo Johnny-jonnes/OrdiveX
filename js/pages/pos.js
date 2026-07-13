@@ -2067,15 +2067,28 @@ async function _validerVenteLogic() {
     return;
   }
 
-  // ── Contrôle: vente sans stock autorisée ? ──
-  if (getSetting('sale_allow_no_stock') !== 'true') {
+  // ── Contrôle: stock (3 paramètres combinés) ──
+  // stock_block_on_rupture : bloque si stock === 0
+  // sale_allow_no_stock    : autorise la vente même si stock < qty demandée
+  // stock_allow_negative   : autorise le stock négatif (override le blocage)
+  const blockOnRupture = getSetting('stock_block_on_rupture') === 'true';
+  const allowNoStock = getSetting('sale_allow_no_stock') === 'true';
+  const allowNegative = getSetting('stock_allow_negative') === 'true';
+
+  if (!allowNoStock || blockOnRupture) {
     const stockAll = await DB.dbGetAll('stock');
     const stockMap = new Map();
     stockAll.forEach(s => stockMap.set(Number(s.productId), s));
     for (const item of posCart) {
       const s = stockMap.get(Number(item.productId));
       const available = s ? (s.quantity || 0) : 0;
-      if (item.qty > available) {
+      // Blocage rupture : stock === 0 et paramètre actif
+      if (blockOnRupture && available <= 0 && !allowNegative) {
+        UI.toast(`⛔ Rupture de stock pour « ${item.name} » — Vente bloquée (paramètre Sécurité Stock).`, 'error', 6000);
+        return;
+      }
+      // Blocage insuffisant : qty > stock et vente sans stock non autorisée
+      if (!allowNoStock && !allowNegative && item.qty > available) {
         UI.toast(`⛔ Stock insuffisant pour « ${item.name} » — Disponible: ${available}, Demandé: ${item.qty}`, 'error', 6000);
         return;
       }
@@ -2407,6 +2420,35 @@ async function _validerVenteLogic() {
     // Afficher reçu officiel
     const soldPids = [...new Set(posCart.map(c => c.productId))];
     await afficherRecu(saleId, [...posCart], saleData);
+
+    // ── Auto-impression si activée dans Paramètres ──
+    if (getSetting('sale_auto_print') === 'true') {
+      const ticketFmt = getSetting('ticket_format') || 'compact';
+      setTimeout(() => {
+        try {
+          if (ticketFmt === 'a4' && typeof PrintEngine !== 'undefined' && typeof PrintEngine.printInvoice === 'function') {
+            PrintEngine.printInvoice(saleId);
+          } else {
+            imprimerTicket();
+          }
+        } catch (e) { console.warn('[AutoPrint]', e); }
+      }, 600);
+    }
+
+    // ── Ouverture tiroir-caisse si activée ──
+    if (getSetting('sale_open_drawer') === 'true') {
+      try {
+        // Commande ESC/POS standard pour tiroir-caisse (pin 2)
+        const drawerCmd = new Uint8Array([0x1B, 0x70, 0x00, 0x19, 0xFA]);
+        console.log('[Tiroir-Caisse] Signal d\'ouverture envoyé (ESC/POS)');
+        // Si une imprimante USB est connectée via Web Serial API
+        if (navigator.serial && window._drawerPort) {
+          const writer = window._drawerPort.writable.getWriter();
+          await writer.write(drawerCmd);
+          writer.releaseLock();
+        }
+      } catch (e) { console.warn('[Tiroir-Caisse] Erreur:', e); }
+    }
 
     // Reset POS
     posCart = []; posCurrentPatient = null; posCurrentRx = null; posMobilePayState = 'idle';

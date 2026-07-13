@@ -108,53 +108,71 @@ function filterInvoices() {
       }
     },
     {
-      label: 'Actions', render: r => `
-      <div class="actions-cell">
-        <button class="btn btn-xs btn-primary" onclick="viewInvoice(${r.id})"><i data-lucide="eye"></i> Voir</button>
-        ${r.status === 'draft' ? `<button class="btn btn-xs btn-success" onclick="validateInvoice(${r.id})"><i data-lucide="check-circle"></i> Valider & Stock</button>` : ''}
-        <button class="btn btn-xs btn-secondary" onclick="printInvoicePDF(${r.id})"><i data-lucide="printer"></i> PDF</button>
-      </div>` },
+      label: 'Actions', render: r => {
+        const gs = (key) => (window._appSettings || {})[key];
+        const canCorriger = r.status === 'validated' && (gs('purchase_allow_edit_after') === 'true' || DB.AppState.currentUser?.role === 'admin');
+        const canDelete = r.status === 'draft' && (Auth.can('supprimer_facture') || DB.AppState.currentUser?.role === 'admin');
+        return `
+        <div class="actions-cell">
+          <button class="btn btn-xs btn-primary" onclick="viewInvoice(${r.id})"><i data-lucide="eye"></i> Voir</button>
+          ${r.status === 'draft' ? `<button class="btn btn-xs btn-success" onclick="validateInvoice(${r.id})"><i data-lucide="check-circle"></i> Valider & Stock</button>` : ''}
+          ${r.status === 'draft' ? `<button class="btn btn-xs btn-warning" onclick="showNewInvoiceForm(${r.id})"><i data-lucide="edit"></i> Modifier</button>` : ''}
+          ${canCorriger ? `<button class="btn btn-xs btn-warning" onclick="unvalidateInvoice(${r.id})"><i data-lucide="rotate-ccw"></i> Corriger</button>` : ''}
+          ${canDelete ? `<button class="btn btn-xs btn-danger" onclick="deleteInvoice(${r.id})"><i data-lucide="trash-2"></i></button>` : ''}
+          <button class="btn btn-xs btn-secondary" onclick="printInvoicePDF(${r.id})"><i data-lucide="printer"></i> PDF</button>
+        </div>`;
+      }
+    },
   ], data, { emptyMessage: 'Aucune facture trouvée', emptyIcon: 'file-search', pageSize: INVOICE_PAGE_SIZE });
+
   if (window.lucide) lucide.createIcons();
 }
 
-async function showNewInvoiceForm() {
+async function showNewInvoiceForm(invoiceId = null) {
   const suppliers = await DB.dbGetAll('suppliers');
+  window._editingInvoiceId = invoiceId;
   
-  UI.modal('<i data-lucide="file-text" class="modal-icon-inline"></i> Nouvelle Facture (Entrée de stock)', `
+  let invoice = null;
+  if (invoiceId) {
+    invoice = await DB.dbGet('invoices', invoiceId);
+  }
+
+  const title = invoice ? `Modifier la Facture N° ${invoice.invoiceNumber}` : 'Nouvelle Facture (Entrée de stock)';
+  
+  UI.modal(`<i data-lucide="file-text" class="modal-icon-inline"></i> ${title}`, `
     <form id="invoice-form" class="form-grid">
       <div class="form-row">
         <div class="form-group">
           <label>N° Facture *</label>
-          <input type="text" name="invoiceNumber" class="form-control" required placeholder="N° inscrit sur la facture">
+          <input type="text" name="invoiceNumber" class="form-control" required placeholder="N° inscrit sur la facture" value="${invoice ? invoice.invoiceNumber : ''}">
         </div>
         <div class="form-group">
           <label>Fournisseur *</label>
           <select name="supplierId" id="inv-supplier-select" class="form-control" required>
             <option value="">Sélectionner...</option>
-            ${suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}
+            ${suppliers.map(s => `<option value="${s.id}" ${invoice && invoice.supplierId === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
           <label>Date de facturation *</label>
-          <input type="date" name="date" class="form-control" value="${new Date().toISOString().split('T')[0]}" required>
+          <input type="date" name="date" class="form-control" value="${invoice ? invoice.date : new Date().toISOString().split('T')[0]}" required>
         </div>
         <div class="form-group">
           <label>Mode de paiement</label>
           <select name="paymentMethod" class="form-control">
-            <option value="virement">Virement</option>
-            <option value="cheque">Chèque</option>
-            <option value="especes">Espèces</option>
-            <option value="mobile_money">Mobile Money</option>
-            <option value="credit">Crédit</option>
+            <option value="virement" ${invoice && invoice.paymentMethod === 'virement' ? 'selected' : ''}>Virement</option>
+            <option value="cheque" ${invoice && invoice.paymentMethod === 'cheque' ? 'selected' : ''}>Chèque</option>
+            <option value="especes" ${invoice && invoice.paymentMethod === 'especes' ? 'selected' : ''}>Espèces</option>
+            <option value="mobile_money" ${invoice && invoice.paymentMethod === 'mobile_money' ? 'selected' : ''}>Mobile Money</option>
+            <option value="credit" ${invoice && invoice.paymentMethod === 'credit' ? 'selected' : ''}>Crédit</option>
           </select>
         </div>
       </div>
       <div class="form-group">
         <label>Note additionnelle</label>
-        <textarea name="note" class="form-control" rows="2" placeholder="Informations complémentaires..."></textarea>
+        <textarea name="note" class="form-control" rows="2" placeholder="Informations complémentaires...">${invoice ? invoice.note || '' : ''}</textarea>
       </div>
     </form>
 
@@ -173,7 +191,7 @@ async function showNewInvoiceForm() {
   `, {
     size: 'large',
     footer: `
-      <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+      <button class="btn btn-secondary" onclick="UI.closeModal(); window._editingInvoiceId = null;">Annuler</button>
       <button class="btn btn-warning" onclick="submitInvoice('draft')"><i data-lucide="save"></i> Enregistrer Brouillon</button>
       <button class="btn btn-success" onclick="submitInvoice('validated')"><i data-lucide="check-circle"></i> Valider (Mettre à jour stocks)</button>
     `
@@ -181,11 +199,17 @@ async function showNewInvoiceForm() {
   if (window.lucide) lucide.createIcons();
   window._invoiceItemCounter = 0;
   
-  // Ajouter un premier champ vide
-  addInvoiceItem();
+  if (invoice && invoice.items && invoice.items.length > 0) {
+    invoice.items.forEach(item => {
+      addInvoiceItem(item);
+    });
+  } else {
+    // Ajouter un premier champ vide
+    addInvoiceItem();
+  }
 }
 
-function addInvoiceItem() {
+function addInvoiceItem(itemData = null) {
   const listEl = document.getElementById('invoice-items-list');
   if (!listEl) return;
   listEl.querySelector('.rx-empty-items')?.remove();
@@ -236,6 +260,30 @@ function addInvoiceItem() {
   `;
   listEl.appendChild(div);
   if (window.lucide) lucide.createIcons();
+
+  if (itemData) {
+    setTimeout(() => {
+      const searchEl = document.getElementById(`inv-search-${idx}`);
+      const prodEl = document.getElementById(`inv-prod-${idx}`);
+      const qtyEl = document.getElementById(`inv-qty-${idx}`);
+      const priceEl = document.getElementById(`inv-price-${idx}`);
+      const salePriceEl = document.getElementById(`inv-sale-price-${idx}`);
+      const lotEl = document.getElementById(`inv-lot-${idx}`);
+      const expEl = document.getElementById(`inv-exp-${idx}`);
+      
+      if (searchEl) searchEl.value = itemData.productName || '';
+      if (prodEl) {
+        prodEl.value = itemData.productId;
+        prodEl.dataset.name = itemData.productName || '';
+      }
+      if (qtyEl) qtyEl.value = itemData.quantity || 1;
+      if (priceEl) priceEl.value = itemData.unitPrice || 0;
+      if (salePriceEl) salePriceEl.value = itemData.salePrice || 0;
+      if (lotEl) lotEl.value = itemData.lotNumber || '';
+      if (expEl) expEl.value = itemData.expiryDate || '';
+      updateInvoiceTotal();
+    }, 50);
+  }
 }
 
 function invoiceProductSearch(idx) {
@@ -365,6 +413,7 @@ async function submitInvoice(status) {
 
   const items = [];
   let validationError = null;
+  const gs = (key) => (window._appSettings || {})[key];
   
   document.querySelectorAll('.rx-item-row[id^="inv-item-"]').forEach(row => {
     const idx = row.id.replace('inv-item-', '');
@@ -376,8 +425,17 @@ async function submitInvoice(status) {
     const expiryDate = document.getElementById(`inv-exp-${idx}`)?.value;
 
     if (hidden?.value) {
-      if (status === 'validated' && !expiryDate) {
-        validationError = "La date d'expiration est requise pour la validation.";
+      // ── Validations conditionnelles selon les Paramètres ──
+      if (status === 'validated') {
+        if (gs('purchase_expiry_required') !== 'false' && !expiryDate) {
+          validationError = "La date d'expiration est requise (paramètre Achats activé).";
+        }
+        if (gs('purchase_lot_required') === 'true' && !lotNumber) {
+          validationError = "Le N° de lot est requis (paramètre Achats activé).";
+        }
+        if (gs('purchase_saleprice_required') === 'true' && (!salePrice || salePrice <= 0)) {
+          validationError = "Le prix de vente est requis (paramètre Achats activé).";
+        }
       }
       if (qty > 0) {
         items.push({ 
@@ -417,12 +475,21 @@ async function submitInvoice(status) {
     createdBy: DB.AppState.currentUser?.id,
   };
 
+  const isEdit = typeof window._editingInvoiceId !== 'undefined' && window._editingInvoiceId !== null;
+
   try {
     if (status === 'validated') {
       const confirm = await UI.confirm(`Confirmer la validation de la facture ?\n\nCela va générer les entrées en stock (Lots et Mouvements) de manière définitive.`);
       if (!confirm) return;
       
-      const invoiceId = await DB.dbAdd('invoices', invoiceData);
+      let invoiceId;
+      if (isEdit) {
+        invoiceId = window._editingInvoiceId;
+        await DB.dbPut('invoices', { ...invoiceData, id: invoiceId });
+        await DB.writeAudit('EDIT_INVOICE_VALIDATED', 'invoices', invoiceId, { invoiceNumber: formData.invoiceNumber });
+      } else {
+        invoiceId = await DB.dbAdd('invoices', invoiceData);
+      }
       
       // Process stock entry
       for (const item of items) {
@@ -501,11 +568,18 @@ async function submitInvoice(status) {
       
     } else {
       // Draft
-      const invoiceId = await DB.dbAdd('invoices', invoiceData);
-      await DB.writeAudit('CREATE_INVOICE_DRAFT', 'invoices', invoiceId, { invoiceNumber: formData.invoiceNumber });
-      UI.toast(`Facture enregistrée en brouillon`, 'success');
+      if (isEdit) {
+        await DB.dbPut('invoices', { ...invoiceData, id: window._editingInvoiceId });
+        await DB.writeAudit('EDIT_INVOICE_DRAFT', 'invoices', window._editingInvoiceId, { invoiceNumber: formData.invoiceNumber });
+        UI.toast(`Brouillon mis à jour`, 'success');
+      } else {
+        const invoiceId = await DB.dbAdd('invoices', invoiceData);
+        await DB.writeAudit('CREATE_INVOICE_DRAFT', 'invoices', invoiceId, { invoiceNumber: formData.invoiceNumber });
+        UI.toast(`Facture enregistrée en brouillon`, 'success');
+      }
     }
     
+    window._editingInvoiceId = null;
     UI.closeModal();
     renderInvoices(document.getElementById('app-content'));
   } catch (err) {
@@ -1090,9 +1164,82 @@ window.exportInvoicesPDF = function() {
   window.PDFExport.generate("Liste des Factures Fournisseurs", headers, data);
 };
 
+async function unvalidateInvoice(invoiceId) {
+  const gs = (key) => (window._appSettings || {})[key];
+  if (gs('purchase_allow_edit_after') !== 'true' && DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('⛔ Action non autorisée par les paramètres d\'achat.', 'error');
+    return;
+  }
+
+  const confirm = await UI.confirm("Voulez-vous annuler la validation de cette facture ?\n\nCela déduira les articles du stock et remettra la facture en statut Brouillon pour modification.");
+  if (!confirm) return;
+
+  try {
+    const invoice = await DB.dbGet('invoices', invoiceId);
+    if (!invoice || invoice.status !== 'validated') return;
+
+    // Déduire les articles du stock et désactiver les lots
+    const stockAll = await DB.dbGetAll('stock');
+    const stockMap = new Map();
+    stockAll.forEach(s => stockMap.set(s.productId, s));
+
+    const lotsAll = await DB.dbGetAll('lots');
+
+    for (const item of invoice.items) {
+      // 1. Déduire du stock
+      const se = stockMap.get(item.productId);
+      if (se) {
+        const nq = Math.max(0, se.quantity - item.quantity);
+        await DB.dbPut('stock', { ...se, quantity: nq });
+      }
+
+      // 2. Déduire ou désactiver les lots correspondants
+      const lot = lotsAll.find(l => l.productId === item.productId && l.lotNumber === item.lotNumber);
+      if (lot) {
+        const nq = Math.max(0, lot.quantity - item.quantity);
+        lot.quantity = nq;
+        if (nq === 0) lot.status = 'inactive';
+        await DB.dbPut('lots', lot);
+      }
+
+      // 3. Enregistrer un mouvement EXIT de correction
+      await DB.dbAdd('movements', {
+        productId: item.productId,
+        type: 'EXIT',
+        subType: 'PURCHASE_CANCEL',
+        quantity: -item.quantity,
+        date: new Date().toISOString(),
+        userId: DB.AppState.currentUser?.id,
+        reference: `CANCEL-${invoice.invoiceNumber}`,
+        lotNumber: item.lotNumber
+      });
+    }
+
+    invoice.status = 'draft';
+    await DB.dbPut('invoices', invoice);
+    await DB.writeAudit('UNVALIDATE_INVOICE', 'invoices', invoiceId, { invoiceNumber: invoice.invoiceNumber });
+    
+    UI.toast('Facture repassée en brouillon et stock mis à jour', 'success');
+    renderInvoices(document.getElementById('app-content'));
+  } catch (err) {
+    UI.toast('Erreur : ' + err.message, 'error');
+  }
+}
+
+async function deleteInvoice(invoiceId) {
+  const confirm = await UI.confirm('Voulez-vous supprimer définitivement ce brouillon de facture ?');
+  if (!confirm) return;
+  try {
+    await DB.dbDelete('invoices', invoiceId);
+    UI.toast('Facture supprimée', 'success');
+    renderInvoices(document.getElementById('app-content'));
+  } catch (err) {
+    UI.toast('Erreur : ' + err.message, 'error');
+  }
+}
+
 window.renderInvoices = renderInvoices;
 window.filterInvoices = filterInvoices;
-// resetInvoicePagination et loadMoreInvoices supprimées (pagination déléguée à UI.table)
 window.showNewInvoiceForm = showNewInvoiceForm;
 window.addInvoiceItem = addInvoiceItem;
 window.invoiceProductSearch = invoiceProductSearch;
@@ -1106,5 +1253,7 @@ window.exportInvoicesCsv = exportInvoicesCsv;
 window.exportSingleInvoiceCsv = exportSingleInvoiceCsv;
 window.importInvoiceCsv = importInvoiceCsv;
 window.printInvoicePDF = printInvoicePDF;
+window.unvalidateInvoice = unvalidateInvoice;
+window.deleteInvoice = deleteInvoice;
 
 Router.register('invoices', renderInvoices);

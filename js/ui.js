@@ -3,10 +3,15 @@
  */
 
 const UI = {
+  // ─── Devise dynamique — lit window._appSettings.currency ───
+  getCurrency() {
+    return (window._appSettings && window._appSettings['currency']) || 'GNF';
+  },
+
   formatCurrency(amount) {
     const num = Math.round(amount || 0);
     const formatted = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    return `${formatted} GNF`;
+    return `${formatted} ${this.getCurrency()}`;
   },
 
   normalizeText(str) {
@@ -17,16 +22,27 @@ const UI = {
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
   },
 
+  // ─── Format de date configurable — lit window._appSettings.date_format ───
   formatDate(dateStr) {
     if (!dateStr) return '—';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (isNaN(d.getTime())) return '—';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const fmt = (window._appSettings && window._appSettings['date_format']) || 'DD/MM/YYYY';
+    if (fmt === 'MM/DD/YYYY') return `${mm}/${dd}/${yyyy}`;
+    if (fmt === 'YYYY-MM-DD') return `${yyyy}-${mm}-${dd}`;
+    return `${dd}/${mm}/${yyyy}`;
   },
 
   formatDateTime(ts) {
     if (!ts) return '—';
     const d = new Date(ts);
-    return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    if (isNaN(d.getTime())) return '—';
+    const datePart = this.formatDate(d);
+    const timePart = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `${datePart} ${timePart}`;
   },
 
   daysUntilExpiry(dateStr) {
