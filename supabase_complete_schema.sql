@@ -1,5 +1,5 @@
 -- ============================================================
--- OrdiveX v9 — Script SQL Supabase COMPLET
+-- OrdiveX v9 — Script SQL Supabase COMPLET (CamelCase Safe)
 -- Exécuter dans : Supabase → SQL Editor → New Query
 -- ✅ CREATE TABLE IF NOT EXISTS = aucune perte de données
 -- ✅ ADD COLUMN IF NOT EXISTS  = sécurisé si colonne existe
@@ -20,22 +20,22 @@ ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS password   TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS name       TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS role       TEXT DEFAULT 'caissier';
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS active     BOOLEAN DEFAULT TRUE;
-ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS updatedAt  BIGINT;
-ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS createdAt  BIGINT;
+ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS "updatedAt"  BIGINT;
+ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS "createdAt"  BIGINT;
 
 -- Colonnes RH (causaient les 400 Bad Request)
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS nom              TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS poste            TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS department       TEXT;
-ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS dateEmbauche     TEXT;
-ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS dateNaissance    TEXT;
+ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS "dateEmbauche"     TEXT;
+ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS "dateNaissance"    TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS salaire          NUMERIC(15,2) DEFAULT 0;
-ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS typeContrat      TEXT;
-ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS dateFinContrat   TEXT;
+ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS "typeContrat"      TEXT;
+ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS "dateFinContrat"   TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS telephone        TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS cni              TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS adresse          TEXT;
-ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS contactUrgence   TEXT;
+ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS "contactUrgence"   TEXT;
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS status           TEXT DEFAULT 'actif';
 ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS notes            TEXT;
 
@@ -45,7 +45,7 @@ ALTER TABLE IF EXISTS public.app_users ADD COLUMN IF NOT EXISTS notes           
 CREATE TABLE IF NOT EXISTS public.settings (
   key        TEXT PRIMARY KEY,
   value      TEXT,
-  updatedAt  BIGINT
+  "updatedAt"  BIGINT
 );
 
 -- ──────────────────────────────────────────────────────────
@@ -60,18 +60,18 @@ CREATE TABLE IF NOT EXISTS public.products (
   category              TEXT,
   form                  TEXT,
   unit                  TEXT,
-  salePrice             NUMERIC(15,2) DEFAULT 0,
-  purchasePrice         NUMERIC(15,2) DEFAULT 0,
+  "salePrice"             NUMERIC(15,2) DEFAULT 0,
+  "purchasePrice"         NUMERIC(15,2) DEFAULT 0,
   tva                   NUMERIC(5,2)  DEFAULT 0,
-  minStock              INTEGER DEFAULT 0,
-  requiresPrescription  BOOLEAN DEFAULT FALSE,
+  "minStock"              INTEGER DEFAULT 0,
+  "requiresPrescription"  BOOLEAN DEFAULT FALSE,
   status                TEXT DEFAULT 'active',
-  supplierId            BIGINT,
+  "supplierId"            BIGINT,
   rayon                 TEXT,
   notes                 TEXT,
-  expiryDate            TEXT,
-  updatedAt             BIGINT,
-  createdAt             BIGINT,
+  "expiryDate"            TEXT,
+  "updatedAt"             BIGINT,
+  "createdAt"             BIGINT,
   _synced               BOOLEAN DEFAULT FALSE
 );
 
@@ -80,50 +80,51 @@ CREATE TABLE IF NOT EXISTS public.products (
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.lots (
   id            BIGINT PRIMARY KEY,
-  productId     BIGINT,
-  lotNumber     TEXT,
-  expiryDate    TEXT,
+  "productId"     BIGINT,
+  "lotNumber"     TEXT,
+  "expiryDate"    TEXT,
   quantity      INTEGER DEFAULT 0,
-  purchasePrice NUMERIC(15,2) DEFAULT 0,
-  salePrice     NUMERIC(15,2) DEFAULT 0,
+  "purchasePrice" NUMERIC(15,2) DEFAULT 0,
+  "salePrice"     NUMERIC(15,2) DEFAULT 0,
   status        TEXT DEFAULT 'active',
-  updatedAt     BIGINT,
-  createdAt     BIGINT,
+  "updatedAt"     BIGINT,
+  "createdAt"     BIGINT,
   _synced       BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_lots_productId  ON public.lots(productId);
-CREATE INDEX IF NOT EXISTS idx_lots_expiryDate ON public.lots(expiryDate);
+CREATE INDEX IF NOT EXISTS idx_lots_productId  ON public.lots("productId");
+CREATE INDEX IF NOT EXISTS idx_lots_expiryDate ON public.lots("expiryDate");
 
 -- ──────────────────────────────────────────────────────────
 -- 6. TABLE stock
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.stock (
   id          BIGINT PRIMARY KEY,
-  productId   BIGINT UNIQUE,
+  "productId"   BIGINT UNIQUE,
   quantity    INTEGER DEFAULT 0,
-  updatedAt   BIGINT,
+  "updatedAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
+CREATE INDEX IF NOT EXISTS idx_stock_productId ON public.stock("productId");
 
 -- ──────────────────────────────────────────────────────────
 -- 7. TABLE movements
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.movements (
   id          BIGINT PRIMARY KEY,
-  productId   BIGINT,
-  lotId       BIGINT,
+  "productId"   BIGINT,
+  "lotId"       BIGINT,
   type        TEXT,
   quantity    INTEGER DEFAULT 0,
   date        TEXT,
   reason      TEXT,
-  userId      BIGINT,
-  saleId      BIGINT,
+  "userId"      BIGINT,
+  "saleId"      BIGINT,
   notes       TEXT,
-  updatedAt   BIGINT,
-  createdAt   BIGINT,
+  "updatedAt"   BIGINT,
+  "createdAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_movements_productId ON public.movements(productId);
+CREATE INDEX IF NOT EXISTS idx_movements_productId ON public.movements("productId");
 CREATE INDEX IF NOT EXISTS idx_movements_date      ON public.movements(date);
 CREATE INDEX IF NOT EXISTS idx_movements_type      ON public.movements(type);
 
@@ -139,8 +140,8 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
   address     TEXT,
   status      TEXT DEFAULT 'active',
   notes       TEXT,
-  updatedAt   BIGINT,
-  createdAt   BIGINT,
+  "updatedAt"   BIGINT,
+  "createdAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
 
@@ -149,20 +150,20 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."purchaseOrders" (
   id            BIGINT PRIMARY KEY,
-  supplierId    BIGINT,
-  orderNumber   TEXT,
+  "supplierId"    BIGINT,
+  "orderNumber"   TEXT,
   date          TEXT,
   status        TEXT DEFAULT 'draft',
   total         NUMERIC(15,2) DEFAULT 0,
   paid          NUMERIC(15,2) DEFAULT 0,
   items         TEXT,
   notes         TEXT,
-  userId        BIGINT,
-  updatedAt     BIGINT,
-  createdAt     BIGINT,
+  "userId"        BIGINT,
+  "updatedAt"     BIGINT,
+  "createdAt"     BIGINT,
   _synced       BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_purchaseOrders_supplierId ON public."purchaseOrders"(supplierId);
+CREATE INDEX IF NOT EXISTS idx_purchaseOrders_supplierId ON public."purchaseOrders"("supplierId");
 CREATE INDEX IF NOT EXISTS idx_purchaseOrders_date       ON public."purchaseOrders"(date);
 CREATE INDEX IF NOT EXISTS idx_purchaseOrders_status     ON public."purchaseOrders"(status);
 
@@ -174,13 +175,13 @@ CREATE TABLE IF NOT EXISTS public.patients (
   name          TEXT NOT NULL,
   phone         TEXT,
   address       TEXT,
-  birthDate     TEXT,
+  "birthDate"     TEXT,
   gender        TEXT,
-  creditLimit   NUMERIC(15,2) DEFAULT 0,
+  "creditLimit"   NUMERIC(15,2) DEFAULT 0,
   insurance     TEXT,
   notes         TEXT,
-  updatedAt     BIGINT,
-  createdAt     BIGINT,
+  "updatedAt"     BIGINT,
+  "createdAt"     BIGINT,
   _synced       BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_patients_name  ON public.patients(name);
@@ -191,25 +192,25 @@ CREATE INDEX IF NOT EXISTS idx_patients_phone ON public.patients(phone);
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.sales (
   id              BIGINT PRIMARY KEY,
-  saleNumber      TEXT,
+  "saleNumber"      TEXT,
   date            TEXT,
-  patientId       BIGINT,
-  userId          BIGINT,
-  paymentMethod   TEXT,
+  "patientId"       BIGINT,
+  "userId"          BIGINT,
+  "paymentMethod"   TEXT,
   total           NUMERIC(15,2) DEFAULT 0,
   paid            NUMERIC(15,2) DEFAULT 0,
   discount        NUMERIC(15,2) DEFAULT 0,
   status          TEXT DEFAULT 'completed',
   notes           TEXT,
-  receiptData     TEXT,
-  updatedAt       BIGINT,
-  createdAt       BIGINT,
+  "receiptData"     TEXT,
+  "updatedAt"       BIGINT,
+  "createdAt"     BIGINT,
   _synced         BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_sales_date          ON public.sales(date);
-CREATE INDEX IF NOT EXISTS idx_sales_patientId     ON public.sales(patientId);
-CREATE INDEX IF NOT EXISTS idx_sales_userId        ON public.sales(userId);
-CREATE INDEX IF NOT EXISTS idx_sales_paymentMethod ON public.sales(paymentMethod);
+CREATE INDEX IF NOT EXISTS idx_sales_patientId     ON public.sales("patientId");
+CREATE INDEX IF NOT EXISTS idx_sales_userId        ON public.sales("userId");
+CREATE INDEX IF NOT EXISTS idx_sales_paymentMethod ON public.sales("paymentMethod");
 CREATE INDEX IF NOT EXISTS idx_sales_status        ON public.sales(status);
 
 -- ──────────────────────────────────────────────────────────
@@ -217,33 +218,33 @@ CREATE INDEX IF NOT EXISTS idx_sales_status        ON public.sales(status);
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."saleItems" (
   id          BIGINT PRIMARY KEY,
-  saleId      BIGINT,
-  productId   BIGINT,
-  lotId       BIGINT,
+  "saleId"      BIGINT,
+  "productId"   BIGINT,
+  "lotId"       BIGINT,
   name        TEXT,
   quantity    INTEGER DEFAULT 1,
-  unitPrice   NUMERIC(15,2) DEFAULT 0,
+  "unitPrice"   NUMERIC(15,2) DEFAULT 0,
   total       NUMERIC(15,2) DEFAULT 0,
   discount    NUMERIC(15,2) DEFAULT 0,
-  updatedAt   BIGINT,
+  "updatedAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_saleItems_saleId    ON public."saleItems"(saleId);
-CREATE INDEX IF NOT EXISTS idx_saleItems_productId ON public."saleItems"(productId);
+CREATE INDEX IF NOT EXISTS idx_saleItems_saleId    ON public."saleItems"("saleId");
+CREATE INDEX IF NOT EXISTS idx_saleItems_productId ON public."saleItems"("productId");
 
 -- ──────────────────────────────────────────────────────────
 -- 13. TABLE prescriptions
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.prescriptions (
   id          BIGINT PRIMARY KEY,
-  patientId   BIGINT,
-  doctorName  TEXT,
+  "patientId"   BIGINT,
+  "doctorName"  TEXT,
   date        TEXT,
   status      TEXT DEFAULT 'active',
   items       TEXT,
   notes       TEXT,
-  updatedAt   BIGINT,
-  createdAt   BIGINT,
+  "updatedAt"   BIGINT,
+  "createdAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
 
@@ -253,12 +254,12 @@ CREATE TABLE IF NOT EXISTS public.prescriptions (
 CREATE TABLE IF NOT EXISTS public.alerts (
   id          BIGINT PRIMARY KEY,
   type        TEXT,
-  productId   BIGINT,
-  lotId       BIGINT,
+  "productId"   BIGINT,
+  "lotId"       BIGINT,
   message     TEXT,
   status      TEXT DEFAULT 'active',
   date        TEXT,
-  updatedAt   BIGINT,
+  "updatedAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
 
@@ -272,10 +273,10 @@ CREATE TABLE IF NOT EXISTS public."cashRegister" (
   amount      NUMERIC(15,2) DEFAULT 0,
   balance     NUMERIC(15,2) DEFAULT 0,
   description TEXT,
-  userId      BIGINT,
-  saleId      BIGINT,
-  updatedAt   BIGINT,
-  createdAt   BIGINT,
+  "userId"      BIGINT,
+  "saleId"      BIGINT,
+  "updatedAt"   BIGINT,
+  "createdAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_cashRegister_date ON public."cashRegister"(date);
@@ -286,17 +287,17 @@ CREATE INDEX IF NOT EXISTS idx_cashRegister_type ON public."cashRegister"(type);
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.returns (
   id          BIGINT PRIMARY KEY,
-  saleId      BIGINT,
-  patientId   BIGINT,
-  userId      BIGINT,
+  "saleId"      BIGINT,
+  "patientId"   BIGINT,
+  "userId"      BIGINT,
   date        TEXT,
   status      TEXT DEFAULT 'pending',
   items       TEXT,
   total       NUMERIC(15,2) DEFAULT 0,
   reason      TEXT,
   notes       TEXT,
-  updatedAt   BIGINT,
-  createdAt   BIGINT,
+  "updatedAt"   BIGINT,
+  "createdAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
 
@@ -305,21 +306,21 @@ CREATE TABLE IF NOT EXISTS public.returns (
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.invoices (
   id            BIGINT PRIMARY KEY,
-  invoiceNumber TEXT,
-  supplierId    BIGINT,
+  "invoiceNumber" TEXT,
+  "supplierId"    BIGINT,
   date          TEXT,
-  dueDate       TEXT,
+  "dueDate"       TEXT,
   status        TEXT DEFAULT 'draft',
   total         NUMERIC(15,2) DEFAULT 0,
   paid          NUMERIC(15,2) DEFAULT 0,
   items         TEXT,
   notes         TEXT,
-  userId        BIGINT,
-  updatedAt     BIGINT,
-  createdAt     BIGINT,
+  "userId"        BIGINT,
+  "updatedAt"     BIGINT,
+  "createdAt"     BIGINT,
   _synced       BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_invoices_supplierId ON public.invoices(supplierId);
+CREATE INDEX IF NOT EXISTS idx_invoices_supplierId ON public.invoices("supplierId");
 CREATE INDEX IF NOT EXISTS idx_invoices_date       ON public.invoices(date);
 CREATE INDEX IF NOT EXISTS idx_invoices_status     ON public.invoices(status);
 
@@ -331,13 +332,13 @@ CREATE TABLE IF NOT EXISTS public.shifts (
   date        TEXT,
   type        TEXT,
   status      TEXT DEFAULT 'open',
-  managerId   BIGINT,
-  startTime   TEXT,
-  endTime     TEXT,
-  totalSales  NUMERIC(15,2) DEFAULT 0,
+  "managerId"   BIGINT,
+  "startTime"   TEXT,
+  "endTime"     TEXT,
+  "totalSales"  NUMERIC(15,2) DEFAULT 0,
   notes       TEXT,
-  updatedAt   BIGINT,
-  createdAt   BIGINT,
+  "updatedAt"   BIGINT,
+  "createdAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
 
@@ -347,11 +348,11 @@ CREATE TABLE IF NOT EXISTS public.shifts (
 CREATE TABLE IF NOT EXISTS public.inventories (
   id          BIGINT PRIMARY KEY,
   date        TEXT,
-  userId      BIGINT,
+  "userId"      BIGINT,
   status      TEXT DEFAULT 'draft',
   notes       TEXT,
-  updatedAt   BIGINT,
-  createdAt   BIGINT,
+  "updatedAt"   BIGINT,
+  "createdAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
 
@@ -360,39 +361,39 @@ CREATE TABLE IF NOT EXISTS public.inventories (
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."inventoryAdjustments" (
   id              BIGINT PRIMARY KEY,
-  inventoryId     BIGINT,
-  productId       BIGINT,
-  lotId           BIGINT,
-  expectedQty     INTEGER DEFAULT 0,
-  countedQty      INTEGER DEFAULT 0,
+  "inventoryId"     BIGINT,
+  "productId"       BIGINT,
+  "lotId"           BIGINT,
+  "expectedQty"     INTEGER DEFAULT 0,
+  "countedQty"      INTEGER DEFAULT 0,
   difference      INTEGER DEFAULT 0,
   date            TEXT,
-  userId          BIGINT,
+  "userId"          BIGINT,
   notes           TEXT,
-  updatedAt       BIGINT,
-  createdAt       BIGINT,
+  "updatedAt"       BIGINT,
+  "createdAt"       BIGINT,
   _synced         BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_inventoryAdj_inventoryId ON public."inventoryAdjustments"(inventoryId);
-CREATE INDEX IF NOT EXISTS idx_inventoryAdj_productId   ON public."inventoryAdjustments"(productId);
+CREATE INDEX IF NOT EXISTS idx_inventoryAdj_inventoryId ON public."inventoryAdjustments"("inventoryId");
+CREATE INDEX IF NOT EXISTS idx_inventoryAdj_productId   ON public."inventoryAdjustments"("productId");
 
 -- ──────────────────────────────────────────────────────────
 -- 21. TABLE "auditLog"
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."auditLog" (
   id          BIGINT PRIMARY KEY,
-  userId      BIGINT,
+  "userId"      BIGINT,
   username    TEXT,
   action      TEXT,
   store       TEXT,
-  recordId    TEXT,
+  "recordId"    TEXT,
   data        TEXT,
   timestamp   BIGINT,
-  ipAddress   TEXT,
-  updatedAt   BIGINT,
+  "ipAddress"   TEXT,
+  "updatedAt"   BIGINT,
   _synced     BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_auditLog_userId    ON public."auditLog"(userId);
+CREATE INDEX IF NOT EXISTS idx_auditLog_userId    ON public."auditLog"("userId");
 CREATE INDEX IF NOT EXISTS idx_auditLog_action    ON public."auditLog"(action);
 CREATE INDEX IF NOT EXISTS idx_auditLog_timestamp ON public."auditLog"(timestamp);
 
@@ -405,21 +406,21 @@ CREATE TABLE IF NOT EXISTS public.employees (
   name             TEXT,
   poste            TEXT,
   department       TEXT,
-  dateEmbauche     TEXT,
-  dateNaissance    TEXT,
+  "dateEmbauche"     TEXT,
+  "dateNaissance"    TEXT,
   salaire          NUMERIC(15,2) DEFAULT 0,
-  typeContrat      TEXT,
-  dateFinContrat   TEXT,
+  "typeContrat"      TEXT,
+  "dateFinContrat"   TEXT,
   telephone        TEXT,
   cni              TEXT,
   adresse          TEXT,
-  contactUrgence   TEXT,
+  "contactUrgence"   TEXT,
   status           TEXT DEFAULT 'actif',
   active           BOOLEAN DEFAULT TRUE,
   notes            TEXT,
-  userId           BIGINT,
-  updatedAt        BIGINT,
-  createdAt        BIGINT,
+  "userId"           BIGINT,
+  "updatedAt"        BIGINT,
+  "createdAt"        BIGINT,
   _synced          BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_employees_status     ON public.employees(status);
@@ -430,21 +431,21 @@ CREATE INDEX IF NOT EXISTS idx_employees_department ON public.employees(departme
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."hr_payroll" (
   id           BIGINT PRIMARY KEY,
-  employeeId   BIGINT,
+  "employeeId"   BIGINT,
   period       TEXT,
-  baseSalary   NUMERIC(15,2) DEFAULT 0,
+  "baseSalary"   NUMERIC(15,2) DEFAULT 0,
   bonuses      NUMERIC(15,2) DEFAULT 0,
   deductions   NUMERIC(15,2) DEFAULT 0,
-  netSalary    NUMERIC(15,2) DEFAULT 0,
+  "netSalary"    NUMERIC(15,2) DEFAULT 0,
   status       TEXT DEFAULT 'draft',
-  paidAt       TEXT,
+  "paidAt"       TEXT,
   notes        TEXT,
-  userId       BIGINT,
-  updatedAt    BIGINT,
-  createdAt    BIGINT,
+  "userId"       BIGINT,
+  "updatedAt"    BIGINT,
+  "createdAt"    BIGINT,
   _synced      BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_hr_payroll_employeeId ON public."hr_payroll"(employeeId);
+CREATE INDEX IF NOT EXISTS idx_hr_payroll_employeeId ON public."hr_payroll"("employeeId");
 CREATE INDEX IF NOT EXISTS idx_hr_payroll_period     ON public."hr_payroll"(period);
 
 -- ──────────────────────────────────────────────────────────
@@ -452,38 +453,38 @@ CREATE INDEX IF NOT EXISTS idx_hr_payroll_period     ON public."hr_payroll"(peri
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."hr_advances" (
   id           BIGINT PRIMARY KEY,
-  employeeId   BIGINT,
+  "employeeId"   BIGINT,
   amount       NUMERIC(15,2) DEFAULT 0,
   date         TEXT,
   reason       TEXT,
   status       TEXT DEFAULT 'pending',
-  approvedBy   BIGINT,
+  "approvedBy"   BIGINT,
   notes        TEXT,
-  updatedAt    BIGINT,
-  createdAt    BIGINT,
+  "updatedAt"    BIGINT,
+  "createdAt"    BIGINT,
   _synced      BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_hr_advances_employeeId ON public."hr_advances"(employeeId);
+CREATE INDEX IF NOT EXISTS idx_hr_advances_employeeId ON public."hr_advances"("employeeId");
 
 -- ──────────────────────────────────────────────────────────
 -- 25. TABLE "hr_leaves"
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."hr_leaves" (
   id           BIGINT PRIMARY KEY,
-  employeeId   BIGINT,
+  "employeeId"   BIGINT,
   type         TEXT,
-  startDate    TEXT,
-  endDate      TEXT,
+  "startDate"    TEXT,
+  "endDate"      TEXT,
   days         INTEGER DEFAULT 0,
   reason       TEXT,
   status       TEXT DEFAULT 'pending',
-  approvedBy   BIGINT,
+  "approvedBy"   BIGINT,
   notes        TEXT,
-  updatedAt    BIGINT,
-  createdAt    BIGINT,
+  "updatedAt"    BIGINT,
+  "createdAt"    BIGINT,
   _synced      BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_hr_leaves_employeeId ON public."hr_leaves"(employeeId);
+CREATE INDEX IF NOT EXISTS idx_hr_leaves_employeeId ON public."hr_leaves"("employeeId");
 CREATE INDEX IF NOT EXISTS idx_hr_leaves_status     ON public."hr_leaves"(status);
 
 -- ──────────────────────────────────────────────────────────
@@ -491,17 +492,17 @@ CREATE INDEX IF NOT EXISTS idx_hr_leaves_status     ON public."hr_leaves"(status
 -- ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public."hr_attendance" (
   id           BIGINT PRIMARY KEY,
-  employeeId   BIGINT,
+  "employeeId"   BIGINT,
   date         TEXT,
-  checkIn      TEXT,
-  checkOut     TEXT,
+  "checkIn"      TEXT,
+  "checkOut"     TEXT,
   status       TEXT DEFAULT 'present',
   notes        TEXT,
-  updatedAt    BIGINT,
-  createdAt    BIGINT,
+  "updatedAt"    BIGINT,
+  "createdAt"    BIGINT,
   _synced      BOOLEAN DEFAULT FALSE
 );
-CREATE INDEX IF NOT EXISTS idx_hr_attendance_employeeId ON public."hr_attendance"(employeeId);
+CREATE INDEX IF NOT EXISTS idx_hr_attendance_employeeId ON public."hr_attendance"("employeeId");
 CREATE INDEX IF NOT EXISTS idx_hr_attendance_date       ON public."hr_attendance"(date);
 
 -- ──────────────────────────────────────────────────────────
@@ -536,4 +537,4 @@ ALTER TABLE IF EXISTS public."hr_attendance"        DISABLE ROW LEVEL SECURITY;
 -- ──────────────────────────────────────────────────────────
 -- ✅ Script terminé — Aucune donnée supprimée ou modifiée
 -- ──────────────────────────────────────────────────────────
-SELECT 'OrdiveX schema v9 installé avec succès - 26 tables' AS result;
+SELECT 'OrdiveX schema v9 camelCase installé avec succès' AS result;
