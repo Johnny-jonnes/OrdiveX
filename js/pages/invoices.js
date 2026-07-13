@@ -331,8 +331,8 @@ async function selectInvoiceProduct(idx, productId) {
 
   if (input) input.value = prod.name;
   if (hidden) { hidden.value = prod.id; hidden.dataset.name = prod.name; }
-  if (priceInput && !priceInput.value) priceInput.value = prod.purchasePrice || '';
-  if (salePriceInput && !salePriceInput.value) salePriceInput.value = prod.salePrice || '';
+  if (priceInput) priceInput.value = prod.purchasePrice || '';
+  if (salePriceInput) salePriceInput.value = prod.salePrice || '';
   
   try {
     const lots = await DB.dbGetAll('lots');
@@ -340,10 +340,10 @@ async function selectInvoiceProduct(idx, productId) {
     if (activeLots.length > 0) {
       activeLots.sort((a,b) => new Date(b.receiptDate || 0) - new Date(a.receiptDate || 0));
       const recentLot = activeLots[0];
-      if (lotInput && !lotInput.value) lotInput.value = recentLot.lotNumber;
-      if (expInput && !expInput.value) expInput.value = recentLot.expiryDate;
+      if (lotInput) lotInput.value = recentLot.lotNumber;
+      if (expInput) expInput.value = recentLot.expiryDate;
     } else {
-      if (expInput && !expInput.value && prod.expiryDate) expInput.value = prod.expiryDate;
+      if (expInput && prod.expiryDate) expInput.value = prod.expiryDate;
     }
   } catch(e) {}
 
@@ -530,7 +530,7 @@ async function submitInvoice(status) {
         
         try {
           const productsAll = await DB.dbGetAll('products');
-          const existingProd = productsAll.find(p => p.id === item.productId);
+          const existingProd = productsAll.find(p => Number(p.id) === Number(item.productId));
           if (existingProd) {
             let updatedProd = false;
             if (item.unitPrice && existingProd.purchasePrice !== item.unitPrice) {
@@ -541,9 +541,29 @@ async function submitInvoice(status) {
               existingProd.salePrice = item.salePrice;
               updatedProd = true;
             }
+            if (item.expiryDate && existingProd.expiryDate !== item.expiryDate) {
+              existingProd.expiryDate = item.expiryDate;
+              updatedProd = true;
+            }
             if (updatedProd) {
+              existingProd.updatedAt = Date.now();
               await DB.dbPut('products', existingProd);
               window._invoicesProducts = null; // force reload next time
+
+              // Propagation en cascade vers tous les lots actifs du produit
+              try {
+                const allLots = await DB.dbGetAll('lots');
+                const productLots = allLots.filter(l => Number(l.productId) === Number(item.productId) && l.status === 'active');
+                for (const lot of productLots) {
+                  const lotUpdate = { ...lot, updatedAt: Date.now() };
+                  if (item.unitPrice) lotUpdate.purchasePrice = item.unitPrice;
+                  if (item.salePrice) lotUpdate.salePrice = item.salePrice;
+                  if (item.expiryDate) lotUpdate.expiryDate = item.expiryDate;
+                  await DB.dbPut('lots', lotUpdate);
+                }
+              } catch (cascadeErr) {
+                console.warn('[Invoice Sync] Erreur cascade lots:', cascadeErr);
+              }
             }
           }
         } catch(e) {}
@@ -643,7 +663,7 @@ async function validateInvoice(invoiceId) {
       
       try {
         const productsAll = await DB.dbGetAll('products');
-        const existingProd = productsAll.find(p => p.id === item.productId);
+        const existingProd = productsAll.find(p => Number(p.id) === Number(item.productId));
         if (existingProd) {
           let updatedProd = false;
           if (item.unitPrice && existingProd.purchasePrice !== item.unitPrice) {
@@ -654,9 +674,29 @@ async function validateInvoice(invoiceId) {
             existingProd.salePrice = item.salePrice;
             updatedProd = true;
           }
+          if (item.expiryDate && existingProd.expiryDate !== item.expiryDate) {
+            existingProd.expiryDate = item.expiryDate;
+            updatedProd = true;
+          }
           if (updatedProd) {
+            existingProd.updatedAt = Date.now();
             await DB.dbPut('products', existingProd);
             window._invoicesProducts = null;
+
+            // Propagation en cascade vers tous les lots actifs du produit
+            try {
+              const allLots = await DB.dbGetAll('lots');
+              const productLots = allLots.filter(l => Number(l.productId) === Number(item.productId) && l.status === 'active');
+              for (const lot of productLots) {
+                const lotUpdate = { ...lot, updatedAt: Date.now() };
+                if (item.unitPrice) lotUpdate.purchasePrice = item.unitPrice;
+                if (item.salePrice) lotUpdate.salePrice = item.salePrice;
+                if (item.expiryDate) lotUpdate.expiryDate = item.expiryDate;
+                await DB.dbPut('lots', lotUpdate);
+              }
+            } catch (cascadeErr) {
+              console.warn('[Invoice Sync] Erreur cascade lots:', cascadeErr);
+            }
           }
         }
       } catch(e) {}

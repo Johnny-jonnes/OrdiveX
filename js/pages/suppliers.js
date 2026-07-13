@@ -1083,7 +1083,7 @@ function selectOrderProduct(idx, productId, productName, purchasePrice) {
 
   if (input) input.value = productName;
   if (hidden) { hidden.value = productId; hidden.dataset.name = productName; hidden.dataset.price = purchasePrice; }
-  if (priceInput && !priceInput.value) priceInput.value = purchasePrice || '';
+  if (priceInput) priceInput.value = purchasePrice || '';
   if (dropdown) dropdown.style.display = 'none';
   updateOrderTotal();
 }
@@ -1477,7 +1477,7 @@ async function confirmReceiveOrder(orderId) {
         invoiceRef: createInvoice ? invoiceNum : null,
       });
 
-      // Mise à jour des prix dans le catalogue (comme pour une facture fournisseur)
+      // Mise à jour des prix et de la date dans le catalogue produits
       try {
         const productsAll = await DB.dbGetAll('products');
         const existingProd = productsAll.find(p => Number(p.id) === Number(item.productId));
@@ -1491,13 +1491,34 @@ async function confirmReceiveOrder(orderId) {
             existingProd.salePrice = recvSalePrice;
             updatedProd = true;
           }
+          if (expiryDate && existingProd.expiryDate !== expiryDate) {
+            existingProd.expiryDate = expiryDate;
+            updatedProd = true;
+          }
           if (updatedProd) {
+            existingProd.updatedAt = Date.now();
             await DB.dbPut('products', existingProd);
-            window._invoicesProducts = null; // force reload next time
+            window._allProducts = null; // force reload
+            window._invoicesProducts = null; // force reload
+
+            // Propagation en cascade vers tous les lots actifs de ce produit
+            try {
+              const allLots = await DB.dbGetAll('lots');
+              const productLots = allLots.filter(l => Number(l.productId) === Number(item.productId) && l.status === 'active');
+              for (const lot of productLots) {
+                const lotUpdate = { ...lot, updatedAt: Date.now() };
+                if (recvPrice) lotUpdate.purchasePrice = recvPrice;
+                if (recvSalePrice) lotUpdate.salePrice = recvSalePrice;
+                if (expiryDate) lotUpdate.expiryDate = expiryDate;
+                await DB.dbPut('lots', lotUpdate);
+              }
+            } catch (cascadeErr) {
+              console.warn('[Receipt Sync] Erreur cascade lots:', cascadeErr);
+            }
           }
         }
       } catch (prodErr) {
-        console.warn('[Receipt] Erreur mise à jour prix produit:', prodErr);
+        console.warn('[Receipt] Erreur mise à jour prix/date produit:', prodErr);
       }
     }
   }
