@@ -101,6 +101,7 @@ async function renderProducts(container) {
   });
 
   window._productsData = enrichedProducts;
+  window._selectedProductIds = new Set(); // init sélection vide
   renderProductsTable(enrichedProducts);
   if (window.lucide) lucide.createIcons();
   if (window._autoAnimateKPIValues) setTimeout(_autoAnimateKPIValues, 100);
@@ -137,7 +138,6 @@ function renderProductsTable(data) {
   const PAGE_SIZE = 100;
   window._filteredProducts = data;
   window._prodPage = window._prodPage || 1;
-  // Reset page when filter changes
   if (data !== window._lastFilteredData) {
     window._prodPage = 1;
     window._lastFilteredData = data;
@@ -148,7 +148,50 @@ function renderProductsTable(data) {
   const start = (window._prodPage - 1) * PAGE_SIZE;
   const pageData = data.slice(start, start + PAGE_SIZE);
 
+  if (!window._selectedProductIds) window._selectedProductIds = new Set();
+
+  // ── Barre d'actions groupées ──────────────────────────────────
+  const selCount = window._selectedProductIds.size;
+  const bulkBarHtml = selCount > 0 ? `
+    <div id="bulk-action-bar" style="
+      position:sticky;top:0;z-index:40;
+      display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+      background:var(--primary);color:#fff;
+      padding:10px 16px;border-radius:10px;margin-bottom:12px;
+      box-shadow:0 4px 16px rgba(46,134,193,0.35);
+      animation:fadeInDown 0.2s ease;
+    ">
+      <span style="font-weight:700;font-size:14px">
+        <i data-lucide="check-square" style="width:16px;height:16px;vertical-align:middle;margin-right:6px"></i>
+        ${selCount} produit${selCount>1?'s':''} sélectionné${selCount>1?'s':''}
+      </span>
+      <div style="flex:1"></div>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);" onclick="bulkEditProducts()">
+        <i data-lucide="pencil" style="width:14px;height:14px"></i> Modifier en lot
+      </button>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);" onclick="bulkReactivateProducts()">
+        <i data-lucide="toggle-right" style="width:14px;height:14px"></i> Réactiver
+      </button>
+      <button class="btn btn-sm" style="background:rgba(214,59,59,0.8);color:#fff;border:none;" onclick="bulkDeleteProducts()">
+        <i data-lucide="trash-2" style="width:14px;height:14px"></i> Désactiver
+      </button>
+      <button class="btn btn-xs" style="background:rgba(255,255,255,0.1);color:#fff;border:none;padding:4px 10px;" onclick="clearProductSelection()" title="Désélectionner tout">
+        ✕ Désélectionner
+      </button>
+    </div>` : '';
+
+  const allPageSelected = pageData.length > 0 && pageData.every(p => window._selectedProductIds.has(p.id));
+
   const columns = [
+    {
+      label: `<input type="checkbox" id="chk-all-products" ${allPageSelected ? 'checked' : ''}
+        onchange="toggleSelectAllProducts(this.checked)"
+        style="width:16px;height:16px;cursor:pointer;">`,
+      render: r => `<input type="checkbox" class="prod-chk" data-id="${r.id}"
+        ${window._selectedProductIds.has(r.id) ? 'checked' : ''}
+        onchange="toggleProductSelection(${r.id},this.checked)"
+        style="width:16px;height:16px;cursor:pointer;">`
+    },
     { label: 'Code', render: r => `<code class="code-tag">${r.code}</code>` },
     { label: 'Produit', render: r => `<div><strong>${r.name}</strong><br><span class="text-muted text-sm">${r.dci || ''} ${r.dosage || ''}</span></div>` },
     { label: 'Marque', key: 'brand' },
@@ -157,32 +200,38 @@ function renderProductsTable(data) {
     { label: 'Statut', render: r => {
       let badges = r.requiresPrescription ? '<span class="badge badge-warning">Rx</span>' : '<span class="badge badge-success">OTC</span>';
       if (r.isControlled) badges += ` <span class="badge badge-danger" title="${r.controlledClass || 'Substance Contrôlée'}">SC</span>`;
+      if (r.status === 'inactive') badges += ' <span class="badge badge-danger">Inactif</span>';
       return badges;
     }},
     { label: 'Prix Vente', render: r => `<strong>${UI.formatCurrency(r.salePrice)}</strong>` },
     { label: 'Prochain Lot Exp.', render: r => {
       if (r._closestExpiry) return UI.expiryBadge ? UI.expiryBadge(r._closestExpiry) : r._closestExpiry;
-      // Si aucun lot actif avec stock, signaler qu'il n'y a pas de stock en cours
       if (r.expiryDate) return '<span class="text-muted" title="Aucun stock actif — date historique">' + (UI.expiryBadge ? UI.expiryBadge(r.expiryDate) : r.expiryDate) + ' ⊘</span>';
       return '<span class="text-muted">—</span>';
     }},
     { label: 'Prix Achat', render: r => UI.formatCurrency(r.purchasePrice) },
-    {
-      label: 'Marge', render: r => {
+    { label: 'Marge', render: r => {
         const m = r.salePrice && r.purchasePrice ? ((r.salePrice - r.purchasePrice) / r.salePrice * 100).toFixed(0) : 0;
         return `<span class="badge badge-${m >= 30 ? 'success' : m >= 20 ? 'warning' : 'danger'}">${m}%</span>`;
-      }
-    },
+    }},
     {
       label: 'Actions', render: r => `
       <div class="actions-cell">
         <button class="btn btn-xs btn-primary" onclick="viewProduct(${r.id})"><i data-lucide="eye"></i></button>
         <button class="btn btn-xs btn-secondary" onclick="editProductForm(${r.id})"><i data-lucide="edit-3"></i></button>
+        <button class="btn btn-xs btn-danger" onclick="deleteProduct(${r.id})" title="Désactiver"><i data-lucide="trash-2"></i></button>
       </div>` },
   ];
 
-  // Render table with only the current page
-  UI.table(container, columns, pageData, { emptyMessage: 'Aucun produit trouvé', emptyIcon: 'pill', paginate: false });
+  // Injecter la barre d'actions + tableau
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = bulkBarHtml;
+  container.innerHTML = '';
+  container.appendChild(wrapper);
+
+  const tableWrapper = document.createElement('div');
+  UI.table(tableWrapper, columns, pageData, { emptyMessage: 'Aucun produit trouvé', emptyIcon: 'pill', paginate: false });
+  container.appendChild(tableWrapper);
 
   // Pagination controls
   const pagDiv = document.createElement('div');
@@ -196,6 +245,242 @@ function renderProductsTable(data) {
   `;
   container.appendChild(pagDiv);
   if (window.lucide) lucide.createIcons();
+}
+
+// ── Fonctions de sélection multiple ─────────────────────────────────
+
+function toggleProductSelection(id, checked) {
+  if (!window._selectedProductIds) window._selectedProductIds = new Set();
+  if (checked) window._selectedProductIds.add(id);
+  else window._selectedProductIds.delete(id);
+  renderProductsTable(window._filteredProducts || window._productsData || []);
+}
+
+function toggleSelectAllProducts(checked) {
+  if (!window._selectedProductIds) window._selectedProductIds = new Set();
+  const pageData = (window._filteredProducts || window._productsData || []);
+  const PAGE_SIZE = 100;
+  const page = window._prodPage || 1;
+  const start = (page - 1) * PAGE_SIZE;
+  const current = pageData.slice(start, start + PAGE_SIZE);
+  current.forEach(p => {
+    if (checked) window._selectedProductIds.add(p.id);
+    else window._selectedProductIds.delete(p.id);
+  });
+  renderProductsTable(pageData);
+}
+
+function clearProductSelection() {
+  window._selectedProductIds = new Set();
+  renderProductsTable(window._filteredProducts || window._productsData || []);
+}
+
+// ── Désactivation en lot ──────────────────────────────────────────────
+async function bulkDeleteProducts() {
+  const ids = [...(window._selectedProductIds || [])];
+  if (!ids.length) return;
+  if (window.Auth && !Auth.can('supprimer_produit') && DB.AppState.currentUser?.role !== 'admin') {
+    UI.toast('⛔ Vous n\'avez pas la permission de désactiver des produits.', 'error', 5000);
+    return;
+  }
+  const ok = await UI.confirm(
+    `⚠️ Désactiver ${ids.length} produit${ids.length > 1 ? 's' : ''} ?\n\n` +
+    `Les produits seront masqués du catalogue et du POS.\nCette action est réversible.`
+  );
+  if (!ok) return;
+
+  let done = 0;
+  for (const id of ids) {
+    const p = await DB.dbGet('products', id).catch(() => null);
+    if (p) {
+      await DB.dbPut('products', { ...p, status: 'inactive', updatedAt: Date.now() });
+      done++;
+    }
+  }
+  await DB.writeAudit('BULK_DEACTIVATE', 'products', null, { ids, count: done });
+  window._selectedProductIds = new Set();
+  UI.toast(`✅ ${done} produit${done > 1 ? 's' : ''} désactivé${done > 1 ? 's' : ''}.`, 'success');
+  Router.navigate('products');
+}
+
+// ── Réactivation en lot ─────────────────────────────────────────────
+async function bulkReactivateProducts() {
+  const ids = [...(window._selectedProductIds || [])];
+  if (!ids.length) return;
+  const ok = await UI.confirm(
+    `Réactiver ${ids.length} produit${ids.length > 1 ? 's' : ''} ?\n\nIls seront de nouveau visibles dans le catalogue et le POS.`
+  );
+  if (!ok) return;
+  let done = 0;
+  for (const id of ids) {
+    const p = await DB.dbGet('products', id).catch(() => null);
+    if (p) {
+      await DB.dbPut('products', { ...p, status: 'active', updatedAt: Date.now() });
+      done++;
+    }
+  }
+  window._selectedProductIds = new Set();
+  UI.toast(`✅ ${done} produit${done > 1 ? 's' : ''} réactivé${done > 1 ? 's' : ''}.`, 'success');
+  Router.navigate('products');
+}
+
+// ── Édition en lot ────────────────────────────────────────────────────
+function bulkEditProducts() {
+  const ids = [...(window._selectedProductIds || [])];
+  if (!ids.length) return;
+
+  const FIELDS = [
+    { value: 'category',           label: '📂 Catégorie' },
+    { value: 'form',               label: '💊 Forme galénique' },
+    { value: 'salePrice',          label: '💰 Prix de vente' },
+    { value: 'purchasePrice',      label: '🛒 Prix d\'achat' },
+    { value: 'minStock',           label: '📦 Seuil minimum de stock' },
+    { value: 'expiryDate',         label: '📅 Date de péremption' },
+    { value: 'requiresPrescription', label: '📋 Ordonnance requise (Rx/OTC)' },
+    { value: 'status',             label: '🔘 Statut (actif/inactif)' },
+    { value: 'brand',              label: '🏷️ Marque / Laboratoire' },
+    { value: 'tva',                label: '📊 TVA (%)' },
+    { value: 'unit',               label: '📐 Unité de vente' },
+  ];
+
+  UI.modal(
+    `<i data-lucide="layers" class="modal-icon-inline"></i> Modification en lot — ${ids.length} produit${ids.length > 1 ? 's' : ''}`,
+    `<div class="form-grid">
+      <div class="form-group" style="grid-column:1/-1">
+        <label class="form-label">Champ à modifier</label>
+        <select id="bulk-field" class="form-select" onchange="renderBulkEditInput()">
+          <option value="">— Choisir un champ —</option>
+          ${FIELDS.map(f => `<option value="${f.value}">${f.label}</option>`).join('')}
+        </select>
+      </div>
+      <div id="bulk-value-container" style="grid-column:1/-1"></div>
+      <div style="grid-column:1/-1;padding:10px 12px;background:var(--surface-2);border-radius:8px;font-size:13px;color:var(--text-muted)">
+        ℹ️ Cette modification s'appliquera à <strong>${ids.length} produit${ids.length > 1 ? 's' : ''}</strong>. Toutes les valeurs existantes seront remplacées.
+      </div>
+    </div>`,
+    {
+      footer: `
+        <button class="btn btn-secondary" onclick="UI.closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="applyBulkEdit()"><i data-lucide="check"></i> Appliquer à ${ids.length} produit${ids.length > 1 ? 's' : ''}</button>
+      `
+    }
+  );
+  setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 100);
+}
+
+function renderBulkEditInput() {
+  const field = document.getElementById('bulk-field')?.value;
+  const cont = document.getElementById('bulk-value-container');
+  if (!cont || !field) return;
+
+  const categoryGroups = window._PHARMA_CATEGORIES || [];
+  const allCats = categoryGroups.flatMap(g => g.items || []);
+
+  const inputs = {
+    category: `
+      <div class="form-group">
+        <label class="form-label">Nouvelle catégorie</label>
+        <select id="bulk-value" class="form-select">
+          <option value="">— Choisir —</option>
+          ${allCats.map(c => `<option value="${c}">${c}</option>`).join('')}
+        </select>
+      </div>`,
+    form: `
+      <div class="form-group">
+        <label class="form-label">Nouvelle forme galénique</label>
+        <select id="bulk-value" class="form-select">
+          <option value="">— Choisir —</option>
+          ${['Comprimé','Gélule','Sirop','Suspension','Solution injectable','Pommade','Crème','Gel','Suppositoire','Ovule','Gouttes','Spray','Inhalateur','Patch','Sachet','Granulé','Lyophilisat'].map(f => `<option value="${f}">${f}</option>`).join('')}
+        </select>
+      </div>`,
+    salePrice: `
+      <div class="form-group">
+        <label class="form-label">Nouveau prix de vente (GNF)</label>
+        <input id="bulk-value" type="number" min="0" step="1" class="form-input" placeholder="Ex: 15000">
+      </div>`,
+    purchasePrice: `
+      <div class="form-group">
+        <label class="form-label">Nouveau prix d'achat (GNF)</label>
+        <input id="bulk-value" type="number" min="0" step="1" class="form-input" placeholder="Ex: 10000">
+      </div>`,
+    minStock: `
+      <div class="form-group">
+        <label class="form-label">Seuil minimum de stock (unités)</label>
+        <input id="bulk-value" type="number" min="0" step="1" class="form-input" placeholder="Ex: 10">
+      </div>`,
+    expiryDate: `
+      <div class="form-group">
+        <label class="form-label">Date de péremption</label>
+        <input id="bulk-value" type="date" class="form-input">
+      </div>`,
+    requiresPrescription: `
+      <div class="form-group">
+        <label class="form-label">Ordonnance requise</label>
+        <select id="bulk-value" class="form-select">
+          <option value="false">OTC — Sans ordonnance</option>
+          <option value="true">Rx — Ordonnance requise</option>
+        </select>
+      </div>`,
+    status: `
+      <div class="form-group">
+        <label class="form-label">Statut</label>
+        <select id="bulk-value" class="form-select">
+          <option value="active">✅ Actif — visible dans le catalogue</option>
+          <option value="inactive">❌ Inactif — masqué du catalogue et POS</option>
+        </select>
+      </div>`,
+    brand: `
+      <div class="form-group">
+        <label class="form-label">Marque / Laboratoire</label>
+        <input id="bulk-value" type="text" class="form-input" placeholder="Ex: Sanofi, Pfizer...">
+      </div>`,
+    tva: `
+      <div class="form-group">
+        <label class="form-label">TVA (%)</label>
+        <input id="bulk-value" type="number" min="0" max="100" step="0.1" class="form-input" placeholder="Ex: 18">
+      </div>`,
+    unit: `
+      <div class="form-group">
+        <label class="form-label">Unité de vente</label>
+        <select id="bulk-value" class="form-select">
+          <option value="boîte">Boîte</option>
+          <option value="flacon">Flacon</option>
+          <option value="tube">Tube</option>
+          <option value="sachet">Sachet</option>
+          <option value="unité">Unité</option>
+          <option value="ampoule">Ampoule</option>
+        </select>
+      </div>`,
+  };
+
+  cont.innerHTML = inputs[field] || '<p class="text-muted">Sélectionnez un champ.</p>';
+}
+
+async function applyBulkEdit() {
+  const field = document.getElementById('bulk-field')?.value;
+  const rawValue = document.getElementById('bulk-value')?.value;
+  if (!field || rawValue === '' || rawValue === null || rawValue === undefined) {
+    UI.toast('Veuillez sélectionner un champ et saisir une valeur.', 'warning'); return;
+  }
+
+  let value = rawValue;
+  if (field === 'requiresPrescription') value = (rawValue === 'true');
+  else if (['salePrice','purchasePrice','minStock','tva'].includes(field)) value = parseFloat(rawValue) || 0;
+
+  const ids = [...(window._selectedProductIds || [])];
+  let done = 0;
+  for (const id of ids) {
+    const p = await DB.dbGet('products', id).catch(() => null);
+    if (p) {
+      await DB.dbPut('products', { ...p, [field]: value, updatedAt: Date.now() });
+      done++;
+    }
+  }
+  await DB.writeAudit('BULK_EDIT', 'products', null, { ids, field, value, count: done });
+  UI.closeModal();
+  window._selectedProductIds = new Set();
+  UI.toast(`✅ Champ "${field}" mis à jour sur ${done} produit${done > 1 ? 's' : ''}.`, 'success');
+  Router.navigate('products');
 }
 
 async function viewProduct(id) {
